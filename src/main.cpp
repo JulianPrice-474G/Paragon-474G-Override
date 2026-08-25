@@ -1,19 +1,66 @@
 #include "main.h"
+#include "ui_engine.hpp"
 
+// Forward declarations — defined in src/user_screen.cpp
+void build_screens();
+int  get_selected_auton();
+void handle_ctrl_input();
 /////
 // For installation, upgrading, documentations, and tutorials, check out our website!
 // https://ez-robotics.github.io/EZ-Template/
 /////
 
+/////
+// MOTOR PORTS - CHANGE THESE
+// - put a minus in front of a port to reverse that motor (ex. -11)
+/////
+constexpr int8_t INTAKE_LEFT_PORT = 16;
+constexpr int8_t INTAKE_RIGHT_PORT = 7;
+constexpr int8_t CASCADE_PORT = 11;    // the 11W motor
+constexpr int8_t CASCADE_2_PORT = -2;  // the 5.5W on the other end of the shaft.
+                                        // Negative because it faces the opposite way - if it
+                                        // fights the first motor instead of helping, flip this sign.
+
+constexpr int8_t INTAKE_2_PORT = 1;    // the 5.5W on LEFT / RIGHT arrows
+constexpr int8_t ARM_PORT = 6;         // TODO: set your real port - UP / DOWN arrows
+
+/////
+// MOTOR SPEEDS - CHANGE THESE
+// - range is 0 to 127, where 127 is full power
+/////
+constexpr int INTAKE_SPEED = 127;    // R1 / R2
+constexpr int INTAKE_2_SPEED = 127;  // LEFT / RIGHT arrows
+constexpr int CASCADE_SPEED = 127;   // L1 / L2
+constexpr int ARM_SPEED = 127;       // UP / DOWN arrows
+constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can ask for
+
+// Intake - R1 runs it one way, R2 runs it the other way.
+// These two motors always spin opposite each other.
+pros::Motor intake_left(INTAKE_LEFT_PORT);
+pros::Motor intake_right(INTAKE_RIGHT_PORT);
+
+// Second intake (5.5W) - LEFT arrow runs it forward, RIGHT arrow runs it reverse
+pros::Motor intake_2(INTAKE_2_PORT);
+
+// Arm - UP arrow runs it forward, DOWN arrow runs it back
+pros::Motor arm(ARM_PORT);
+
+// Cascade - L1 runs it backward, L2 runs it forward.
+// Two separate motors instead of a MotorGroup.  A group assumes its members are
+// interchangeable, which an 11W and a 5.5W aren't, and it silently swallows a
+// failure on one member.  Commanding them separately can't hide a dead motor.
+pros::Motor cascade(CASCADE_PORT);
+pros::Motor cascade_2(CASCADE_2_PORT);
+
 // Chassis constructor
 ez::Drive chassis(
     // These are your drive motors, the first motor is used for sensing!
-    {1, 2, 3},     // Left Chassis Ports (negative port will reverse it!)
-    {-4, -5, -6},  // Right Chassis Ports (negative port will reverse it!)
+    {-20, -12,},     // Left Chassis Ports (negative port will reverse it!)
+    {10, 3,},  // Right Chassis Ports (negative port will reverse it!)
 
-    7,      // IMU Port
-    4.125,  // Wheel Diameter (Remember, 4" wheels without screw holes are actually 4.125!)
-    343);   // Wheel RPM = cartridge * (motor gear / wheel gear)
+    19,      // IMU Port
+    3.125,  // Wheel Diameter (Remember, 4" wheels without screw holes are actually 4.125!)
+    360);   // Wheel RPM = cartridge * (motor gear / wheel gear)
 
 // Uncomment the trackers you're using here!
 // - `8` and `9` are smart ports (making these negative will reverse the sensor)
@@ -30,54 +77,37 @@ ez::Drive chassis(
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
-  // Print our branding over your terminal :D
-  ez::ez_template_print();
+  pros::lcd::initialize();  // required to start LVGL
+  pros::lcd::shutdown();    // remove PROS text overlay immediately
 
-  pros::delay(500);  // Stop the user from doing anything while legacy ports configure
+  // Spinner — visible while build_screens() runs
+  lv_obj_t* startup_scr = lv_obj_create(nullptr);
+  lv_obj_remove_style_all(startup_scr);
+  lv_obj_set_style_bg_color(startup_scr, lv_color_hex(UI_DARK_BG), 0);
+  lv_obj_set_style_bg_opa(startup_scr, LV_OPA_COVER, 0);
+  lv_obj_clear_flag(startup_scr, LV_OBJ_FLAG_SCROLLABLE);
+  lv_scr_load(startup_scr);
 
-  // Look at your horizontal tracking wheel and decide if it's in front of the midline of your robot or behind it
-  //  - change `back` to `front` if the tracking wheel is in front of the midline
-  //  - ignore this if you aren't using a horizontal tracker
-  // chassis.odom_tracker_back_set(&horiz_tracker);
-  // Look at your vertical tracking wheel and decide if it's to the left or right of the center of the robot
-  //  - change `left` to `right` if the tracking wheel is to the right of the centerline
-  //  - ignore this if you aren't using a vertical tracker
-  // chassis.odom_tracker_left_set(&vert_tracker);
+  lv_obj_t* spinner = lv_spinner_create(startup_scr, 1200, 75);
+  lv_obj_set_size(spinner, 100, 100);
+  lv_obj_center(spinner);
+  lv_obj_set_style_arc_color(spinner, lv_color_hex(UI_GOLD),   LV_PART_INDICATOR);
+  lv_obj_set_style_arc_width(spinner, 8,                        LV_PART_INDICATOR);
+  lv_obj_set_style_arc_color(spinner, lv_color_hex(0x3A3A3A), LV_PART_MAIN);
+  lv_obj_set_style_arc_width(spinner, 8,                        LV_PART_MAIN);
+  lv_task_handler();
 
-  // Configure your chassis controls
-  chassis.opcontrol_curve_buttons_toggle(true);   // Enables modifying the controller curve with buttons on the joysticks
-  chassis.opcontrol_drive_activebrake_set(0.0);   // Sets the active brake kP. We recommend ~2.  0 will disable.
-  chassis.opcontrol_curve_default_set(0.0, 0.0);  // Defaults for curve. If using tank, only the first parameter is used. (Comment this line out if you have an SD card!)
+  chassis.opcontrol_curve_buttons_toggle(false); // reclaim controller buttons for UI use
 
-  // Set the drive to your own constants from autons.cpp!
+  // ── Add your chassis setup here ──────────────────────────────────────────────
   default_constants();
-
-  // These are already defaulted to these buttons, but you can change the left/right curve buttons here!
-  // chassis.opcontrol_curve_buttons_left_set(pros::E_CONTROLLER_DIGITAL_LEFT, pros::E_CONTROLLER_DIGITAL_RIGHT);  // If using tank, only the left side is used.
-  // chassis.opcontrol_curve_buttons_right_set(pros::E_CONTROLLER_DIGITAL_Y, pros::E_CONTROLLER_DIGITAL_A);
-
-  // Autonomous Selector using LLEMU
-  ez::as::auton_selector.autons_add({
-      {"Drive\n\nDrive forward and come back", drive_example},
-      {"Turn\n\nTurn 3 times.", turn_example},
-      {"Drive and Turn\n\nDrive forward, turn, come back", drive_and_turn},
-      {"Drive and Turn\n\nSlow down during drive", wait_until_change_speed},
-      {"Swing Turn\n\nSwing in an 'S' curve", swing_example},
-      {"Motion Chaining\n\nDrive forward, turn, and come back, but blend everything together :D", motion_chaining},
-      {"Combine all 3 movements", combining_movements},
-      {"Interference\n\nAfter driving forward, robot performs differently if interfered or not", interfered_example},
-      {"Simple Odom\n\nThis is the same as the drive example, but it uses odom instead!", odom_drive_example},
-      {"Pure Pursuit\n\nGo to (0, 30) and pass through (6, 10) on the way.  Come back to (0, 0)", odom_pure_pursuit_example},
-      {"Pure Pursuit Wait Until\n\nGo to (24, 24) but start running an intake once the robot passes (12, 24)", odom_pure_pursuit_wait_until_example},
-      {"Boomerang\n\nGo to (0, 24, 45) then come back to (0, 0, 0)", odom_boomerang_example},
-      {"Boomerang Pure Pursuit\n\nGo to (0, 24, 45) on the way to (24, 24) then come back to (0, 0, 0)", odom_boomerang_injected_pure_pursuit_example},
-      {"Measure Offsets\n\nThis will turn the robot a bunch of times and calculate your offsets for your tracking wheels.", measure_offsets},
-  });
-
-  // Initialize chassis and auton selector
-  chassis.initialize();
-  ez::as::initialize();
+  chassis.initialize();   // spinner stays visible during IMU calibration
   master.rumble(chassis.drive_imu_calibrated() ? "." : "---");
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  EngineInit();
+  build_screens();  // sets up brain screen + initial controller display
+  CtrlFlush();
 }
 
 /**
@@ -133,60 +163,24 @@ void autonomous() {
   to be consistent
   */
 
-  ez::as::auton_selector.selected_auton_call();  // Calls selected auton from autonomous selector
-}
-
-/**
- * Simplifies printing tracker values to the brain screen
- */
-void screen_print_tracker(ez::tracking_wheel *tracker, std::string name, int line) {
-  std::string tracker_value = "", tracker_width = "";
-  // Check if the tracker exists
-  if (tracker != nullptr) {
-    tracker_value = name + " tracker: " + util::to_string_with_precision(tracker->get());             // Make text for the tracker value
-    tracker_width = "  width: " + util::to_string_with_precision(tracker->distance_to_center_get());  // Make text for the distance to center
-  }
-  ez::screen_print(tracker_value + tracker_width, line);  // Print final tracker text
-}
-
-/**
- * Ez screen task
- * Adding new pages here will let you view them during user control or autonomous
- * and will help you debug problems you're having
- */
-void ez_screen_task() {
-  while (true) {
-    // Only run this when not connected to a competition switch
-    if (!pros::competition::is_connected()) {
-      // Blank page for odom debugging
-      if (chassis.odom_enabled() && !chassis.pid_tuner_enabled()) {
-        // If we're on the first blank page...
-        if (ez::as::page_blank_is_on(0)) {
-          // Display X, Y, and Theta
-          ez::screen_print("x: " + util::to_string_with_precision(chassis.odom_x_get()) +
-                               "\ny: " + util::to_string_with_precision(chassis.odom_y_get()) +
-                               "\na: " + util::to_string_with_precision(chassis.odom_theta_get()),
-                           1);  // Don't override the top Page line
-
-          // Display all trackers that are being used
-          screen_print_tracker(chassis.odom_tracker_left, "l", 4);
-          screen_print_tracker(chassis.odom_tracker_right, "r", 5);
-          screen_print_tracker(chassis.odom_tracker_back, "b", 6);
-          screen_print_tracker(chassis.odom_tracker_front, "f", 7);
-        }
-      }
-    }
-
-    // Remove all blank pages when connected to a comp switch
-    else {
-      if (ez::as::page_blank_amount() > 0)
-        ez::as::page_blank_remove_all();
-    }
-
-    pros::delay(ez::util::DELAY_TIME);
+  // The brain UI replaces EZ-Template's LLEMU selector.  get_selected_auton()
+  // returns the index of whichever auton button was tapped (or -1 if none).
+  // The number in each case must match the auton_idx given to that ButtonAdd.
+  switch (get_selected_auton()) {
+    // case 0: your_left_auton();   break;
+    // case 1: your_right_auton();  break;
+    // case 2: your_skills_route(); break;
+    default: break;
   }
 }
-pros::Task ezScreenTask(ez_screen_task);
+
+// NOTE: EZ-Template's stock main.cpp defines screen_print_tracker() and
+// ez_screen_task() here, plus the global `pros::Task ezScreenTask(ez_screen_task);`.
+// All three have been REMOVED for the brain UI.
+//  - They draw to the brain with ez::screen_print(), which is LLEMU.
+//  - initialize() calls pros::lcd::shutdown() and hands the display to the UI engine.
+//  - The task is a global, so it starts before initialize() even runs.
+// Leaving it in means an LLEMU task and the LVGL UI engine both driving the screen.
 
 /**
  * Gives you some extras to run in your opcontrol:
@@ -209,6 +203,8 @@ void ez_template_extras() {
       chassis.pid_tuner_toggle();
 
     // Trigger the selected autonomous routine
+    // !!! WARNING: DOWN now runs the arm backward.  Holding DOWN and pressing B fires your
+    // !!! whole autonomous routine.  Change this combo if that bites you.
     if (master.get_digital(DIGITAL_B) && master.get_digital(DIGITAL_DOWN)) {
       pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
       autonomous();
@@ -239,24 +235,68 @@ void ez_template_extras() {
  * operator control task will be stopped. Re-enabling the robot will restart the
  * task, not resume it from where it left off.
  */
+
 void opcontrol() {
-  // This is preference to what you like to drive on
   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
+  static bool ctrl_flushed = false;
 
   while (true) {
-    // Gives you some extras to make EZ-Template ezier
-    ez_template_extras();
+    handle_ctrl_input();
 
-    chassis.opcontrol_tank();  // Tank control
-    // chassis.opcontrol_arcade_standard(ez::SPLIT);   // Standard split arcade
-    // chassis.opcontrol_arcade_standard(ez::SINGLE);  // Standard single arcade
-    // chassis.opcontrol_arcade_flipped(ez::SPLIT);    // Flipped split arcade
-    // chassis.opcontrol_arcade_flipped(ez::SINGLE);   // Flipped single arcade
+    chassis.opcontrol_arcade_standard(ez::SPLIT);
 
-    // . . .
-    // Put more user control code here!
-    // . . .
+    if (!ctrl_flushed) { ctrl_flushed = true; CtrlFlush(); }
 
-    pros::delay(ez::util::DELAY_TIME);  // This is used for timer calculations!  Keep this ez::util::DELAY_TIME
+    // ── Add your subsystem controls here ──────────────────────────────────
+
+    // Intake
+    //  - hold R1 to run it one direction, hold R2 to run it the other
+    //  - the two motors always spin opposite each other
+    if (master.get_digital(DIGITAL_R1)) {
+      intake_left.move(INTAKE_SPEED);
+      intake_right.move(-INTAKE_SPEED);
+    } else if (master.get_digital(DIGITAL_R2)) {
+      intake_left.move(-INTAKE_SPEED);
+      intake_right.move(INTAKE_SPEED);
+    } else {
+      intake_left.move(0);
+      intake_right.move(0);
+    }
+
+    // Second intake
+    //  - hold LEFT arrow to run it forward, hold RIGHT arrow to run it reverse
+    if (master.get_digital(DIGITAL_LEFT)) {
+      intake_2.move(INTAKE_2_SPEED);
+    } else if (master.get_digital(DIGITAL_RIGHT)) {
+      intake_2.move(-INTAKE_2_SPEED);
+    } else {
+      intake_2.move(0);
+    }
+
+    // Arm
+    //  - hold UP arrow to run it forward, hold DOWN arrow to run it back
+    if (master.get_digital(DIGITAL_UP)) {
+      arm.move(ARM_SPEED);
+    } else if (master.get_digital(DIGITAL_DOWN)) {
+      arm.move(-ARM_SPEED);
+    } else {
+      arm.move(0);
+    }
+
+    // Cascade
+    //  - hold L1 to run it backward, hold L2 to run it forward
+    //  - releasing both lets it coast
+    if (master.get_digital(DIGITAL_L1)) {
+      cascade.move(-CASCADE_SPEED);
+      cascade_2.move(-CASCADE_SPEED);
+    } else if (master.get_digital(DIGITAL_L2)) {
+      cascade.move(CASCADE_SPEED);
+      cascade_2.move(CASCADE_SPEED);
+    } else {
+      cascade.move(0);
+      cascade_2.move(0);
+    }
+
+    pros::delay(ez::util::DELAY_TIME);
   }
 }

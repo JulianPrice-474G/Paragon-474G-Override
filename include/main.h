@@ -48,6 +48,18 @@
 #include "subsystems.hpp"
 
 
+// DO NOT add `#include "ui_engine.hpp"` here.
+// ui_engine.hpp line 2 includes main.h, so including it back from main.h makes a
+// cycle.  Normal compiles survive it because the header guards break the loop, but
+// clangd fails with "main file cannot be included recursively when building a
+// preamble" the moment you open ui_engine.hpp.
+// Each .cpp that needs the engine includes "ui_engine.hpp" directly instead.
+
+// Defined in src/user_screen.cpp
+extern const char* battery_text();
+extern const char* ctrl_battery_text();
+
+
 /**
  * If you find doing pros::Motor() to be tedious and you'd prefer just to do
  * Motor, you can use the namespace with the following commented out line.

@@ -1,0 +1,20 @@
+# clangd configuration for PROS / EZ-Template / Brain UI projects.
+#
+# main.h and subsystems.hpp are umbrella headers - they exist to re-export PROS,
+# EZ-Template, and project headers so each .cpp only needs one #include.
+#
+# clangd's IncludeCleaner assumes one-header-per-symbol style and flags that
+# pattern from both directions:
+#
+#   UnusedIncludes  - "Included header api.hpp is not used directly" on main.h,
+#                     because main.h re-exports it rather than using it itself.
+#                     Taking that quick-fix DELETES the include and breaks the build.
+#
+#   MissingIncludes - "No header providing 'pros::Motor' is directly included",
+#                     because main.cpp gets it transitively through main.h.
+#
+# Both are false positives here, so both are off. Neither affects compilation -
+# `pros make` behaves identically either way.
+Diagnostics:
+  UnusedIncludes: None
+  MissingIncludes: None
