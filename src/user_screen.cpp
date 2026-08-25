@@ -55,14 +55,17 @@
 //       in the names[] array inside _ctrl_auton()
 //  □  Change "Custom Brain UI" in _ctrl_home() → your team/robot name
 //  □  Add your actual auton functions to autonomous() in main.cpp/autons.cpp
-//  □  Select auton then press UP + X on the controller before every match to lock the brain screen
+//  □  Select auton, then HOLD UP + X for 1 second before every match to lock the brain screen
 //
 // ── DRIVER MODE  ★ READ THIS BEFORE COMPETING ★ ──────────────────────────────
 //
 //  Driver mode locks the brain screen and frees LEFT/RIGHT/A/B on the controller
 //  for robot subsystems (intake, arm, claw, etc.) during a match.
 //
-//  HOW TO TOGGLE:  Hold UP and press X (either order). Same combo exits.
+//  HOW TO TOGGLE:  HOLD UP + X together for 1 second. Same combo exits.
+//                  A quick tap of either button does nothing, so UP and X stay
+//                  usable for your subsystems. Change the buttons and the hold
+//                  time at DRIVER_MODE_BTN_A / _B / _HOLD_MS below.
 //
 //  WHAT HAPPENS WHEN ACTIVE:
 //    • Brain screen shows "MATCH IN PROGRESS" — touch is fully disabled so
@@ -75,10 +78,10 @@
 //  COMPETITION WORKFLOW:
 //    1. Before the match — tap your auton on the brain screen or select it
 //       with the controller.
-//    2. Press UP + X → brain screen locks, controller confirms.
+//    2. Hold UP + X for 1 second → brain screen locks, controller rumbles.
 //    3. Field fires autonomous → your selected auton runs.
 //    4. Driver control → Pre programed robot functions control your robot subsystems.
-//    5. After the match → UP + X again to unlock for the next auton pick.
+//    5. After the match → hold UP + X again to unlock for the next auton pick.
 //
 //  IMPORTANT: always enter driver mode before the match starts.
 //             If you skip this, LEFT/RIGHT/A/B will navigate the controller
@@ -248,7 +251,7 @@
 //      LEFT / RIGHT        — cycle between auton pages
 //      A  (on auton page)  — select that auton + navigate brain screen to it
 //      B  (on auton page)  — return to HOME
-//      UP + X              — toggle driver mode (locks brain screen for the match)
+//      UP + X (hold 1s)    — toggle driver mode (locks brain screen for the match)
 //
 //    ── Ctrl* functions (usable anywhere, not just in handle_ctrl_input) ──────
 //
@@ -283,6 +286,43 @@
 
 
 // ── Demo getter / helper functions ────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════════════════════
+//  DRIVER MODE TOGGLE — change these two buttons to fit your robot
+// ══════════════════════════════════════════════════════════════════════════════
+//
+//  Both buttons must be held TOGETHER for DRIVER_MODE_HOLD_MS before the mode
+//  flips.  A quick tap of either one does NOTHING, so both buttons stay fully
+//  usable for your subsystems.  You only give up the specific case of holding
+//  both at the same time for a full second.
+//
+//  The controller rumbles to confirm:  "-" entering driver mode, "." leaving it.
+//
+//  Any two DIGITAL_* buttons work.  Pick a pair your driver would never hold
+//  together for a second in the middle of a match.
+//
+static const pros::controller_digital_e_t DRIVER_MODE_BTN_A   = DIGITAL_UP;
+static const pros::controller_digital_e_t DRIVER_MODE_BTN_B   = DIGITAL_X;
+static const int                          DRIVER_MODE_HOLD_MS = 1000;
+
+// Returns true exactly once per completed hold.  The buttons must be released
+// before it can fire again, so holding them does not toggle repeatedly.
+static bool _driver_mode_combo_fired() {
+  static int  held_ms       = 0;
+  static bool already_fired = false;
+
+  if (master.get_digital(DRIVER_MODE_BTN_A) && master.get_digital(DRIVER_MODE_BTN_B)) {
+    held_ms += ez::util::DELAY_TIME;   // handle_ctrl_input() runs once per opcontrol tick
+    if (held_ms >= DRIVER_MODE_HOLD_MS && !already_fired) {
+      already_fired = true;
+      return true;
+    }
+  } else {
+    held_ms       = 0;
+    already_fired = false;
+  }
+  return false;
+}
 
 const char* battery_text() {
   static char buf[20];
@@ -596,14 +636,11 @@ void build_screens() {
 // The competition template below replaces this with the full navigation state machine.
 void handle_ctrl_input() {
   static bool driver_mode = false;
-  bool up_held = master.get_digital(DIGITAL_UP);
-  bool x_new   = master.get_digital_new_press(DIGITAL_X);
-  bool x_held  = master.get_digital(DIGITAL_X);
-  bool up_new  = master.get_digital_new_press(DIGITAL_UP);
-  if ((up_held && x_new) || (x_held && up_new)) {
+  if (_driver_mode_combo_fired()) {
     driver_mode = !driver_mode;
     EngineDriverMode(driver_mode);
-    if (driver_mode) { CtrlLabel(0, "* DRIVER MODE *"); CtrlLabel(2, "UP+X to exit"); }
+    CtrlRumble(driver_mode ? "-" : ".");
+    if (driver_mode) { CtrlLabel(0, "* DRIVER MODE *"); CtrlLabel(2, "hold UP+X 1s"); }
     else             { CtrlLabel(0, "Custom Brain UI"); CtrlLive(1, battery_text, 500); CtrlLabel(2, ""); }
   }
 }
@@ -694,22 +731,18 @@ void handle_ctrl_input() {
     _ctrl_home();
   }
 
-  // ── Driver mode toggle (UP + X) ───────────────────────────────────────────
-  // We require a two-button combo to prevent accidental activation mid-match.
-  //   get_digital()           = true every tick the button is held
-  //   get_digital_new_press() = true only on the first tick it goes down
-  // The combo fires if one button is already held when the other is newly pressed.
-  bool up_held = master.get_digital(DIGITAL_UP);
-  bool x_new   = master.get_digital_new_press(DIGITAL_X);
-  bool x_held  = master.get_digital(DIGITAL_X);
-  bool up_new  = master.get_digital_new_press(DIGITAL_UP);
-
-  if ((up_held && x_new) || (x_held && up_new)) {
+  // ── Driver mode toggle ────────────────────────────────────────────────────
+  // _driver_mode_combo_fired() requires DRIVER_MODE_BTN_A and DRIVER_MODE_BTN_B
+  // to be held together for DRIVER_MODE_HOLD_MS.  A quick tap of either button
+  // does nothing, so both stay usable for your subsystems.  Change the buttons
+  // at the top of this file.
+  if (_driver_mode_combo_fired()) {
     driver_mode = !driver_mode;
     EngineDriverMode(driver_mode);  // locks or unlocks brain screen touch input
+    CtrlRumble(driver_mode ? "-" : ".");
     if (driver_mode) {
       CtrlLabel(0, "* DRIVER MODE *");  // confirm to driver that mode is active
-      CtrlLabel(2, "UP+X to exit");
+      CtrlLabel(2, "hold UP+X 1s");
     } else {
       ctrl_state = CTRL_HOME;  // always return to home when exiting driver mode
       _ctrl_home();
