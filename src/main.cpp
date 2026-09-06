@@ -14,43 +14,71 @@ void handle_ctrl_input();
 // MOTOR PORTS - CHANGE THESE
 // - put a minus in front of a port to reverse that motor (ex. -11)
 /////
-constexpr int8_t INTAKE_LEFT_PORT = 16;
-constexpr int8_t INTAKE_RIGHT_PORT = 7;
-constexpr int8_t CASCADE_PORT = 11;    // the 11W motor
-constexpr int8_t CASCADE_2_PORT = -2;  // the 5.5W on the other end of the shaft.
-                                        // Negative because it faces the opposite way - if it
-                                        // fights the first motor instead of helping, flip this sign.
+// ── L1 / L2 pair - two motors, always spinning opposite each other ──────────
+// TODO: set your real ports
+constexpr int8_t L_MOTOR_A_PORT = 11;
+constexpr int8_t L_MOTOR_B_PORT = 2;
 
-constexpr int8_t INTAKE_2_PORT = 1;    // the 5.5W on LEFT / RIGHT arrows
-constexpr int8_t ARM_PORT = 6;         // TODO: set your real port - UP / DOWN arrows
+// ── R1 / R2 group - four motors, three one way and the fourth the other ─────
+// TODO: set your real ports.  R_MOTOR_D is the odd one out - it always runs
+// opposite to the other three.
+constexpr int8_t R_MOTOR_A_PORT = -16;
+constexpr int8_t R_MOTOR_B_PORT = -1;   // negative = this motor is mounted backwards
+constexpr int8_t R_MOTOR_C_PORT = 13;  // negative = this motor is mounted backwards
+constexpr int8_t R_MOTOR_D_PORT = 4;
+
 
 /////
 // MOTOR SPEEDS - CHANGE THESE
 // - range is 0 to 127, where 127 is full power
 /////
-constexpr int INTAKE_SPEED = 127;    // R1 / R2
-constexpr int INTAKE_2_SPEED = 127;  // LEFT / RIGHT arrows
-constexpr int CASCADE_SPEED = 127;   // L1 / L2
-constexpr int ARM_SPEED = 127;       // UP / DOWN arrows
+constexpr int L_SPEED    = 127;      // L1 - full power
+constexpr int L2_SPEED   = L_SPEED * 80 / 100;  // L2 - 80% of L_SPEED (= 101)
+constexpr int R_SPEED = 127;         // R1 / R2 group
 constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can ask for
 
-// Intake - R1 runs it one way, R2 runs it the other way.
-// These two motors always spin opposite each other.
-pros::Motor intake_left(INTAKE_LEFT_PORT);
-pros::Motor intake_right(INTAKE_RIGHT_PORT);
+// L1 / L2 pair - these two ALWAYS spin opposite each other.
+// The opposite direction is commanded in code (one gets +speed, the other
+// -speed), not baked into a negative port, so the relationship is visible
+// where you read it.
+pros::Motor l_motor_a(L_MOTOR_A_PORT);
+pros::Motor l_motor_b(L_MOTOR_B_PORT);
 
-// Second intake (5.5W) - LEFT arrow runs it forward, RIGHT arrow runs it reverse
-pros::Motor intake_2(INTAKE_2_PORT);
+// R1 / R2 group - A, B and C run together; D always runs opposite to them.
+pros::Motor r_motor_a(R_MOTOR_A_PORT);
+pros::Motor r_motor_b(R_MOTOR_B_PORT);
+pros::Motor r_motor_c(R_MOTOR_C_PORT);
+pros::Motor r_motor_d(R_MOTOR_D_PORT);
 
-// Arm - UP arrow runs it forward, DOWN arrow runs it back
-pros::Motor arm(ARM_PORT);
+/////
+// PNEUMATICS - ADI (3-wire) ports, letters A-H
+/////
+constexpr char HIGH_INTAKE_PORT   = 'F';
+constexpr char MIDDLE_INTAKE_PORT = 'D';
+constexpr char CLAW_PORT          = 'A';  // TODO: set your real ADI port (A-H, D and F are taken)
 
-// Cascade - L1 runs it backward, L2 runs it forward.
-// Two separate motors instead of a MotorGroup.  A group assumes its members are
-// interchangeable, which an 11W and a 5.5W aren't, and it silently swallows a
-// failure on one member.  Commanding them separately can't hide a dead motor.
-pros::Motor cascade(CASCADE_PORT);
-pros::Motor cascade_2(CASCADE_2_PORT);
+// Single-acting solenoids.  true = extended, false = retracted.
+// If your pistons turn out to behave backwards, swap these two values - that is
+// the only place the sense of "extended" is defined.
+constexpr bool PISTON_EXTENDED  = true;
+constexpr bool PISTON_RETRACTED = false;
+
+// Both start EXTENDED.  The second constructor argument is the power-on state,
+// so they are already up before opcontrol runs.
+pros::adi::DigitalOut high_intake(HIGH_INTAKE_PORT,   PISTON_EXTENDED);
+pros::adi::DigitalOut middle_intake(MIDDLE_INTAKE_PORT, PISTON_EXTENDED);
+
+// Claw starts RETRACTED.  You did not ask for it to default extended like the
+// other two, so this is the odd one out on purpose - flip to PISTON_EXTENDED
+// if it should start out.
+pros::adi::DigitalOut claw(CLAW_PORT, PISTON_RETRACTED);
+
+// Software mirror of what each solenoid was last told to do.  A DigitalOut
+// cannot be read back, so this is the only record of piston state - and the
+// r_motor_b interlock below depends on it.
+bool high_intake_extended   = true;
+bool middle_intake_extended = true;
+bool claw_extended          = false;
 
 // Chassis constructor
 ez::Drive chassis(
@@ -203,8 +231,6 @@ void ez_template_extras() {
       chassis.pid_tuner_toggle();
 
     // Trigger the selected autonomous routine
-    // !!! WARNING: DOWN now runs the arm backward.  Holding DOWN and pressing B fires your
-    // !!! whole autonomous routine.  Change this combo if that bites you.
     if (master.get_digital(DIGITAL_B) && master.get_digital(DIGITAL_DOWN)) {
       pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
       autonomous();
@@ -249,52 +275,70 @@ void opcontrol() {
 
     // ── Add your subsystem controls here ──────────────────────────────────
 
-    // Intake
-    //  - hold R1 to run it one direction, hold R2 to run it the other
-    //  - the two motors always spin opposite each other
+    // Pistons - HOLD to retract, release to extend.  Not a toggle.
+    //  - hold B: HIGH intake retracts  (this is the "middle" position)
+    //  - hold Y: BOTH retract           (the "low" position)
+    //  - release: whatever you were holding down goes back up ("high" position)
+    bool high_want   = !(master.get_digital(DIGITAL_B) || master.get_digital(DIGITAL_Y));
+    bool middle_want = !master.get_digital(DIGITAL_Y);
+
+    // Only write to the solenoid when the state actually changes, rather than
+    // re-sending the same value every 10ms tick.
+    if (high_want != high_intake_extended) {
+      high_intake_extended = high_want;
+      high_intake.set_value(high_want);
+    }
+    if (middle_want != middle_intake_extended) {
+      middle_intake_extended = middle_want;
+      middle_intake.set_value(middle_want);
+    }
+
+    // Claw - DOWN arrow TOGGLES it.  Unlike the two above, this one latches:
+    // press once to extend, press again to retract.
+    if (master.get_digital_new_press(DIGITAL_DOWN)) {
+      claw_extended = !claw_extended;
+      claw.set_value(claw_extended);
+    }
+
+    // R1 / R2 group - four motors
+    //  - R1: A, B, C forward and D backward
+    //  - R2: every one of them reversed from what R1 does
+    //  - r_motor_b (port 1) is INTERLOCKED.  It runs in every position EXCEPT
+    //    the high state, which is both pistons extended:
+    //        HIGH   - both extended (nothing held) -> stopped
+    //        MIDDLE - high retracted (B held)      -> runs with the group
+    //        LOW    - both retracted (Y held)      -> runs with the group
+    bool port1_enabled = !(high_intake_extended && middle_intake_extended);
+
     if (master.get_digital(DIGITAL_R1)) {
-      intake_left.move(INTAKE_SPEED);
-      intake_right.move(-INTAKE_SPEED);
+      r_motor_a.move(R_SPEED);
+      r_motor_b.move(port1_enabled ? R_SPEED : 0);
+      r_motor_c.move(R_SPEED);
+      r_motor_d.move(-R_SPEED);
     } else if (master.get_digital(DIGITAL_R2)) {
-      intake_left.move(-INTAKE_SPEED);
-      intake_right.move(INTAKE_SPEED);
+      r_motor_a.move(-R_SPEED);
+      r_motor_b.move(port1_enabled ? -R_SPEED : 0);
+      r_motor_c.move(-R_SPEED);
+      r_motor_d.move(R_SPEED);
     } else {
-      intake_left.move(0);
-      intake_right.move(0);
+      r_motor_a.move(0);
+      r_motor_b.move(0);
+      r_motor_c.move(0);
+      r_motor_d.move(0);
     }
 
-    // Second intake
-    //  - hold LEFT arrow to run it forward, hold RIGHT arrow to run it reverse
-    if (master.get_digital(DIGITAL_LEFT)) {
-      intake_2.move(INTAKE_2_SPEED);
-    } else if (master.get_digital(DIGITAL_RIGHT)) {
-      intake_2.move(-INTAKE_2_SPEED);
-    } else {
-      intake_2.move(0);
-    }
-
-    // Arm
-    //  - hold UP arrow to run it forward, hold DOWN arrow to run it back
-    if (master.get_digital(DIGITAL_UP)) {
-      arm.move(ARM_SPEED);
-    } else if (master.get_digital(DIGITAL_DOWN)) {
-      arm.move(-ARM_SPEED);
-    } else {
-      arm.move(0);
-    }
-
-    // Cascade
-    //  - hold L1 to run it backward, hold L2 to run it forward
-    //  - releasing both lets it coast
+    // L1 / L2 pair - two motors, always opposite each other
+    //  - L1: A forward, B backward, at full L_SPEED
+    //  - L2: both flipped from what L1 does, at the slower L2_SPEED
     if (master.get_digital(DIGITAL_L1)) {
-      cascade.move(-CASCADE_SPEED);
-      cascade_2.move(-CASCADE_SPEED);
+      l_motor_a.move(L_SPEED);
+      l_motor_b.move(-L_SPEED);
     } else if (master.get_digital(DIGITAL_L2)) {
-      cascade.move(CASCADE_SPEED);
-      cascade_2.move(CASCADE_SPEED);
+      l_motor_a.move(-L2_SPEED);
+      l_motor_b.move(L2_SPEED);
     } else {
-      cascade.move(0);
-      cascade_2.move(0);
+      l_motor_a.move(0);
+      l_motor_b.move(0);
     }
 
     pros::delay(ez::util::DELAY_TIME);
