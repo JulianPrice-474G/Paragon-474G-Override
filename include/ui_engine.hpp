@@ -686,6 +686,18 @@ void SpinnerAdd(const char* page,
 //   if (up && x) { driver_mode = !driver_mode; EngineDriverMode(driver_mode); }
 void EngineDriverMode(bool active);
 
+// Returns true while driver mode is active.
+// Use this in opcontrol() to gate your subsystem controls, so nothing moves
+// while the driver is navigating the UI:
+//
+//   if (DriverModeActive()) {
+//     if (master.get_digital(DIGITAL_R1)) intake.move(127);
+//     else                                intake.move(0);
+//   } else {
+//     intake.move(0);   // parked while the UI has the buttons
+//   }
+bool DriverModeActive();
+
 // ── Misc ───────────────────────────────────────────────────────────────────────
 // Called once in initialize() in main.cpp. Do not call yourself.
 void EngineInit();

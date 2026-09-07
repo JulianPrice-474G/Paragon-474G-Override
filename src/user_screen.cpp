@@ -330,330 +330,41 @@ const char* battery_text() {
   return buf;
 }
 
-// ╔══════════════════════════════════════════════════════════════════════════════╗
-// ║  DELETE EVERYTHING FROM HERE DOWN TO THE "END DELETE" LINE BELOW             ║
-// ║  when switching from demo to a competition auton selector.                   ║
-// ║  Keep: battery_text() above, get_selected_auton() and the AUTON SELECTOR     ║
-// ║  EXAMPLE block below.                                                        ║
-// ║  This code below is just a demo of the Brain UI features and is not          ║
-// ║  inteded for competition use.                                                ║
-// ╚══════════════════════════════════════════════════════════════════════════════╝
-
-int      battery_pct()       { return (int)pros::battery::get_capacity(); }
-uint32_t battery_dot_color() { return pros::battery::get_capacity() > 20.0 ? UI_GREEN : UI_RED; }
-bool     battery_low()       { return pros::battery::get_capacity() <= 20.0; }
-
-static void do_ctrl_rumble()   { CtrlRumble(".--"); }
-static void do_ctrl_clear_0()  { CtrlClear(0); }
-static void do_ctrl_clear_1()  { CtrlClear(1); }
-static void do_ctrl_clear_2()  { CtrlClear(2); }
-
-static int  _demo_delay = 500;
-static void on_demo_delay(int val) { _demo_delay = val; }
-
-static int  _demo_speed = 80;
-static void on_demo_speed(int val) { _demo_speed = val; }
-
-static bool _toggle_state = false;
-static void on_demo_toggle(bool s) { _toggle_state = s; }
-
-static void start_demo_countdown() { CountdownStart(); }
-static void stop_demo_countdown()  { CountdownStop();  }
-
-// ── per-feature rebuild callbacks ─────────────────────────────────────────────
-
-static void show_buttons() {
-  PageClear("detail");
-  ButtonAdd("detail", 10,  10,  80, 32, UI_GRAY,   "< Back",   "menu");
-  LabelAdd( "detail", 200, 14,  "ButtonAdd",        18, UI_WHITE);
-  ButtonAdd("detail",  10, 55, 100, 50, UI_GOLD,   "Default");
-  ButtonAdd("detail", 120, 55, 100, 50, UI_GREEN,  "Pill",     nullptr, UI_ELEM_NONE, -1, UI_SHAPE_PILL);
-  ButtonAdd("detail", 230, 55, 100, 50, UI_BLUE,   "Sharp",    nullptr, UI_ELEM_NONE, -1, UI_SHAPE_SHARP);
-  ButtonAdd("detail", 340, 55, 130, 50, UI_ORANGE, "Animated", nullptr, UI_ELEM_GROW);
-  LabelAdd("detail",  18, 112, "radius: 8",      14, UI_GRAY);
-  LabelAdd("detail", 122, 112, "UI_SHAPE_PILL",  14, UI_GRAY);
-  LabelAdd("detail", 232, 112, "UI_SHAPE_SHARP", 14, UI_GRAY);
-  LabelAdd("detail", 342, 112, "UI_ELEM_GROW",   14, UI_GRAY);
-  LabelAdd("detail", 10, 136, "Press Animations — tap each:", 14, UI_GRAY);
-  ButtonPressStyle(UI_PRESS_FLASH);
-  ButtonAdd("detail",  10, 155, 130, 48, UI_GOLD,  "Flash");
-  ButtonPressStyle(UI_PRESS_PULSE);
-  ButtonAdd("detail", 175, 155, 130, 48, UI_GREEN, "Pulse");
-  ButtonPressStyle(UI_PRESS_RIPPLE);
-  ButtonAdd("detail", 340, 155, 130, 48, UI_BLUE,  "Ripple");
-  ButtonPressStyle(UI_PRESS_NONE);
-  LabelAdd("detail",  18, 210, "UI_PRESS_FLASH",  14, UI_GRAY);
-  LabelAdd("detail", 183, 210, "UI_PRESS_PULSE",  14, UI_GRAY);
-  LabelAdd("detail", 348, 210, "UI_PRESS_RIPPLE", 14, UI_GRAY);
-}
-
-static void show_labels() {
-  PageClear("detail");
-  ButtonAdd("detail", 10, 10, 80, 32, UI_GRAY, "< Back", "menu");
-  LabelAdd( "detail", 200, 14, "LabelAdd", 18, UI_WHITE);
-  LabelAdd("detail",  20,  50, "Font size 14",  14, UI_WHITE);
-  LabelAdd("detail",  20,  68, "Font size 18",  18, UI_GOLD);
-  LabelAdd("detail",  20,  90, "Font size 20",  20, UI_GREEN);
-  LabelAdd("detail",  20, 114, "Font size 24",  24, UI_ORANGE);
-  LabelAdd("detail",  20, 143, "48",             48, UI_BLUE);
-  LabelAdd("detail", 200, 160, "font_size: 14 / 18 / 20 / 24 / 48", 14, UI_GRAY);
-  LabelAdd("detail", 200, 178, "color: any UI_* constant or 0xRRGGBB", 14, UI_GRAY);
-}
-
-static void show_live() {
-  PageClear("detail");
-  ButtonAdd("detail", 10, 10, 80, 32, UI_GRAY, "< Back", "menu");
-  LabelAdd( "detail", 170, 14, "Live & Blink Labels", 18, UI_WHITE);
-  LabelAdd(    "detail", 20,  50, "LiveLabelAdd — refreshes automatically:", 14, UI_GRAY);
-  LiveLabelAdd("detail", 20,  68, battery_text, 500, 20, UI_GREEN);
-  LabelAdd(    "detail", 20,  93, "getter function called every 500 ms",     14, UI_GRAY);
-  BoxAdd("detail", 0, 113, 480, 1, UI_GRAY, 0);
-  LabelAdd(      "detail", 20, 120, "BlinkLabelAdd — blinks when condition is true:", 14, UI_GRAY);
-  BlinkLabelAdd( "detail", 20, 138, battery_text, battery_low, UI_WHITE, UI_RED, 400, 20);
-  LabelAdd(      "detail", 20, 166, "blinks red when battery <= 20%", 14, UI_GRAY);
-}
-
-static void show_shapes() {
-  PageClear("detail");
-  ButtonAdd("detail", 10, 10, 80, 32, UI_GRAY, "< Back", "menu");
-  LabelAdd( "detail", 205, 14, "Shapes", 18, UI_WHITE);
-  BoxAdd(       "detail",  36, 50, 52, 52, UI_GOLD,   8);
-  CircleAdd(    "detail", 124, 50, 52, UI_GREEN);
-  SquareAdd(    "detail", 212, 50, 52, UI_BLUE);
-  RoundedBoxAdd("detail", 300, 50, 52, UI_ORANGE, 14);
-  TriangleAdd(  "detail", 388, 50, 52, 52, UI_PURPLE);
-  LabelAdd("detail",  44, 108, "BoxAdd",      14, UI_GRAY);
-  LabelAdd("detail", 123, 108, "CircleAdd",   14, UI_GRAY);
-  LabelAdd("detail", 211, 108, "SquareAdd",   14, UI_GRAY);
-  LabelAdd("detail", 296, 108, "RoundedBox",  14, UI_GRAY);
-  LabelAdd("detail", 381, 108, "TriangleAdd", 14, UI_GRAY);
-  LabelAdd("detail", 10, 132, "BoxAdd(page, x, y, w, h, color)",                14, UI_GRAY);
-  LabelAdd("detail", 10, 150, "CircleAdd / SquareAdd(page, x, y, size, color)", 14, UI_GRAY);
-  LabelAdd("detail", 10, 168, "TriangleAdd(page, x, y, w, h, color)",           14, UI_GRAY);
-  LabelAdd("detail", 10, 186, "All shapes accept border_color + border_width too.", 14, UI_GRAY);
-}
-
-static void show_popup() {
-  PageClear("detail");
-  ButtonAdd("detail", 10, 10, 80, 32, UI_GRAY, "< Back", "menu");
-  LabelAdd( "detail", 200, 14, "Popups", 18, UI_WHITE);
-  LabelAdd( "detail", 20,  55, "PopupAdd creates an overlay dialog.",     18, UI_WHITE);
-  LabelAdd( "detail", 20,  78, "PopupLabelAdd adds a live value inside.", 18, UI_WHITE);
-  LabelAdd( "detail", 20, 100, "Use goes_to = \"popup:name\" to open it.", 14, UI_GRAY);
-  ButtonAdd("detail", 165, 135, 150, 45, UI_GREEN, "Open Popup", "popup:demo_pop");
-}
-
-static void show_bar() {
-  PageClear("detail");
-  ButtonAdd("detail", 10, 10, 80, 32, UI_GRAY, "< Back", "menu");
-  LabelAdd( "detail", 170, 14, "Progress Bar & Color Dot", 18, UI_WHITE);
-  LabelAdd("detail",  20,  50, "BarAdd — fills 0-100, warn color below threshold:", 14, UI_GRAY);
-  BarAdd(  "detail",  20,  68, 380, 20, battery_pct, 500, UI_GREEN, UI_GRAY, 6, UI_RED, 20);
-  LabelAdd("detail",  20,  95, "Turns red when battery <= 20%", 14, UI_GRAY);
-  LabelAdd("detail",  20, 135, "DotAdd — small circle whose color comes from a getter:", 14, UI_GRAY);
-  DotAdd(  "detail",  20, 158,  24, battery_dot_color, 500);
-  LabelAdd("detail",  52, 160, "Green > 20%   Red <= 20%", 18, UI_WHITE);
-}
-
-static void show_toggle() {
-  PageClear("detail");
-  ButtonAdd("detail", 10, 10, 80, 32, UI_GRAY, "< Back", "menu");
-  LabelAdd( "detail", 190, 14, "Toggle Button", 18, UI_WHITE);
-  LabelAdd("detail", 20,  52, "Stays highlighted when active.",          18, UI_WHITE);
-  LabelAdd("detail", 20,  75, "on_toggle(bool state) fires each tap.",   18, UI_WHITE);
-  LabelAdd("detail", 20, 103, "ToggleAdd(page, x, y, w, h,",            14, UI_GRAY);
-  LabelAdd("detail", 20, 121, "  color_off, color_on,",                  14, UI_GRAY);
-  LabelAdd("detail", 20, 139, "  \"off text\", \"on text\", anim, radius, callback)", 14, UI_GRAY);
-  ToggleAdd("detail", 160, 178, 160, 50, UI_GRAY, UI_GREEN, "OFF", "ON", UI_ELEM_GROW, 8, on_demo_toggle, _toggle_state);
-}
-
-static void show_grid() {
-  static const ui_btn_item GRID_ITEMS[] = {
-    { UI_GOLD,   "Item 1", -1, nullptr },
-    { UI_GREEN,  "Item 2", -1, nullptr },
-    { UI_BLUE,   "Item 3", -1, nullptr },
-    { UI_ORANGE, "Item 4", -1, nullptr },
-    { UI_PURPLE, "Item 5", -1, nullptr },
-    { UI_RED,    "Item 6", -1, nullptr },
-  };
-  PageClear("detail");
-  ButtonAdd("detail", 10, 10, 80, 32, UI_GRAY, "< Back", "menu");
-  LabelAdd( "detail", 185, 14, "Button Grid", 18, UI_WHITE);
-  LabelAdd("detail", 20, 50, "GridAdd auto-sizes N buttons into columns.", 18, UI_WHITE);
-  LabelAdd("detail", 20, 73, "GridAdd(page, x, y, total_w, total_h,",     14, UI_GRAY);
-  LabelAdd("detail", 20, 91, "  cols, items[], item_count, gap, anim)",    14, UI_GRAY);
-  GridAdd( "detail", 10, 110, 460, 126, 3, GRID_ITEMS, 6, 8, UI_ELEM_GROW);
-}
-
-static void show_bg() {
-  PageClear("detail");
-  PageBgColor("detail", UI_PURPLE);
-  ButtonAdd("detail", 10, 10, 80, 32, 0x6A0DAD, "< Back", "menu");
-  LabelAdd( "detail", 155, 14, "BG Color & Page Anim", 18, UI_WHITE);
-  LabelAdd("detail", 20,  52, "This page uses PageBgColor(\"detail\", UI_PURPLE).", 18, UI_WHITE);
-  LabelAdd("detail", 20,  75, "Use BgColor(color) before PageAdd() to bake a",   18, UI_WHITE);
-  LabelAdd("detail", 20,  98, "background into a page permanently.",               18, UI_WHITE);
-  BoxAdd("detail", 0, 122, 480, 1, 0x9966CC, 0);
-  LabelAdd("detail", 20, 130, "PageAnim() sets how pages transition:",   18, UI_WHITE);
-  LabelAdd("detail", 20, 155, "  UI_ANIM_NONE   — instant switch",       14, 0xCCAAFF);
-  LabelAdd("detail", 20, 173, "  UI_ANIM_FADE   — new page fades in",    14, 0xCCAAFF);
-  LabelAdd("detail", 20, 191, "  UI_ANIM_SLIDE  — pages slide sideways", 14, 0xCCAAFF);
-}
-
-static void show_controller() {
-  PageClear("detail");
-  ButtonAdd("detail", 10, 10, 80, 32, UI_GRAY, "< Back", "menu");
-  LabelAdd( "detail", 165, 14, "Controller Screen", 18, UI_WHITE);
-  LabelAdd("detail", 20, 48, "The controller has a 3-row text display (19 chars max).", 14, UI_GRAY);
-  BoxAdd("detail", 10, 64, 460, 82, 0x0D0D0D, 6, 0x555555, 2);
-  LabelAdd("detail", 20,  74, "Row 0:", 14, 0x666666);
-  LabelAdd("detail", 82,  74, "Custom Brain UI",          14, 0x88FF88);
-  LabelAdd("detail", 20,  94, "Row 1:", 14, 0x666666);
-  LabelAdd("detail", 82,  94, "Bat: 87%  (updates live)", 14, 0x88FF88);
-  LabelAdd("detail", 20, 114, "Row 2:", 14, 0x666666);
-  LabelAdd("detail", 20, 154, "Clear a row — tap to send CtrlClear(row):", 14, UI_GRAY);
-  ButtonAdd("detail",  20, 172, 130, 38, UI_RED,    "Clear Row 0", nullptr, UI_ELEM_NONE, -1, 8, do_ctrl_clear_0);
-  ButtonAdd("detail", 165, 172, 130, 38, UI_RED,    "Clear Row 1", nullptr, UI_ELEM_NONE, -1, 8, do_ctrl_clear_1);
-  ButtonAdd("detail", 310, 172, 130, 38, UI_RED,    "Clear Row 2", nullptr, UI_ELEM_NONE, -1, 8, do_ctrl_clear_2);
-  ButtonAdd("detail", 320, 120, 140, 34, UI_ORANGE, "Rumble .--",  nullptr, UI_ELEM_NONE, -1, 8, do_ctrl_rumble);
-}
-
-static void show_slider() {
-  PageClear("detail");
-  ButtonAdd("detail", 10, 10, 80, 32, UI_GRAY, "< Back", "menu");
-  LabelAdd( "detail", 205, 14, "Slider", 18, UI_WHITE);
-  LabelAdd("detail", 20, 48, "Drag to pick a value — useful for auton delay, speed limits, etc.", 14, UI_GRAY);
-  LabelAdd( "detail",  20,  76, "Auton Delay (ms):", 14, UI_GRAY);
-  SliderAdd("detail",  20,  94, 300, 24, 0, 3000, _demo_delay, UI_GOLD, on_demo_delay);
-  LabelAdd( "detail",  20, 132, "Speed Limit (%):", 14, UI_GRAY);
-  SliderAdd("detail",  20, 150, 300, 24, 0, 100, _demo_speed, UI_GREEN, on_demo_speed);
-  LabelAdd("detail", 20, 190, "SliderAdd(page, x, y, w, h, min, max, default, color, on_change)", 14, UI_GRAY);
-  LabelAdd("detail", 20, 208, "Store the value in a static int — use it in autonomous().", 14, UI_GRAY);
-}
-
-static void show_countdown() {
-  PageClear("detail");
-  ButtonAdd("detail", 10, 10, 80, 32, UI_GRAY, "< Back", "menu");
-  LabelAdd( "detail", 180, 14, "Countdown", 18, UI_WHITE);
-  LabelAdd("detail", 20, 48, "Counts down from a set duration. Turns red at warn_seconds.", 14, UI_GRAY);
-  CountdownAdd("detail", 185, 72, 60, 48, UI_WHITE, UI_RED, 10);
-  ButtonAdd("detail", 130, 140, 105, 40, UI_GREEN, "Start / Reset", nullptr, UI_ELEM_NONE, -1, 8, start_demo_countdown);
-  ButtonAdd("detail", 245, 140, 105, 40, UI_RED,   "Stop",          nullptr, UI_ELEM_NONE, -1, 8, stop_demo_countdown);
-  LabelAdd("detail", 20, 194, "CountdownAdd(page, x, y, seconds, font_size, color, warn_color, warn_secs)", 14, UI_GRAY);
-  LabelAdd("detail", 20, 212, "CountdownStart()  /  CountdownStop()  /  CountdownRemaining()", 14, UI_GRAY);
-}
-
-static void show_spinner() {
-  PageClear("detail");
-  ButtonAdd("detail", 10, 10, 80, 32, UI_GRAY, "< Back", "menu");
-  LabelAdd( "detail", 195, 14, "Spinner", 18, UI_WHITE);
-  LabelAdd("detail", 20, 48, "SpinnerAdd(page, x, y, size, color, speed_ms, arc_deg)", 14, UI_GRAY);
-  SpinnerAdd("detail",  30, 78,  60, UI_GOLD,  1200, 75);
-  SpinnerAdd("detail", 185, 70,  80, UI_GREEN,  800, 90);
-  SpinnerAdd("detail", 355, 62, 100, UI_BLUE,   600, 60);
-  LabelAdd("detail",  28, 146, "60px",  14, UI_GRAY);
-  LabelAdd("detail", 190, 156, "80px",  14, UI_GRAY);
-  LabelAdd("detail", 365, 168, "100px", 14, UI_GRAY);
-  LabelAdd("detail",  20, 178, "UI_GOLD  1200ms  75deg", 14, 0xDB9E23);
-  LabelAdd("detail",  20, 196, "UI_GREEN  800ms  90deg", 14, UI_GREEN);
-  LabelAdd("detail",  20, 214, "UI_BLUE   600ms  60deg", 14, UI_BLUE);
-}
-
-// ── menu items ────────────────────────────────────────────────────────────────
-
-static void show_driver_info() {
-  PageClear("detail");
-  ButtonAdd("detail", 10, 10, 80, 32, UI_GRAY, "< Back", "menu");
-  LabelAdd( "detail", 170, 14, "Driver Mode", 18, UI_RED);
-  BoxAdd(   "detail", 0, 44, 480, 2, UI_RED, 0);
-
-  LabelAdd("detail", 20, 52, "Toggle: Hold UP + press X  (same combo to exit)", 14, UI_GRAY);
-
-  LabelAdd("detail", 20,  70, "While active:", 14, UI_GRAY);
-  LabelAdd("detail", 20,  86, "  Brain screen LOCKED — nothing is touchable",   18, UI_WHITE);
-  LabelAdd("detail", 20, 108, "  Controller shows DRIVER MODE",                  18, UI_WHITE);
-  LabelAdd("detail", 20, 130, "  Driver controls function rather than UI navigation",      18, UI_WHITE);
-
-  BoxAdd(   "detail", 0, 152, 480, 1, UI_GRAY, 0);
-
-  LabelAdd("detail", 20, 158, "Competition workflow:", 14, UI_GRAY);
-  LabelAdd("detail", 20, 174, "1. Tap your auton button on the brain screen",    14, UI_WHITE);
-  LabelAdd("detail", 20, 190, "2. Press UP+X  →  driver mode ON, screen locks",  14, UI_WHITE);
-  LabelAdd("detail", 20, 206, "3. Field fires  →  selected auton runs",           14, UI_WHITE);
-  LabelAdd("detail", 20, 222, "4. Drive!  UP+X again to unlock after the match",  14, UI_GOLD);
-}
-
-static const ui_btn_item MENU_ITEMS[] = {
-  { UI_GOLD,      "Buttons",     -1, "detail", show_buttons     },
-  { UI_BLUE,      "Labels",      -1, "detail", show_labels      },
-  { UI_GREEN,     "Live Text",   -1, "detail", show_live        },
-  { UI_ORANGE,    "Shapes",      -1, "detail", show_shapes      },
-  { UI_PURPLE,    "Popups",      -1, "detail", show_popup       },
-  { UI_RED,       "Bar & Dot",   -1, "detail", show_bar         },
-  { UI_DARK_GOLD, "Toggle",      -1, "detail", show_toggle      },
-  { 0x0055AA,     "Button Grid", -1, "detail", show_grid        },
-  { UI_GRAY,      "BG & Anim",   -1, "detail", show_bg          },
-  { 0x008888,     "Controller",  -1, "detail", show_controller  },
-  { UI_GOLD,      "Slider",      -1, "detail", show_slider      },
-  { 0x005588,     "Countdown",   -1, "detail", show_countdown   },
-  { UI_DARK_GOLD, "Spinner",     -1, "detail", show_spinner     },
-  { 0xCC1111,     "Driver Mode", -1, "detail", show_driver_info },
-};
-
-void build_screens() {
-  BgColor(UI_WHITE);   PageAdd("home");
-  BgColor(UI_DARK_BG); PageAdd("menu");
-                       PageAdd("detail");
-
-  // popup declared once — persists across detail reloads
-  PopupAdd(     "demo_pop", 300, 170, "Live Battery", UI_DARK_BG, UI_GREEN);
-  PopupLabelAdd("demo_pop",  90,  60, battery_text, 200, 24, UI_WHITE);
-  ButtonAdd(    "demo_pop", 100, 110, 100, 38, UI_GREEN, "Close", "close");
-
-  // ── home ──────────────────────────────────────────────────────────────────
-  LabelAdd("home",  60,  55, "Custom Brain UI Template", 24, UI_BLACK);
-  LabelAdd("home",  90,  98, "Tap Continue to explore every",   18, UI_GRAY);
-  LabelAdd("home",  90, 120, "UI function available.",          18, UI_GRAY);
-  ButtonAdd("home", 190, 178, 100, 42, UI_GOLD, "Continue", "menu", UI_ELEM_FADE);
-
-  // ── menu ──────────────────────────────────────────────────────────────────
-  LabelAdd("menu", 148, 8, "Choose a Feature", 20, UI_WHITE);
-  BoxAdd("menu", 0, 32, 480, 2, UI_GRAY, 0);
-  GridAdd("menu", 5, 38, 470, 198, 3, MENU_ITEMS, 14, 6, UI_ELEM_GROW);
-
-  // detail starts empty; show_* callbacks fill it on navigation
-
-  // ── controller display setup ───────────────────────────────────────────────
-  CtrlLabel(0, "Custom Brain UI");
-  CtrlLive(1, battery_text, 500);
-  CtrlLabel(2, "");
-
-  PageAnim(UI_ANIM_FADE);
-  PageShow("home");
-}
-
-// Demo stub — handles only the UP+X driver mode toggle so it can be tested.
-// The competition template below replaces this with the full navigation state machine.
-void handle_ctrl_input() {
-  static bool driver_mode = false;
-  if (_driver_mode_combo_fired()) {
-    driver_mode = !driver_mode;
-    EngineDriverMode(driver_mode);
-    CtrlRumble(driver_mode ? "-" : ".");
-    if (driver_mode) { CtrlLabel(0, "* DRIVER MODE *"); CtrlLabel(2, "hold UP+X 1s"); }
-    else             { CtrlLabel(0, "Custom Brain UI"); CtrlLive(1, battery_text, 500); CtrlLabel(2, ""); }
-  }
-}
-
-// ╔══════════════════════════════════════════════════════════════════════════════╗
-// ║  END DELETE — keep everything below this line                               ║
-// ╚══════════════════════════════════════════════════════════════════════════════╝
 
 int get_selected_auton() { return SelectedAuton(); }
 
+// Live readout of which auton is currently selected, so a tap on the brain (or
+// an A press on the controller) has visible confirmation.  Names must match the
+// ButtonAdd labels on "auton_tab".
+// Live IMU heading for the popup on each auton page.
+const char* imu_text() {
+  static char buf[16];
+  snprintf(buf, sizeof(buf), "%.1f deg", chassis.drive_imu_get());
+  return buf;
+}
+
+// Zeroes the IMU.  Wired to the Reset button inside that popup.
+static void do_imu_reset() { chassis.drive_imu_reset(); }
+
+const char* selected_auton_text() {
+  static char buf[32];
+  static const char* names[] = { "Auto 1", "Auto 2", "Auto 3", "Auto 4", "Auto 5" };
+  int idx = SelectedAuton();
+  if (idx < 0 || idx >= (int)(sizeof(names) / sizeof(names[0])))
+    snprintf(buf, sizeof(buf), "Selected: none");
+  else
+    snprintf(buf, sizeof(buf), "Selected: %s", names[idx]);
+  return buf;
+}
+
 const char* ctrl_battery_text() {
   static char buf[20];
-  snprintf(buf, sizeof(buf), "Ctrl: %d%%", master.get_battery_level());
+  // get_battery_capacity() is the PERCENTAGE - the controller-side analog of
+  // pros::battery::get_capacity().  get_battery_level() is a different field
+  // and does not report a percentage, which is why this used to read wrong.
+  int pct = master.get_battery_capacity();
+  if (pct < 0) pct = 0;   // PROS_ERR when the controller is not connected
+  snprintf(buf, sizeof(buf), "Ctrl: %d%%", pct);
   return buf;
 }
 
@@ -687,10 +398,8 @@ const char* ctrl_battery_text() {
 */
 
 
-/*
-// ── Controller state machine ───────────────────────────────────────────────────
 
-enum _CtrlState { CTRL_HOME, CTRL_NAV, CTRL_A0, CTRL_A1, CTRL_A2 };
+enum _CtrlState { CTRL_HOME, CTRL_NAV, CTRL_A0, CTRL_A1, CTRL_A2, CTRL_A3, CTRL_A4 };
 
 // ── What the controller shows in each state ──────────────────────────────────
 //  Keep strings ≤ 15 chars — the VEX LCD is narrower than the 19-char API limit.
@@ -708,11 +417,22 @@ static void _ctrl_nav() {
 }
 
 static void _ctrl_auton(int idx) {
-  static const char* names[] = { "Auton 1", "Auton 2", "Skills" };  // match your button names
+  static const char* names[] = { "Auto 1", "Auto 2", "Auto 3", "Auto 4", "Auto 5" };  // match your button names
   CtrlLabel(0, names[idx]);
   CtrlLabel(1, "(A)sel  (B)back");
   CtrlLabel(2, "(< >) Nxt Auton");
 }
+
+// Controller confirmation after A selects an auton.  Without this the display is
+// identical before and after the press, so there is no way to tell it registered.
+static void _ctrl_selected(int idx) {
+  static const char* names[] = { "Auto 1", "Auto 2", "Auto 3", "Auto 4", "Auto 5" };
+  CtrlLabel(0, names[idx]);
+  CtrlLabel(1, "** SELECTED **");
+  CtrlLabel(2, "(< >) Nxt Auton");
+  CtrlRumble(".");            // short buzz so you feel it too
+}
+
 
 // handle_ctrl_input() is called once per opcontrol loop tick from main.cpp.
 // It reads buttons and advances the state machine, updating the controller
@@ -777,21 +497,33 @@ void handle_ctrl_input() {
       //        then PageShow() navigates the brain screen to that auton's detail page.
       //   B  = bail back to home without changing the auton selection.
       case CTRL_A0:
-        if (left_new)  { ctrl_state = CTRL_A2; _ctrl_auton(2); }  // wrap to last
+        if (left_new)  { ctrl_state = CTRL_A4; _ctrl_auton(4); }
         if (right_new) { ctrl_state = CTRL_A1; _ctrl_auton(1); }
-        if (a_new)     { ForceSelectAuton(0); PageShow("auton_1"); }
+        if (a_new)     { ForceSelectAuton(0); PageShow("auton_1"); _ctrl_selected(0); }
         if (b_new)     { ctrl_state = CTRL_HOME; _ctrl_home(); }
         break;
       case CTRL_A1:
         if (left_new)  { ctrl_state = CTRL_A0; _ctrl_auton(0); }
         if (right_new) { ctrl_state = CTRL_A2; _ctrl_auton(2); }
-        if (a_new)     { ForceSelectAuton(1); PageShow("auton_2"); }
+        if (a_new)     { ForceSelectAuton(1); PageShow("auton_2"); _ctrl_selected(1); }
         if (b_new)     { ctrl_state = CTRL_HOME; _ctrl_home(); }
         break;
       case CTRL_A2:
         if (left_new)  { ctrl_state = CTRL_A1; _ctrl_auton(1); }
-        if (right_new) { ctrl_state = CTRL_A0; _ctrl_auton(0); }  // wrap to first
-        if (a_new)     { ForceSelectAuton(2); PageShow("auton_3"); }
+        if (right_new) { ctrl_state = CTRL_A3; _ctrl_auton(3); }
+        if (a_new)     { ForceSelectAuton(2); PageShow("auton_3"); _ctrl_selected(2); }
+        if (b_new)     { ctrl_state = CTRL_HOME; _ctrl_home(); }
+        break;
+      case CTRL_A3:
+        if (left_new)  { ctrl_state = CTRL_A2; _ctrl_auton(2); }
+        if (right_new) { ctrl_state = CTRL_A4; _ctrl_auton(4); }
+        if (a_new)     { ForceSelectAuton(3); PageShow("auton_4"); _ctrl_selected(3); }
+        if (b_new)     { ctrl_state = CTRL_HOME; _ctrl_home(); }
+        break;
+      case CTRL_A4:
+        if (left_new)  { ctrl_state = CTRL_A3; _ctrl_auton(3); }
+        if (right_new) { ctrl_state = CTRL_A0; _ctrl_auton(0); }
+        if (a_new)     { ForceSelectAuton(4); PageShow("auton_5"); _ctrl_selected(4); }
         if (b_new)     { ctrl_state = CTRL_HOME; _ctrl_home(); }
         break;
     }
@@ -805,9 +537,19 @@ void build_screens() {
   // Declare all pages first — widgets can be added in any order after this.
   PageAdd("auton_tab");   // main auton picker (shown first)
   PageAdd("status_tab");  // battery / team info tab
-  PageAdd("auton_1");     // detail page for Auton 1
-  PageAdd("auton_2");     // detail page for Auton 2
-  PageAdd("auton_3");     // detail page for Skills
+  PageAdd("auton_1");     // detail page for Auto 1
+  PageAdd("auton_2");     // detail page for Auto 2
+  PageAdd("auton_3");     // detail page for Auto 3
+  PageAdd("auton_4");     // detail page for Auto 4
+  PageAdd("auton_5");     // detail page for Auto 5
+
+  // ── IMU popup - declared once, opened from every auton page ────────────────
+  PopupAdd(     "imu", 300, 180, "IMU Position", UI_DARK_BG, UI_GREEN);
+  PopupLabelAdd("imu",  85,  62, imu_text, 100, 24, UI_WHITE);   // refreshes 10x/sec
+  ButtonAdd(    "imu",  20, 120, 120, 40, UI_ORANGE, "Reset",
+                nullptr, UI_ELEM_NONE, -1, 8, do_imu_reset);     // stays open so you
+                                                                 // see it hit 0.0
+  ButtonAdd(    "imu", 160, 120, 120, 40, UI_GREEN,  "Close", "close");
 
   // ── Auton Selector tab ─────────────────────────────────────────────────────
   // Tab bar: two buttons side-by-side at the top (y=0, h=34).
@@ -820,10 +562,15 @@ void build_screens() {
 
   // Three auton buttons — auton_idx (last number) must match case N in autonomous().
   ButtonPressStyle(UI_PRESS_RIPPLE);
-  ButtonAdd("auton_tab",  50,  66, 380, 41, UI_GOLD,  "Auton 1", "auton_1", UI_ELEM_GROW, 0);
-  ButtonAdd("auton_tab",  50, 117, 380, 41, UI_GREEN, "Auton 2", "auton_2", UI_ELEM_GROW, 1);
-  ButtonAdd("auton_tab",  50, 168, 380, 41, UI_BLUE,  "Skills",  "auton_3", UI_ELEM_GROW, 2);
+  ButtonAdd("auton_tab",   5, 44, 89, 158, UI_GOLD,    "Auto 1", "auton_1", UI_ELEM_GROW, 0);
+  ButtonAdd("auton_tab", 100, 44, 89, 158, UI_GOLD,    "Auto 2", "auton_2", UI_ELEM_GROW, 1);
+  ButtonAdd("auton_tab", 195, 44, 89, 158, UI_GOLD,    "Auto 3", "auton_3", UI_ELEM_GROW, 2);
+  ButtonAdd("auton_tab", 290, 44, 89, 158, UI_GOLD,    "Auto 4", "auton_4", UI_ELEM_GROW, 3);
+  ButtonAdd("auton_tab", 385, 44, 89, 158, UI_GOLD,    "Auto 5", "auton_5", UI_ELEM_GROW, 4);
   ButtonPressStyle(UI_PRESS_NONE);
+
+  // Selection confirmation, under the three buttons
+  LiveLabelAdd("auton_tab", 10, 208, selected_auton_text, 200, 18, UI_GREEN);
 
   // ── Robot Status tab ───────────────────────────────────────────────────────
   BoxAdd(   "status_tab",   0,  0, 480, 34, UI_DARK_BG, 0);
@@ -832,29 +579,58 @@ void build_screens() {
   BoxAdd(   "status_tab", 240, 31, 240,  3, UI_GOLD, 0);  // underline on active tab
   BoxAdd(   "status_tab",   0, 33, 480,  1, UI_GRAY, 0);
 
-  LabelAdd("status_tab",  20, 50, "Team XXXX", 24, UI_WHITE);  // ← change to your team number
+  LabelAdd("status_tab",  20, 50, "Team 474G", 24, UI_WHITE);  // ← change to your team number
   LabelAdd("status_tab",  20, 88, "Brain Battery:", 18, UI_GRAY);
   LiveLabelAdd("status_tab", 200, 88, battery_text, 500, 18, UI_GREEN);
   LabelAdd("status_tab",  20, 116, "Controller:", 18, UI_GRAY);
   LiveLabelAdd("status_tab", 160, 116, ctrl_battery_text, 1000, 18, UI_GREEN);
 
   // ── Auton detail pages — add your route description, field map, notes, etc. ─
-  ButtonAdd("auton_1", 10, 10, 80, 32, UI_GOLD,  "< Back", "auton_tab");
-  LabelAdd( "auton_1", 130, 18, "Auton 1", 20, UI_WHITE);
-  BoxAdd(   "auton_1",   0, 52, 480,  2, UI_GRAY, 0);
-  LabelAdd( "auton_1", 140, 137, "Put auton info here", 18, UI_GRAY);
+  ButtonAdd("auton_1", 10, 10, 80, 32, UI_GOLD, "< Back", "auton_tab");
+  LabelAdd( "auton_1", 130, 18, "Auto 1", 20, UI_WHITE);
+  ButtonAdd("auton_1", 390, 10, 80, 32, UI_GREEN, "IMU", "popup:imu");
+  BoxAdd(   "auton_1",   0, 52, 480,   2, UI_GRAY, 0);
+  // Gold panel filling the page body.  Added BEFORE the label so the label
+  // draws on top of it - LVGL renders in creation order.
+  BoxAdd(   "auton_1",  10, 62, 460, 168, UI_GOLD, 12);
+  LabelAdd( "auton_1", 140, 137, "Put auton info here", 18, UI_BLACK);
 
-  ButtonAdd("auton_2", 10, 10, 80, 32, UI_GREEN, "< Back", "auton_tab");
-  LabelAdd( "auton_2", 130, 18, "Auton 2", 20, UI_WHITE);
-  BoxAdd(   "auton_2",   0, 52, 480,  2, UI_GRAY, 0);
-  LabelAdd( "auton_2", 140, 137, "Put auton info here", 18, UI_GRAY);
+  ButtonAdd("auton_2", 10, 10, 80, 32, UI_GOLD, "< Back", "auton_tab");
+  LabelAdd( "auton_2", 130, 18, "Auto 2", 20, UI_WHITE);
+  ButtonAdd("auton_2", 390, 10, 80, 32, UI_GREEN, "IMU", "popup:imu");
+  BoxAdd(   "auton_2",   0, 52, 480,   2, UI_GRAY, 0);
+  // Gold panel filling the page body.  Added BEFORE the label so the label
+  // draws on top of it - LVGL renders in creation order.
+  BoxAdd(   "auton_2",  10, 62, 460, 168, UI_GOLD, 12);
+  LabelAdd( "auton_2", 140, 137, "Put auton info here", 18, UI_BLACK);
 
-  ButtonAdd("auton_3", 10, 10, 80, 32, UI_BLUE,  "< Back", "auton_tab");
-  LabelAdd( "auton_3", 130, 18, "Skills",  20, UI_WHITE);
-  BoxAdd(   "auton_3",   0, 52, 480,  2, UI_GRAY, 0);
-  LabelAdd( "auton_3", 140, 137, "Put auton info here", 18, UI_GRAY);
+  ButtonAdd("auton_3", 10, 10, 80, 32, UI_GOLD, "< Back", "auton_tab");
+  LabelAdd( "auton_3", 130, 18, "Auto 3", 20, UI_WHITE);
+  ButtonAdd("auton_3", 390, 10, 80, 32, UI_GREEN, "IMU", "popup:imu");
+  BoxAdd(   "auton_3",   0, 52, 480,   2, UI_GRAY, 0);
+  // Gold panel filling the page body.  Added BEFORE the label so the label
+  // draws on top of it - LVGL renders in creation order.
+  BoxAdd(   "auton_3",  10, 62, 460, 168, UI_GOLD, 12);
+  LabelAdd( "auton_3", 140, 137, "Put auton info here", 18, UI_BLACK);
+
+  ButtonAdd("auton_4", 10, 10, 80, 32, UI_GOLD, "< Back", "auton_tab");
+  LabelAdd( "auton_4", 130, 18, "Auto 4", 20, UI_WHITE);
+  ButtonAdd("auton_4", 390, 10, 80, 32, UI_GREEN, "IMU", "popup:imu");
+  BoxAdd(   "auton_4",   0, 52, 480,   2, UI_GRAY, 0);
+  // Gold panel filling the page body.  Added BEFORE the label so the label
+  // draws on top of it - LVGL renders in creation order.
+  BoxAdd(   "auton_4",  10, 62, 460, 168, UI_GOLD, 12);
+  LabelAdd( "auton_4", 140, 137, "Put auton info here", 18, UI_BLACK);
+
+  ButtonAdd("auton_5", 10, 10, 80, 32, UI_GOLD, "< Back", "auton_tab");
+  LabelAdd( "auton_5", 130, 18, "Auto 5", 20, UI_WHITE);
+  ButtonAdd("auton_5", 390, 10, 80, 32, UI_GREEN, "IMU", "popup:imu");
+  BoxAdd(   "auton_5",   0, 52, 480,   2, UI_GRAY, 0);
+  // Gold panel filling the page body.  Added BEFORE the label so the label
+  // draws on top of it - LVGL renders in creation order.
+  BoxAdd(   "auton_5",  10, 62, 460, 168, UI_GOLD, 12);
+  LabelAdd( "auton_5", 140, 137, "Put auton info here", 18, UI_BLACK);
 
   PageShow("auton_tab");
 }
 
-═══════════════════════════════════════════════════════════════════════════════ */

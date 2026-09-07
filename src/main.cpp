@@ -1,3 +1,8 @@
+
+/////
+// For installation, upgrading, documentations, and tutorials, check out our website!
+// https://ez-robotics.github.io/EZ-Template/
+/////
 #include "main.h"
 #include "ui_engine.hpp"
 
@@ -5,11 +10,6 @@
 void build_screens();
 int  get_selected_auton();
 void handle_ctrl_input();
-/////
-// For installation, upgrading, documentations, and tutorials, check out our website!
-// https://ez-robotics.github.io/EZ-Template/
-/////
-
 /////
 // MOTOR PORTS - CHANGE THESE
 // - put a minus in front of a port to reverse that motor (ex. -11)
@@ -105,18 +105,21 @@ ez::Drive chassis(
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
-  pros::lcd::initialize();  // required to start LVGL
-  pros::lcd::shutdown();    // remove PROS text overlay immediately
+  pros::lcd::initialize();  // required to start LVGL - do not remove, it data aborts
+  // lv_obj_clean() below replaces pros::lcd::shutdown().  lcd_initialize() builds
+  // 8 objects; lcd_shutdown() deletes exactly one and leaks the other seven.
 
-  // Spinner — visible while build_screens() runs
-  lv_obj_t* startup_scr = lv_obj_create(nullptr);
-  lv_obj_remove_style_all(startup_scr);
-  lv_obj_set_style_bg_color(startup_scr, lv_color_hex(UI_DARK_BG), 0);
-  lv_obj_set_style_bg_opa(startup_scr, LV_OPA_COVER, 0);
-  lv_obj_clear_flag(startup_scr, LV_OBJ_FLAG_SCROLLABLE);
-  lv_scr_load(startup_scr);
+  // Spinner — drawn on the screen LVGL already owns.
+  // Do NOT do lv_obj_create(nullptr) + lv_obj_remove_style_all() + lv_scr_load()
+  // here: remove_style_all() strips the screen's width and height along with
+  // everything else, so that screen never covers the panel.  PROS's loading bar
+  // stays visible underneath it and only the spinner's own pixels paint on top.
+  // lv_scr_act() is already display-sized, so styling it directly works.
+  lv_obj_clean(lv_scr_act());
+  lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(UI_DARK_BG), 0);
+  lv_obj_set_style_bg_opa(lv_scr_act(),   LV_OPA_COVER,             0);
 
-  lv_obj_t* spinner = lv_spinner_create(startup_scr, 1200, 75);
+  lv_obj_t* spinner = lv_spinner_create(lv_scr_act(), 1200, 75);
   lv_obj_set_size(spinner, 100, 100);
   lv_obj_center(spinner);
   lv_obj_set_style_arc_color(spinner, lv_color_hex(UI_GOLD),   LV_PART_INDICATOR);
@@ -127,7 +130,7 @@ void initialize() {
 
   chassis.opcontrol_curve_buttons_toggle(false); // reclaim controller buttons for UI use
 
-  // ── Add your chassis setup here ──────────────────────────────────────────────
+  // ── Your chassis setup — replace with your own, but do not delete ────────────
   default_constants();
   chassis.initialize();   // spinner stays visible during IMU calibration
   master.rumble(chassis.drive_imu_calibrated() ? "." : "---");
@@ -137,6 +140,11 @@ void initialize() {
   build_screens();  // sets up brain screen + initial controller display
   CtrlFlush();
 }
+
+
+
+
+
 
 /**
  * Runs while the robot is in the disabled state of Field Management System or
@@ -172,36 +180,23 @@ void competition_initialize() {
  * from where it left off.
  */
 void autonomous() {
-  chassis.pid_targets_reset();                // Resets PID targets to 0
-  chassis.drive_imu_reset();                  // Reset gyro position to 0
-  chassis.drive_sensor_reset();               // Reset drive sensors to 0
-  chassis.odom_xyt_set(0_in, 0_in, 0_deg);    // Set the current position, you can start at a specific position with this
-  chassis.drive_brake_set(MOTOR_BRAKE_HOLD);  // Set motors to hold.  This helps autonomous consistency
+  chassis.pid_targets_reset();
+  chassis.drive_imu_reset();
+  chassis.drive_sensor_reset();
+  chassis.odom_xyt_set(0_in, 0_in, 0_deg);
+  chassis.drive_brake_set(MOTOR_BRAKE_HOLD);
 
-  /*
-  Odometry and Pure Pursuit are not magic
-
-  It is possible to get perfectly consistent results without tracking wheels,
-  but it is also possible to have extremely inconsistent results without tracking wheels.
-  When you don't use tracking wheels, you need to:
-   - avoid wheel slip
-   - avoid wheelies
-   - avoid throwing momentum around (super harsh turns, like in the example below)
-  You can do cool curved motions, but you have to give your robot the best chance
-  to be consistent
-  */
-
-  // The brain UI replaces EZ-Template's LLEMU selector.  get_selected_auton()
-  // returns the index of whichever auton button was tapped (or -1 if none).
-  // The number in each case must match the auton_idx given to that ButtonAdd.
+  // The number in each case must match the auton_idx you gave that
+  // ButtonAdd in build_screens().
   switch (get_selected_auton()) {
-    // case 0: your_left_auton();   break;
-    // case 1: your_right_auton();  break;
-    // case 2: your_skills_route(); break;
-    default: break;
+    case 0: drive_example();           break;   // Auto 1
+    case 1: turn_example();            break;   // Auto 2
+    case 2: drive_and_turn();          break;   // Auto 3
+    case 3: wait_until_change_speed(); break;   // Auto 4
+    case 4: swing_example();           break;   // Auto 5
+    default:                           break;   // nothing selected
   }
 }
-
 // NOTE: EZ-Template's stock main.cpp defines screen_print_tracker() and
 // ez_screen_task() here, plus the global `pros::Task ezScreenTask(ez_screen_task);`.
 // All three have been REMOVED for the brain UI.
@@ -209,6 +204,17 @@ void autonomous() {
 //  - initialize() calls pros::lcd::shutdown() and hands the display to the UI engine.
 //  - The task is a global, so it starts before initialize() even runs.
 // Leaving it in means an LLEMU task and the LVGL UI engine both driving the screen.
+
+/**
+ * Simplifies printing tracker values to the brain screen
+ */
+
+/**
+ * Ez screen task
+ * Adding new pages here will let you view them during user control or autonomous
+ * and will help you debug problems you're having
+ */
+
 
 /**
  * Gives you some extras to run in your opcontrol:
@@ -230,8 +236,48 @@ void ez_template_extras() {
     if (master.get_digital_new_press(DIGITAL_X))
       chassis.pid_tuner_toggle();
 
-    // Trigger the selected autonomous routine
-    if (master.get_digital(DIGITAL_B) && master.get_digital(DIGITAL_DOWN)) {
+    // Trigger the selected autonomous routine.
+    // Gated on !DriverModeActive(): in driver mode LEFT is released back to your
+    // subsystems, so without this a driver using LEFT could fire autonomous by
+    // accident.  Outside driver mode LEFT belongs to the UI menu, and the menu
+    // navigating while auton starts does not matter.
+    // Edge-detect the combo ourselves rather than using get_digital_new_press().
+    //
+    // Two reasons:
+    //  1. get_digital_new_press() is CONSUMED by the first caller each press, and
+    //     handle_ctrl_input() already reads LEFT/RIGHT/A/B that way for the menu.
+    //     It runs earlier in the loop, so it eats the press and this never fires.
+    //  2. Plain get_digital() on both would re-fire forever: autonomous() blocks
+    //     the loop, so the instant it returns the combo is still held.
+    //
+    // get_digital() does not get consumed, so tracking the edge here is safe.
+    // HOLD both for AUTON_COMBO_HOLD_MS.  A tap does nothing, so brushing the
+    // buttons while driving cannot start a routine.
+    //
+    // get_digital(), not get_digital_new_press(): a new-press is CONSUMED by the
+    // first caller, and handle_ctrl_input() already reads LEFT/RIGHT/A/B that way
+    // for the menu.  It runs earlier in the loop, so it would eat the press and
+    // this would never fire.
+    static const int AUTON_COMBO_HOLD_MS = 1000;
+    static int  auton_combo_ms    = 0;
+    static bool auton_combo_fired = false;
+
+    bool auton_combo = master.get_digital(DIGITAL_B) && master.get_digital(DIGITAL_LEFT);
+    bool auton_combo_pressed = false;
+
+    if (auton_combo) {
+      auton_combo_ms += ez::util::DELAY_TIME;   // one tick per opcontrol loop
+      if (auton_combo_ms >= AUTON_COMBO_HOLD_MS && !auton_combo_fired) {
+        auton_combo_fired   = true;             // fires once, not every tick
+        auton_combo_pressed = true;
+      }
+    } else {
+      auton_combo_ms    = 0;
+      auton_combo_fired = false;
+    }
+
+    if (!DriverModeActive() && auton_combo_pressed) {
+      master.rumble("-");   // long buzz so you know the combo fired
       pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
       autonomous();
       chassis.drive_brake_set(preference);
@@ -268,79 +314,97 @@ void opcontrol() {
 
   while (true) {
     handle_ctrl_input();
+    ez_template_extras();        // ← keeps DOWN+B auton test and X PID tuner
 
     chassis.opcontrol_arcade_standard(ez::SPLIT);
 
     if (!ctrl_flushed) { ctrl_flushed = true; CtrlFlush(); }
 
     // ── Add your subsystem controls here ──────────────────────────────────
+    // Gated on driver mode: outside it the UI owns LEFT/RIGHT/A/B, so navigating
+    // the auton menu must not be able to spin a motor or fire a piston.
+    if (DriverModeActive()) {
 
-    // Pistons - HOLD to retract, release to extend.  Not a toggle.
-    //  - hold B: HIGH intake retracts  (this is the "middle" position)
-    //  - hold Y: BOTH retract           (the "low" position)
-    //  - release: whatever you were holding down goes back up ("high" position)
-    bool high_want   = !(master.get_digital(DIGITAL_B) || master.get_digital(DIGITAL_Y));
-    bool middle_want = !master.get_digital(DIGITAL_Y);
 
-    // Only write to the solenoid when the state actually changes, rather than
-    // re-sending the same value every 10ms tick.
-    if (high_want != high_intake_extended) {
-      high_intake_extended = high_want;
-      high_intake.set_value(high_want);
-    }
-    if (middle_want != middle_intake_extended) {
-      middle_intake_extended = middle_want;
-      middle_intake.set_value(middle_want);
-    }
+      // Pistons - HOLD to retract, release to extend.  Not a toggle.
+      //  - hold B: HIGH intake retracts  (this is the "middle" position)
+      //  - hold Y: BOTH retract           (the "low" position)
+      //  - release: whatever you were holding down goes back up ("high" position)
+      bool high_want   = !(master.get_digital(DIGITAL_B) || master.get_digital(DIGITAL_Y));
+      bool middle_want = !master.get_digital(DIGITAL_Y);
 
-    // Claw - DOWN arrow TOGGLES it.  Unlike the two above, this one latches:
-    // press once to extend, press again to retract.
-    if (master.get_digital_new_press(DIGITAL_DOWN)) {
-      claw_extended = !claw_extended;
-      claw.set_value(claw_extended);
-    }
+      // Only write to the solenoid when the state actually changes, rather than
+      // re-sending the same value every 10ms tick.
+      if (high_want != high_intake_extended) {
+        high_intake_extended = high_want;
+        high_intake.set_value(high_want);
+      }
+      if (middle_want != middle_intake_extended) {
+        middle_intake_extended = middle_want;
+        middle_intake.set_value(middle_want);
+      }
 
-    // R1 / R2 group - four motors
-    //  - R1: A, B, C forward and D backward
-    //  - R2: every one of them reversed from what R1 does
-    //  - r_motor_b (port 1) is INTERLOCKED.  It runs in every position EXCEPT
-    //    the high state, which is both pistons extended:
-    //        HIGH   - both extended (nothing held) -> stopped
-    //        MIDDLE - high retracted (B held)      -> runs with the group
-    //        LOW    - both retracted (Y held)      -> runs with the group
-    bool port1_enabled = !(high_intake_extended && middle_intake_extended);
+      // Claw - DOWN arrow TOGGLES it.  Unlike the two above, this one latches:
+      // press once to extend, press again to retract.
+      if (master.get_digital_new_press(DIGITAL_DOWN)) {
+        claw_extended = !claw_extended;
+        claw.set_value(claw_extended);
+      }
 
-    if (master.get_digital(DIGITAL_R1)) {
-      r_motor_a.move(R_SPEED);
-      r_motor_b.move(port1_enabled ? R_SPEED : 0);
-      r_motor_c.move(R_SPEED);
-      r_motor_d.move(-R_SPEED);
-    } else if (master.get_digital(DIGITAL_R2)) {
-      r_motor_a.move(-R_SPEED);
-      r_motor_b.move(port1_enabled ? -R_SPEED : 0);
-      r_motor_c.move(-R_SPEED);
-      r_motor_d.move(R_SPEED);
+      // R1 / R2 group - four motors
+      //  - R1: A, B, C forward and D backward
+      //  - R2: every one of them reversed from what R1 does
+      //  - r_motor_b (port 1) is INTERLOCKED.  It runs in every position EXCEPT
+      //    the high state, which is both pistons extended:
+      //        HIGH   - both extended (nothing held) -> stopped
+      //        MIDDLE - high retracted (B held)      -> runs with the group
+      //        LOW    - both retracted (Y held)      -> runs with the group
+      bool port1_enabled = !(high_intake_extended && middle_intake_extended);
+
+      if (master.get_digital(DIGITAL_R1)) {
+        r_motor_a.move(R_SPEED);
+        r_motor_b.move(port1_enabled ? R_SPEED : 0);
+        r_motor_c.move(R_SPEED);
+        r_motor_d.move(-R_SPEED);
+      } else if (master.get_digital(DIGITAL_R2)) {
+        r_motor_a.move(-R_SPEED);
+        r_motor_b.move(port1_enabled ? -R_SPEED : 0);
+        r_motor_c.move(-R_SPEED);
+        r_motor_d.move(R_SPEED);
+      } else {
+        r_motor_a.move(0);
+        r_motor_b.move(0);
+        r_motor_c.move(0);
+        r_motor_d.move(0);
+      }
+
+      // L1 / L2 pair - two motors, always opposite each other
+      //  - L1: A forward, B backward, at full L_SPEED
+      //  - L2: both flipped from what L1 does, at the slower L2_SPEED
+      if (master.get_digital(DIGITAL_L1)) {
+        l_motor_a.move(L_SPEED);
+        l_motor_b.move(-L_SPEED);
+      } else if (master.get_digital(DIGITAL_L2)) {
+        l_motor_a.move(-L2_SPEED);
+        l_motor_b.move(L2_SPEED);
+      } else {
+        l_motor_a.move(0);
+        l_motor_b.move(0);
+      }
+
     } else {
+      // Parked while the UI has the controller.  move(0) rather than skipping,
+      // or a motor holds whatever it was last told to do.
+      l_motor_a.move(0);
+      l_motor_b.move(0);
       r_motor_a.move(0);
       r_motor_b.move(0);
       r_motor_c.move(0);
       r_motor_d.move(0);
-    }
-
-    // L1 / L2 pair - two motors, always opposite each other
-    //  - L1: A forward, B backward, at full L_SPEED
-    //  - L2: both flipped from what L1 does, at the slower L2_SPEED
-    if (master.get_digital(DIGITAL_L1)) {
-      l_motor_a.move(L_SPEED);
-      l_motor_b.move(-L_SPEED);
-    } else if (master.get_digital(DIGITAL_L2)) {
-      l_motor_a.move(-L2_SPEED);
-      l_motor_b.move(L2_SPEED);
-    } else {
-      l_motor_a.move(0);
-      l_motor_b.move(0);
+      // Pistons hold their state and are not re-commanded here.
     }
 
     pros::delay(ez::util::DELAY_TIME);
   }
 }
+

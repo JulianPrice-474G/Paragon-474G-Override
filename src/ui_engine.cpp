@@ -647,6 +647,10 @@ static lv_obj_t* _easter_scr       = nullptr;
 static lv_obj_t* _pre_easter_scr   = nullptr;
 static bool      _easter_triggered = false;
 
+// Set by EngineDriverMode().  Read by the easter egg check below and exposed
+// to user code through DriverModeActive().
+static bool      _driver_mode_active = false;
+
 static void _ctrl_task(void*) {
   while (true) {
     if (_building) { pros::delay(50); continue; }
@@ -656,10 +660,14 @@ static void _ctrl_task(void*) {
       _ctrl_send_all();
     }
 
-    // Easter egg: hold all 4 top triggers for ~600ms
+    // Easter egg: hold all 4 top triggers for ~600ms.
+    // Skipped entirely in driver mode.  The easter screen is dismissed by a
+    // TAP, and driver mode disables touch - so firing it during a match would
+    // leave the brain stuck on it with no way out.
     {
       static int hold = 0;
-      bool combo = _ctrl.get_digital(DIGITAL_L1) && _ctrl.get_digital(DIGITAL_L2) &&
+      bool combo = !_driver_mode_active &&
+                   _ctrl.get_digital(DIGITAL_L1) && _ctrl.get_digital(DIGITAL_L2) &&
                    _ctrl.get_digital(DIGITAL_R1) && _ctrl.get_digital(DIGITAL_R2);
       if (combo) {
         if (++hold == 30 && !_easter_triggered) {
@@ -2049,7 +2057,12 @@ void CtrlFlush() {
 static lv_obj_t* _driver_screen  = nullptr;
 static lv_obj_t* _prev_screen    = nullptr;
 
+bool DriverModeActive() {
+  return _driver_mode_active;
+}
+
 void EngineDriverMode(bool active) {
+  _driver_mode_active = active;
   if (active) {
     _prev_screen = lv_scr_act();
 
