@@ -233,7 +233,12 @@ void ez_template_extras() {
     //  When enabled:
     //  * use A and Y to increment / decrement the constants
     //  * use the arrow keys to navigate the constants
-    if (master.get_digital_new_press(DIGITAL_X))
+    // X is half of the UI's UP+X driver-mode combo, so arming driver mode would
+    // otherwise toggle the PID tuner at the same time.  That is fatal: the tuner
+    // calls pros::lcd::shutdown() and builds its own LLEMU display over the UI
+    // engine's screens, while the engine's background tasks are still writing to
+    // them.  Require X on its own, with UP up.
+    if (master.get_digital_new_press(DIGITAL_X) && !master.get_digital(DIGITAL_UP))
       chassis.pid_tuner_toggle();
 
     // Trigger the selected autonomous routine.

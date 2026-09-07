@@ -2062,6 +2062,18 @@ bool DriverModeActive() {
 }
 
 void EngineDriverMode(bool active) {
+  // Everything below creates LVGL objects and swaps screens from the CALLER's
+  // task (opcontrol, via handle_ctrl_input).  The background tasks - live
+  // labels, blink labels, bars, dots, countdowns, popup labels - touch LVGL
+  // under _mutex.  Without taking it here too, this can allocate and re-parent
+  // objects while one of those is mid-write, which data aborts.
+  //
+  // take() with a generous timeout rather than take(5): losing the toggle is
+  // worse than waiting a few ms.  If it genuinely cannot be had we still set
+  // the flag, so the gate in opcontrol stays correct even if the screen does not
+  // change.
+  bool locked = (_mutex != nullptr) && _mutex->take(100);
+
   _driver_mode_active = active;
   if (active) {
     _prev_screen = lv_scr_act();
@@ -2069,6 +2081,12 @@ void EngineDriverMode(bool active) {
     if (!_driver_screen) {
       _driver_screen = lv_obj_create(nullptr);
       lv_obj_remove_style_all(_driver_screen);
+      // remove_style_all() strips width and height along with every other style
+      // property, leaving the screen content-sized.  Loading a screen with no
+      // valid dimensions as the active screen is not safe - put them back before
+      // lv_scr_load() ever sees it.
+      lv_obj_set_size(_driver_screen, LV_HOR_RES, LV_VER_RES);
+      lv_obj_set_pos(_driver_screen, 0, 0);
       lv_obj_set_style_bg_color(_driver_screen, lv_color_hex(UI_DARK_BG), 0);
       lv_obj_set_style_bg_opa(_driver_screen, LV_OPA_COVER, 0);
       lv_obj_clear_flag(_driver_screen, LV_OBJ_FLAG_SCROLLABLE);
@@ -2104,4 +2122,7 @@ void EngineDriverMode(bool active) {
 
     if (_prev_screen) lv_scr_load(_prev_screen);
   }
+
+  if (locked) _mutex->give();
 }
+
