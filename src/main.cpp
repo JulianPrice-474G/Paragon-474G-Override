@@ -16,16 +16,16 @@ void handle_ctrl_input();
 /////
 // ── L1 / L2 pair - two motors, always spinning opposite each other ──────────
 // TODO: set your real ports
-constexpr int8_t L_MOTOR_A_PORT = 11;
+constexpr int8_t L_MOTOR_A_PORT = 13;
 constexpr int8_t L_MOTOR_B_PORT = 2;
 
 // ── R1 / R2 group - four motors, three one way and the fourth the other ─────
 // TODO: set your real ports.  R_MOTOR_D is the odd one out - it always runs
 // opposite to the other three.
-constexpr int8_t R_MOTOR_A_PORT = -16;
-constexpr int8_t R_MOTOR_B_PORT = -1;   // negative = this motor is mounted backwards
-constexpr int8_t R_MOTOR_C_PORT = 13;  // negative = this motor is mounted backwards
-constexpr int8_t R_MOTOR_D_PORT = 4;
+constexpr int8_t R_MOTOR_A_PORT = 1;
+constexpr int8_t R_MOTOR_B_PORT = 4;   // drop-down intake - cut by the piston interlock
+constexpr int8_t R_MOTOR_C_PORT = 19;
+constexpr int8_t R_MOTOR_D_PORT = 11;  // the one that spins opposite the other two
 
 
 /////
@@ -33,7 +33,7 @@ constexpr int8_t R_MOTOR_D_PORT = 4;
 // - range is 0 to 127, where 127 is full power
 /////
 constexpr int L_SPEED    = 127;      // L1 - full power
-constexpr int L2_SPEED   = L_SPEED * 80 / 100;  // L2 - 80% of L_SPEED (= 101)
+constexpr int L2_SPEED   = L_SPEED * 50 / 100;  // L2 - 50% of L_SPEED (= 63)
 constexpr int R_SPEED = 127;         // R1 / R2 group
 constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can ask for
 
@@ -54,8 +54,9 @@ pros::Motor r_motor_d(R_MOTOR_D_PORT);
 // PNEUMATICS - ADI (3-wire) ports, letters A-H
 /////
 constexpr char HIGH_INTAKE_PORT   = 'F';
-constexpr char MIDDLE_INTAKE_PORT = 'D';
-constexpr char CLAW_PORT          = 'A';  // TODO: set your real ADI port (A-H, D and F are taken)
+constexpr char MIDDLE_INTAKE_PORT = 'E';
+constexpr char CLAW_PORT          = 'C';  // toggled by RIGHT
+constexpr char C_FLIP_PORT        = 'D';  // toggled by DOWN
 
 // Single-acting solenoids.  true = extended, false = retracted.
 // If your pistons turn out to behave backwards, swap these two values - that is
@@ -68,10 +69,10 @@ constexpr bool PISTON_RETRACTED = false;
 pros::adi::DigitalOut high_intake(HIGH_INTAKE_PORT,   PISTON_EXTENDED);
 pros::adi::DigitalOut middle_intake(MIDDLE_INTAKE_PORT, PISTON_EXTENDED);
 
-// Claw starts RETRACTED.  You did not ask for it to default extended like the
-// other two, so this is the odd one out on purpose - flip to PISTON_EXTENDED
-// if it should start out.
-pros::adi::DigitalOut claw(CLAW_PORT, PISTON_RETRACTED);
+// Claw and C-flip both start RETRACTED, unlike the two intake solenoids above.
+// Flip either to PISTON_EXTENDED if it should be out at power-on.
+pros::adi::DigitalOut claw(CLAW_PORT,     PISTON_RETRACTED);
+pros::adi::DigitalOut c_flip(C_FLIP_PORT, PISTON_RETRACTED);
 
 // Software mirror of what each solenoid was last told to do.  A DigitalOut
 // cannot be read back, so this is the only record of piston state - and the
@@ -79,6 +80,7 @@ pros::adi::DigitalOut claw(CLAW_PORT, PISTON_RETRACTED);
 bool high_intake_extended   = true;
 bool middle_intake_extended = true;
 bool claw_extended          = false;
+bool c_flip_extended        = false;
 
 // Chassis constructor
 ez::Drive chassis(
@@ -86,7 +88,7 @@ ez::Drive chassis(
     {-20, -12,},     // Left Chassis Ports (negative port will reverse it!)
     {10, 3,},  // Right Chassis Ports (negative port will reverse it!)
 
-    19,      // IMU Port
+    5,      // IMU Port
     3.125,  // Wheel Diameter (Remember, 4" wheels without screw holes are actually 4.125!)
     360);   // Wheel RPM = cartridge * (motor gear / wheel gear)
 
@@ -351,7 +353,14 @@ void opcontrol() {
 
       // Claw - DOWN arrow TOGGLES it.  Unlike the two above, this one latches:
       // press once to extend, press again to retract.
+      // Toggles: each press flips the solenoid and it stays there.  Safe to read
+      // DOWN and RIGHT with new_press here - handle_ctrl_input() only consumes
+      // LEFT/RIGHT/A/B while driver mode is OFF, and this block is driver-only.
       if (master.get_digital_new_press(DIGITAL_DOWN)) {
+        c_flip_extended = !c_flip_extended;
+        c_flip.set_value(c_flip_extended);
+      }
+      if (master.get_digital_new_press(DIGITAL_RIGHT)) {
         claw_extended = !claw_extended;
         claw.set_value(claw_extended);
       }

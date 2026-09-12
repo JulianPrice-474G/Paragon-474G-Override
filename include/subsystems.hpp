@@ -16,10 +16,12 @@ extern pros::Motor r_motor_d;  // always opposite a, b, c
 // Pneumatics - single-acting solenoids, both default to extended
 extern pros::adi::DigitalOut high_intake;
 extern pros::adi::DigitalOut middle_intake;
-extern pros::adi::DigitalOut claw;
+extern pros::adi::DigitalOut claw;    // port C - toggled by RIGHT
+extern pros::adi::DigitalOut c_flip;  // port D - toggled by DOWN
 extern bool high_intake_extended;
 extern bool middle_intake_extended;
 extern bool claw_extended;
+extern bool c_flip_extended;
 
 // Your other motors, sensors, etc. should go here.  Below are examples
 
