@@ -15,5 +15,3 @@ temp.log
 temp.errors
 *.ini
 .d/
-# Claude Code personal settings
-.claude/settings.local.json

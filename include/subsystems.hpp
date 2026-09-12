@@ -23,6 +23,9 @@ extern bool middle_intake_extended;
 extern bool claw_extended;
 extern bool c_flip_extended;
 
+// AI Vision sensor - smart port 15
+extern pros::AIVision ai_cam;
+
 // Your other motors, sensors, etc. should go here.  Below are examples
 
 // inline pros::Motor intake(1);

@@ -82,6 +82,12 @@ bool middle_intake_extended = true;
 bool claw_extended          = false;
 bool c_flip_extended        = false;
 
+/////
+// AI VISION SENSOR - smart port (not ADI)
+/////
+constexpr int8_t AI_VISION_PORT = 15;
+pros::AIVision ai_cam(AI_VISION_PORT);
+
 // Chassis constructor
 ez::Drive chassis(
     // These are your drive motors, the first motor is used for sensing!
