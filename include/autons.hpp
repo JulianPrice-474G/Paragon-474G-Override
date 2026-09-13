@@ -2,6 +2,16 @@
 
 void default_constants();
 
+// ── Your autons ───────────────────────────────────────────────────────────────
+// These are what the five buttons on the brain actually run.  Write them in
+// src/autons.cpp.  The example routines below are EZ-Template's reference code
+// and are no longer wired to anything - leave them, copy from them, or delete.
+void auto_1();
+void auto_2();
+void auto_3();
+void auto_4();
+void auto_5();
+
 void drive_example();
 void turn_example();
 void drive_and_turn();

@@ -51,6 +51,49 @@ void default_constants() {
 ///
 // Drive Example
 ///
+// ═══════════════════════════════════════════════════════════════════════════
+//  YOUR AUTONS - these are what the five brain buttons run
+// ═══════════════════════════════════════════════════════════════════════════
+
+///
+// Auto 1 - runs when slot 1 is selected on the brain
+///
+void auto_1() {
+  // Your code here.
+}
+
+///
+// Auto 2 - runs when slot 2 is selected on the brain
+///
+void auto_2() {
+  // Your code here.
+}
+
+///
+// Auto 3 - runs when slot 3 is selected on the brain
+///
+void auto_3() {
+  // Your code here.
+}
+
+///
+// Auto 4 - runs when slot 4 is selected on the brain
+///
+void auto_4() {
+  // Your code here.
+}
+
+///
+// Auto 5 - runs when slot 5 is selected on the brain
+///
+void auto_5() {
+  // Your code here.
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  EZ-Template example routines below - reference only, nothing calls these
+// ═══════════════════════════════════════════════════════════════════════════
+
 void drive_example() {
   // The first parameter is target inches
   // The second parameter is max speed the robot will drive at
