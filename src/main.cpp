@@ -106,22 +106,35 @@ ez::Drive chassis(
  * All other competition modes are blocked by initialize; it is recommended
  * to keep execution time for this mode under a few seconds.
  */
+// The screen LLEMU owns.  EnginePause() hands the display back to it so the
+// PID tuner's output is actually visible.
+static lv_obj_t* llemu_screen = nullptr;
+
 void initialize() {
   pros::lcd::initialize();  // required to start LVGL - do not remove, it data aborts
-  // lv_obj_clean() below replaces pros::lcd::shutdown().  lcd_initialize() builds
-  // 8 objects; lcd_shutdown() deletes exactly one and leaks the other seven.
 
-  // Spinner — drawn on the screen LVGL already owns.
-  // Do NOT do lv_obj_create(nullptr) + lv_obj_remove_style_all() + lv_scr_load()
-  // here: remove_style_all() strips the screen's width and height along with
-  // everything else, so that screen never covers the panel.  PROS's loading bar
-  // stays visible underneath it and only the spinner's own pixels paint on top.
-  // lv_scr_act() is already display-sized, so styling it directly works.
-  lv_obj_clean(lv_scr_act());
-  lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(UI_DARK_BG), 0);
-  lv_obj_set_style_bg_opa(lv_scr_act(),   LV_OPA_COVER,             0);
+  // LLEMU's 8 objects live on the screen that is active right now.  Keep a
+  // handle on it and DO NOT destroy them: lv_obj_clean() here would free all 8
+  // while LLEMU went on holding pointers to them, and the next thing to call
+  // pros::lcd::set_text() - EZ-Template's PID tuner - would write into freed
+  // memory and data abort.  lcd_initialize() will not rebuild them either; it
+  // returns early because LLEMU still believes it is initialised.
+  llemu_screen = lv_scr_act();
 
-  lv_obj_t* spinner = lv_spinner_create(lv_scr_act(), 1200, 75);
+  // Spinner goes on a screen of our own, so LLEMU's is left untouched.
+  // remove_style_all() strips width and height along with every other style
+  // property, so set them back explicitly - a screen with no size is what made
+  // an earlier attempt at this fail to cover PROS's loading bar.
+  lv_obj_t* boot = lv_obj_create(nullptr);
+  lv_obj_remove_style_all(boot);
+  lv_obj_set_size(boot, LV_HOR_RES, LV_VER_RES);
+  lv_obj_set_pos(boot, 0, 0);
+  lv_obj_set_style_bg_color(boot, lv_color_hex(UI_DARK_BG), 0);
+  lv_obj_set_style_bg_opa(boot,   LV_OPA_COVER,             0);
+  lv_obj_clear_flag(boot, LV_OBJ_FLAG_SCROLLABLE);
+  lv_scr_load(boot);
+
+  lv_obj_t* spinner = lv_spinner_create(boot, 1200, 75);
   lv_obj_set_size(spinner, 100, 100);
   lv_obj_center(spinner);
   lv_obj_set_style_arc_color(spinner, lv_color_hex(UI_GOLD),   LV_PART_INDICATOR);
@@ -245,7 +258,7 @@ void ez_template_extras() {
       // background tasks - that combination data aborts.  Stand the engine down
       // for as long as the tuner is up, and bring it back when the tuner closes.
       if (!chassis.pid_tuner_enabled()) {
-        EnginePause();
+        EnginePause(llemu_screen);  // show LLEMU's screen, where the tuner prints
         chassis.pid_tuner_enable();
       } else {
         chassis.pid_tuner_disable();

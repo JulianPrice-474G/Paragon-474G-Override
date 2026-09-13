@@ -701,9 +701,9 @@ void EngineDriverMode(bool active);
 // engine's background tasks and parks a blank screen; EngineResume() restores
 // your UI.  Always pair them:
 //
-//   if (!chassis.pid_tuner_enabled()) { EnginePause();  chassis.pid_tuner_enable();  }
+//   if (!chassis.pid_tuner_enabled()) { EnginePause(llemu_screen); chassis.pid_tuner_enable(); }
 //   else                              { chassis.pid_tuner_disable(); EngineResume(); }
-void EnginePause();
+void EnginePause(lv_obj_t* handoff = nullptr);
 void EngineResume();
 bool EnginePaused();
 
