@@ -112,21 +112,14 @@ ez::Drive chassis(
  * All other competition modes are blocked by initialize; it is recommended
  * to keep execution time for this mode under a few seconds.
  */
-// The screen LLEMU owns.  EnginePause() hands the display back to it so the
-// PID tuner's output is actually visible.
-static lv_obj_t* llemu_screen = nullptr;
-
 void initialize() {
   pros::lcd::initialize();  // required to start LVGL - do not remove, it data aborts
 
-  // LLEMU's 8 objects live on the screen that is active right now.  Keep a
-  // handle on it and DO NOT destroy them: lv_obj_clean() here would free all 8
-  // while LLEMU went on holding pointers to them, and the next thing to call
-  // pros::lcd::set_text() - EZ-Template's PID tuner - would write into freed
-  // memory and data abort.  lcd_initialize() will not rebuild them either; it
-  // returns early because LLEMU still believes it is initialised.
-  llemu_screen = lv_scr_act();
-
+  // Leave LLEMU's 8 objects alone.  lv_obj_clean(lv_scr_act()) here would free
+  // them all while LLEMU went on holding pointers to them, and anything that
+  // later called pros::lcd::set_text() would write into freed memory and data
+  // abort.  lcd_initialize() does not rebuild them either - it returns early
+  // because LLEMU still believes it is initialised.
   // Spinner goes on a screen of our own, so LLEMU's is left untouched.
   // remove_style_all() strips width and height along with every other style
   // property, so set them back explicitly - a screen with no size is what made
@@ -254,31 +247,6 @@ void autonomous() {
 void ez_template_extras() {
   // Only run this when not connected to a competition switch
   if (!pros::competition::is_connected()) {
-    // PID Tuner
-    // - after you find values that you're happy with, you'll have to set them in auton.cpp
-
-    // Enable / Disable PID Tuner
-    //  When enabled:
-    //  * use A and Y to increment / decrement the constants
-    //  * use the arrow keys to navigate the constants
-    // X is half of the UI's UP+X driver-mode combo, so arming driver mode would
-    // otherwise toggle the PID tuner at the same time.  That is fatal: the tuner
-    // calls pros::lcd::shutdown() and builds its own LLEMU display over the UI
-    // engine's screens, while the engine's background tasks are still writing to
-    // them.  Require X on its own, with UP up.
-    if (master.get_digital_new_press(DIGITAL_X) && !master.get_digital(DIGITAL_UP)) {
-      // The tuner draws with LLEMU, which cannot coexist with the UI engine's
-      // background tasks - that combination data aborts.  Stand the engine down
-      // for as long as the tuner is up, and bring it back when the tuner closes.
-      if (!chassis.pid_tuner_enabled()) {
-        EnginePause(llemu_screen);  // show LLEMU's screen, where the tuner prints
-        chassis.pid_tuner_enable();
-      } else {
-        chassis.pid_tuner_disable();
-        EngineResume();
-      }
-    }
-
     // Trigger the selected autonomous routine.
     // Gated on !DriverModeActive(): in driver mode LEFT is released back to your
     // subsystems, so without this a driver using LEFT could fire autonomous by
