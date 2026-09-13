@@ -317,6 +317,12 @@ void ez_template_extras() {
 
 void opcontrol() {
   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
+
+  // Cascade holds position when no button is pressed, so a raised lift does not
+  // sag under its own weight.  Set here rather than in initialize() so it is
+  // re-applied every time opcontrol starts, e.g. after an auton test.
+  l_motor_a.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
+  l_motor_b.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
   static bool ctrl_flushed = false;
 
   while (true) {
@@ -402,8 +408,10 @@ void opcontrol() {
         l_motor_a.move(-L2_SPEED);
         l_motor_b.move(L2_SPEED);
       } else {
-        l_motor_a.move(0);
-        l_motor_b.move(0);
+        // brake() engages the brake mode set above.  move(0) would only drop the
+        // voltage to zero, which lets the cascade freewheel back down.
+        l_motor_a.brake();
+        l_motor_b.brake();
       }
 
     } else {
