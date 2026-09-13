@@ -197,11 +197,11 @@ void autonomous() {
   // The number in each case must match the auton_idx you gave that
   // ButtonAdd in build_screens().
   switch (get_selected_auton()) {
-    case 0: drive_example();           break;   // Auto 1
-    case 1: turn_example();            break;   // Auto 2
-    case 2: drive_and_turn();          break;   // Auto 3
-    case 3: wait_until_change_speed(); break;   // Auto 4
-    case 4: swing_example();           break;   // Auto 5
+    case 0: auto_1(); break;
+    case 1: auto_2(); break;
+    case 2: auto_3(); break;
+    case 3: auto_4(); break;
+    case 4: auto_5(); break;
     default:                           break;   // nothing selected
   }
 }
