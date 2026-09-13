@@ -2072,7 +2072,7 @@ bool DriverModeActive() {
 static lv_obj_t* _pause_screen = nullptr;
 static lv_obj_t* _pause_prev   = nullptr;
 
-void EnginePause() {
+void EnginePause(lv_obj_t* handoff) {
   if (_paused) return;
   // Order matters: stop the tasks FIRST, then wait out whichever one is already
   // inside the mutex, and only then touch the screen.  Swapping screens while a
@@ -2092,7 +2092,9 @@ void EnginePause() {
     lv_obj_set_style_bg_opa(_pause_screen, LV_OPA_COVER, 0);
     lv_obj_clear_flag(_pause_screen, LV_OBJ_FLAG_SCROLLABLE);
   }
-  lv_scr_load(_pause_screen);
+  // Hand over to the caller's screen if it gave us one (LLEMU's, for the PID
+  // tuner, so its output is visible), otherwise park our own blank one.
+  lv_scr_load(handoff ? handoff : _pause_screen);
   lv_task_handler();  // make the swap take effect before we return
 }
 
