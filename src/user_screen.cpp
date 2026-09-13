@@ -348,17 +348,24 @@ static void do_imu_reset() { chassis.drive_imu_reset(); }
 
 // Live AI Vision readout.  "--" means the sensor is not reporting - either it
 // is unplugged or it is on a different port than AI_VISION_PORT in main.cpp.
+// When it does see something, show which way to turn to face it: "L 34" means
+// the target sits 34 px left of centre.
 const char* ai_vision_text() {
   static char buf[48];
   int n = ai_cam.get_object_count();
   if (n < 0) {
     snprintf(buf, sizeof(buf), "--  (check port)");
-  } else if (n == 0) {
-    snprintf(buf, sizeof(buf), "0 objects");
-  } else {
-    pros::AIVision::Object o = ai_cam.get_object(0);
-    snprintf(buf, sizeof(buf), "%d seen   id %d", n, (int)o.id);
+    return buf;
   }
+  VisionTarget t = vision_largest();
+  if (!t.found) {
+    snprintf(buf, sizeof(buf), "%d seen, no target", n);
+    return buf;
+  }
+  const char* kind = t.is_color ? "col" : "obj";
+  char dir = (abs(t.offset) <= VISION_ALIGN_TOLERANCE) ? '=' : (t.offset > 0 ? 'R' : 'L');
+  snprintf(buf, sizeof(buf), "%s%d  %c%-3d  %dpx",
+           kind, t.id, dir, abs(t.offset), t.width);
   return buf;
 }
 

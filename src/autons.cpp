@@ -60,6 +60,17 @@ void default_constants() {
 ///
 void auto_1() {
   // Your code here.
+  //
+  // To face the nearest target with the AI Vision sensor:
+  //
+  //   if (vision_align(2000)) {
+  //     // aligned - drive at it, score, whatever
+  //   } else {
+  //     // nothing found within 2 s - fall back to a fixed route
+  //   }
+  //
+  // vision_align() stops the drive before returning either way, and the tuning
+  // constants live at the top of include/vision.hpp.
 }
 
 ///

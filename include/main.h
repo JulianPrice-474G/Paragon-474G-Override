@@ -46,6 +46,7 @@
 // More includes here...
 #include "autons.hpp"
 #include "subsystems.hpp"
+#include "vision.hpp"
 
 // Defined in src/user_screen.cpp
 extern const char* battery_text();
