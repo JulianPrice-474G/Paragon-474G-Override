@@ -117,14 +117,6 @@ void vision_draw_view(lv_obj_t* canvas) {
     lv_obj_set_style_border_color(canvas, lv_color_hex(UI_GRAY), 0);
     lv_obj_set_style_border_width(canvas, 1, 0);
 
-    // Centre line - when a target's box straddles this, vision_align() is happy
-    _view_center = lv_obj_create(canvas);
-    lv_obj_remove_style_all(_view_center);
-    lv_obj_set_size(_view_center, 1, VISION_VIEW_H);
-    lv_obj_set_pos(_view_center, VISION_VIEW_W / 2, 0);
-    lv_obj_set_style_bg_color(_view_center, lv_color_hex(UI_GRAY), 0);
-    lv_obj_set_style_bg_opa(_view_center, LV_OPA_50, 0);
-
     for (int i = 0; i < VISION_VIEW_MAX_BOXES; i++) {
       lv_obj_t* b = lv_obj_create(canvas);
       lv_obj_remove_style_all(b);
@@ -133,6 +125,16 @@ void vision_draw_view(lv_obj_t* canvas) {
       lv_obj_add_flag(b, LV_OBJ_FLAG_HIDDEN);
       _view_boxes[i] = b;
     }
+
+    // Centre line LAST, so it sits above the detection boxes rather than under
+    // them.  2 px and fully opaque: a 1 px half-transparent grey line on a near
+    // black background is invisible on the brain's panel.
+    _view_center = lv_obj_create(canvas);
+    lv_obj_remove_style_all(_view_center);
+    lv_obj_set_size(_view_center, 2, VISION_VIEW_H);
+    lv_obj_set_pos(_view_center, VISION_VIEW_W / 2 - 1, 0);
+    lv_obj_set_style_bg_color(_view_center, lv_color_hex(UI_WHITE), 0);
+    lv_obj_set_style_bg_opa(_view_center, LV_OPA_COVER, 0);
   }
 
   int drawn = 0;
@@ -174,4 +176,6 @@ void vision_draw_view(lv_obj_t* canvas) {
 
   for (int i = drawn; i < VISION_VIEW_MAX_BOXES; i++)
     lv_obj_add_flag(_view_boxes[i], LV_OBJ_FLAG_HIDDEN);
+
+  if (_view_center) lv_obj_move_foreground(_view_center);
 }
