@@ -8,6 +8,7 @@
 // The sensor's frame is 320 px wide, so dead centre is x = 160.  An object's
 // "offset" below is how far right of centre it sits; negative means left.
 constexpr int VISION_FRAME_WIDTH  = 320;
+constexpr int VISION_FRAME_HEIGHT = 240;
 constexpr int VISION_FRAME_CENTER = VISION_FRAME_WIDTH / 2;
 
 // How close to centred counts as aligned, in pixels.  Smaller = fussier and
@@ -49,3 +50,15 @@ VisionTarget vision_largest();
 // there, false on timeout or if nothing was ever seen.  Safe to call from an
 // auton - it stops the drive before returning either way.
 bool vision_align(int timeout_ms = 2000);
+
+/////
+// Live detection view (see the popup on the Status page)
+/////
+// Size of the drawn frame inside the popup, and how many boxes it will show at
+// once.  Keep the same 4:3 ratio as the sensor or the boxes will look stretched.
+constexpr int VISION_VIEW_W         = 264;
+constexpr int VISION_VIEW_H         = 198;
+constexpr int VISION_VIEW_MAX_BOXES = 8;
+
+// Draw callback handed to PopupCanvasAdd() - you should not need to call this.
+void vision_draw_view(lv_obj_t* canvas);

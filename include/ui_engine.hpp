@@ -407,6 +407,27 @@ void PortNames(const char* names[20]);
 //   ButtonAdd("imu", 20,  135, 110, 35, UI_ORANGE, "Reset IMU", "close",
 //          false, -1, 8, do_imu_reset);
 //   ButtonAdd("imu", 170, 135, 110, 35, UI_GREEN,  "Close",     "close");
+// Live CANVAS inside a popup.  The engine creates an empty container at
+// (x, y, w, h) when the popup opens and calls draw(container) every
+// interval_ms until it closes; what goes inside is up to you.  Use it for
+// anything the engine has no widget for.
+//
+// The callback gets the SAME container every tick while open, and a brand new
+// one the next time the popup opens - compare the pointer against your last to
+// know when to rebuild your children:
+//
+//   static lv_obj_t* seen = nullptr;
+//   void my_draw(lv_obj_t* c) {
+//     if (c != seen) { seen = c; /* create children */ }
+//     /* move/hide them */
+//   }
+//
+// Runs under the engine's LVGL mutex, so call LVGL directly - do not lock.
+void PopupCanvasAdd(const char* popup_name,
+                    int x, int y, int w, int h,
+                    void (*draw)(lv_obj_t* canvas),
+                    int interval_ms = 100);
+
 void PopupLabelAdd(const char* popup_name,
                        int x, int y,
                        const char* (*getter)(),

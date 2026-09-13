@@ -567,6 +567,13 @@ void build_screens() {
   PageAdd("auton_5");     // detail page for Auto 5
 
   // ── IMU popup - declared once, opened from every auton page ────────────────
+  // Live AI Vision view.  Not a camera feed - the sensor sends no video over the
+  // smart port - but every detection drawn to scale inside the frame.
+  PopupAdd(      "vision", 466, 232, "AI Vision", UI_DARK_BG, UI_GREEN);
+  PopupCanvasAdd("vision", 100, 30, VISION_VIEW_W, VISION_VIEW_H, vision_draw_view, 100);
+  PopupLabelAdd( "vision", 8, 206, ai_vision_text, 250, 14, UI_WHITE);
+  ButtonAdd(     "vision", 392, 2, 66, 24, UI_GREEN, "Close", "close");
+
   PopupAdd(     "imu", 300, 180, "IMU Position", UI_DARK_BG, UI_GREEN);
   PopupLabelAdd("imu",  85,  62, imu_text, 100, 24, UI_WHITE);   // refreshes 10x/sec
   ButtonAdd(    "imu",  20, 120, 120, 40, UI_ORANGE, "Reset",
@@ -609,6 +616,7 @@ void build_screens() {
   LiveLabelAdd("status_tab", 160, 116, ctrl_battery_text, 1000, 18, UI_GREEN);
   LabelAdd("status_tab",  20, 144, "AI Vision:", 18, UI_GRAY);
   LiveLabelAdd("status_tab", 160, 144, ai_vision_text, 250, 18, UI_GREEN);
+  ButtonAdd("status_tab", 350, 138, 110, 32, UI_GREEN, "Live View", "popup:vision");
 
   // ── Auton detail pages — add your route description, field map, notes, etc. ─
   ButtonAdd("auton_1", 10, 10, 80, 32, UI_GOLD, "< Back", "auton_tab");

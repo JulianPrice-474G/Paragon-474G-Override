@@ -883,6 +883,27 @@ static _PopupLiveLblSpec _popup_live_specs[_MAX_POPUP_LIVE] = {};
 static int               _popup_live_count        = 0;
 static bool              _popup_live_task_started = false;
 
+// A live CANVAS is the same idea as a live label, but the engine only supplies
+// the container and the redraw tick - what goes inside is entirely the caller's.
+// Used for things the engine has no widget for, e.g. plotting AI Vision
+// detections.  The draw callback owns its children; it is handed the same
+// container every tick until the popup closes, and a NEW one next time it opens,
+// so compare the pointer to know when to rebuild.
+#define _MAX_POPUP_CANVAS 4
+
+struct _PopupCanvasSpec {
+  char      popup_name[32];
+  int       x, y, w, h;
+  void      (*draw)(lv_obj_t* canvas);
+  int       interval_ms;
+  lv_obj_t* obj;       // valid only while the popup is open
+  uint32_t  last_ms;
+  bool      active;
+};
+
+static _PopupCanvasSpec _popup_canvas_specs[_MAX_POPUP_CANVAS] = {};
+static int              _popup_canvas_count = 0;
+
 static void _popup_live_task(void*) {
   while (true) {
     if (_building || _paused) { pros::delay(20); continue; }
@@ -902,7 +923,40 @@ static void _popup_live_task(void*) {
       }
       _mutex->give();
     }
+
+    for (int i = 0; i < _popup_canvas_count; i++) {
+      _PopupCanvasSpec& c = _popup_canvas_specs[i];
+      if (!c.active) continue;
+      if (now - c.last_ms < (uint32_t)c.interval_ms) continue;
+      c.last_ms = now;
+      // Same locking rule as live labels: hold the mutex across the null check
+      // and the draw, so the popup cannot be deleted underneath the callback.
+      if (!_mutex || !_mutex->take(10)) continue;
+      lv_obj_t* obj = c.obj;
+      if (obj && c.active && c.draw) c.draw(obj);
+      _mutex->give();
+    }
+
     pros::delay(25);
+  }
+}
+
+void PopupCanvasAdd(const char* popup_name,
+                    int x, int y, int w, int h,
+                    void (*draw)(lv_obj_t* canvas),
+                    int interval_ms) {
+  if (_popup_canvas_count >= _MAX_POPUP_CANVAS || draw == nullptr) return;
+  _PopupCanvasSpec& c = _popup_canvas_specs[_popup_canvas_count++];
+  strncpy(c.popup_name, popup_name, 31); c.popup_name[31] = '\0';
+  c.x = x; c.y = y; c.w = w; c.h = h;
+  c.draw        = draw;
+  c.interval_ms = interval_ms;
+  c.obj         = nullptr;
+  c.active      = false;
+
+  if (!_popup_live_task_started) {
+    static pros::Task task(_popup_live_task, nullptr, "Popup Live");
+    _popup_live_task_started = true;
   }
 }
 
@@ -1032,6 +1086,12 @@ static void _close_active_popup() {
         _popup_live_specs[i].obj   = nullptr;
       }
     }
+    for (int i = 0; i < _popup_canvas_count; i++) {
+      if (strncmp(_popup_canvas_specs[i].popup_name, _active_popup->name, 31) == 0) {
+        _popup_canvas_specs[i].active = false;
+        _popup_canvas_specs[i].obj    = nullptr;
+      }
+    }
     _mutex->give();
   }
   lv_obj_del(_active_popup->widget);
@@ -1113,6 +1173,20 @@ static void _open_popup(const char* name) {
     s.obj     = CreateLabel(pd->widget, s.x, s.y, init ? init : "", s.font_size, s.color);
     s.last_ms = pros::millis();
     s.active  = true;
+  }
+
+  // Activate live canvases registered for this popup
+  for (int i = 0; i < _popup_canvas_count; i++) {
+    _PopupCanvasSpec& c = _popup_canvas_specs[i];
+    if (strncmp(c.popup_name, name, 31) != 0) continue;
+    lv_obj_t* box = lv_obj_create(pd->widget);
+    lv_obj_remove_style_all(box);
+    lv_obj_set_pos(box, c.x, c.y);
+    lv_obj_set_size(box, c.w, c.h);
+    lv_obj_clear_flag(box, LV_OBJ_FLAG_SCROLLABLE);
+    c.obj     = box;
+    c.last_ms = 0;       // draw on the very next tick, no wait
+    c.active  = true;
   }
 
   _active_popup = pd;
