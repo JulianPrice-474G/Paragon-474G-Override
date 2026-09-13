@@ -696,6 +696,17 @@ void EngineDriverMode(bool active);
 //   } else {
 //     intake.move(0);   // parked while the UI has the buttons
 //   }
+// Hand the brain display to another library (EZ-Template's PID tuner, or
+// anything else using LLEMU) without data aborting.  EnginePause() stops the
+// engine's background tasks and parks a blank screen; EngineResume() restores
+// your UI.  Always pair them:
+//
+//   if (!chassis.pid_tuner_enabled()) { EnginePause();  chassis.pid_tuner_enable();  }
+//   else                              { chassis.pid_tuner_disable(); EngineResume(); }
+void EnginePause();
+void EngineResume();
+bool EnginePaused();
+
 bool DriverModeActive();
 
 // ── Misc ───────────────────────────────────────────────────────────────────────

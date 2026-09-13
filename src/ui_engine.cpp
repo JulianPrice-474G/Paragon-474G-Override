@@ -6,6 +6,7 @@
 static pros::Mutex* _mutex          = nullptr;
 static int          _selected_auton = -1;   // set by ButtonAdd(auton_idx) or _on_auton_btn
 static bool         _building       = true; // true during build_screens() — background tasks skip LVGL calls
+static bool         _paused         = false;// true while EnginePause() has handed the display to someone else
 static uint32_t     _build_last_yield = 0;
 
 // Drive LVGL directly every 15ms during build — lcd::shutdown() deleted the
@@ -570,7 +571,7 @@ static bool     _live_task_started         = false;
 // Background task — checks each live label and calls its getter when due.
 static void _live_label_task(void*) {
   while (true) {
-    if (_building) { pros::delay(20); continue; }
+    if (_building || _paused) { pros::delay(20); continue; }
     uint32_t now = pros::millis();
     for (int i = 0; i < _live_lbl_count; i++) {
       _LiveLbl& ll = _live_lbls[i];
@@ -653,7 +654,7 @@ static bool      _driver_mode_active = false;
 
 static void _ctrl_task(void*) {
   while (true) {
-    if (_building) { pros::delay(50); continue; }
+    if (_building || _paused) { pros::delay(50); continue; }
     uint32_t now = pros::millis();
     if (_ctrl_dirty || now - _ctrl_last_send >= _CTRL_REFRESH_MS) {
       _ctrl_dirty = false;
@@ -795,7 +796,7 @@ static bool      _blink_task_started          = false;
 
 static void _blink_task(void*) {
   while (true) {
-    if (_building) { pros::delay(20); continue; }
+    if (_building || _paused) { pros::delay(20); continue; }
     uint32_t now = pros::millis();
     for (int i = 0; i < _blink_lbl_count; i++) {
       _BlinkLbl& bl = _blink_lbls[i];
@@ -884,7 +885,7 @@ static bool              _popup_live_task_started = false;
 
 static void _popup_live_task(void*) {
   while (true) {
-    if (_building) { pros::delay(20); continue; }
+    if (_building || _paused) { pros::delay(20); continue; }
     uint32_t now = pros::millis();
     for (int i = 0; i < _popup_live_count; i++) {
       _PopupLiveLblSpec& s = _popup_live_specs[i];
@@ -1317,7 +1318,7 @@ static bool     _live_bar_task_started     = false;
 
 static void _live_bar_task(void*) {
   while (true) {
-    if (_building) { pros::delay(20); continue; }
+    if (_building || _paused) { pros::delay(20); continue; }
     uint32_t now = pros::millis();
     for (int i = 0; i < _live_bar_count; i++) {
       _LiveBar& b = _live_bars[i];
@@ -1510,7 +1511,7 @@ static bool     _live_dot_task_started     = false;
 
 static void _live_dot_task(void*) {
   while (true) {
-    if (_building) { pros::delay(20); continue; }
+    if (_building || _paused) { pros::delay(20); continue; }
     uint32_t now = pros::millis();
     for (int i = 0; i < _live_dot_count; i++) {
       _LiveDot& d = _live_dots[i];
@@ -1709,7 +1710,7 @@ void SliderAdd(const char* page,
 
 static void _countdown_task(void*) {
   while (true) {
-    if (_building) { pros::delay(20); continue; }
+    if (_building || _paused) { pros::delay(20); continue; }
     uint32_t now = pros::millis();
     for (int i = 0; i < _countdown_count; i++) {
       _CountdownRec& c = _countdowns[i];
@@ -2060,6 +2061,49 @@ static lv_obj_t* _prev_screen    = nullptr;
 bool DriverModeActive() {
   return _driver_mode_active;
 }
+
+// ── Handing the display to another library ────────────────────────────────────
+// EZ-Template's PID tuner (and anything else built on LLEMU) calls
+// pros::lcd::shutdown() and then draws its own display.  If the engine's seven
+// background tasks keep writing LVGL objects underneath that, the brain data
+// aborts.  EnginePause() stops them and parks a throwaway screen so the other
+// library builds on that instead of on one of ours; EngineResume() puts ours
+// back.  Always pair them.
+static lv_obj_t* _pause_screen = nullptr;
+static lv_obj_t* _pause_prev   = nullptr;
+
+void EnginePause() {
+  if (_paused) return;
+  // Order matters: stop the tasks FIRST, then wait out whichever one is already
+  // inside the mutex, and only then touch the screen.  Swapping screens while a
+  // task is mid-write is the exact race this exists to prevent.
+  _paused = true;
+  if (_mutex && _mutex->take(200)) _mutex->give();
+
+  _pause_prev = lv_scr_act();
+  if (!_pause_screen) {
+    _pause_screen = lv_obj_create(nullptr);
+    lv_obj_remove_style_all(_pause_screen);
+    // remove_style_all() strips width and height - put them back before
+    // lv_scr_load() ever sees this screen.
+    lv_obj_set_size(_pause_screen, LV_HOR_RES, LV_VER_RES);
+    lv_obj_set_pos(_pause_screen, 0, 0);
+    lv_obj_set_style_bg_color(_pause_screen, lv_color_hex(UI_DARK_BG), 0);
+    lv_obj_set_style_bg_opa(_pause_screen, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(_pause_screen, LV_OBJ_FLAG_SCROLLABLE);
+  }
+  lv_scr_load(_pause_screen);
+  lv_task_handler();  // make the swap take effect before we return
+}
+
+void EngineResume() {
+  if (!_paused) return;
+  if (_pause_prev) lv_scr_load(_pause_prev);
+  lv_obj_invalidate(lv_scr_act());
+  _paused = false;  // last, so no task draws until our screen is back up
+}
+
+bool EnginePaused() { return _paused; }
 
 void EngineDriverMode(bool active) {
   // Everything below creates LVGL objects and swaps screens from the CALLER's

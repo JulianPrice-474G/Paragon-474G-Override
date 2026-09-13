@@ -240,8 +240,18 @@ void ez_template_extras() {
     // calls pros::lcd::shutdown() and builds its own LLEMU display over the UI
     // engine's screens, while the engine's background tasks are still writing to
     // them.  Require X on its own, with UP up.
-    if (master.get_digital_new_press(DIGITAL_X) && !master.get_digital(DIGITAL_UP))
-      chassis.pid_tuner_toggle();
+    if (master.get_digital_new_press(DIGITAL_X) && !master.get_digital(DIGITAL_UP)) {
+      // The tuner draws with LLEMU, which cannot coexist with the UI engine's
+      // background tasks - that combination data aborts.  Stand the engine down
+      // for as long as the tuner is up, and bring it back when the tuner closes.
+      if (!chassis.pid_tuner_enabled()) {
+        EnginePause();
+        chassis.pid_tuner_enable();
+      } else {
+        chassis.pid_tuner_disable();
+        EngineResume();
+      }
+    }
 
     // Trigger the selected autonomous routine.
     // Gated on !DriverModeActive(): in driver mode LEFT is released back to your
