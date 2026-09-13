@@ -144,6 +144,13 @@ void initialize() {
   master.rumble(chassis.drive_imu_calibrated() ? "." : "---");
   // ─────────────────────────────────────────────────────────────────────────────
 
+  // Tell the AI Vision sensor what to look for.  Harmless if it is unplugged -
+  // the calls just return PROS_ERR and ai_vision_text() shows "--".
+  ai_cam.enable_detection_types(pros::AivisionModeType::tags,
+                                pros::AivisionModeType::colors,
+                                pros::AivisionModeType::objects);
+  ai_cam.set_tag_family(pros::AivisionTagFamily::tag_16H5);
+
   EngineInit();
   build_screens();  // sets up brain screen + initial controller display
   CtrlFlush();

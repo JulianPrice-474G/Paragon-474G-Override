@@ -50,6 +50,7 @@
 // Defined in src/user_screen.cpp
 extern const char* battery_text();
 extern const char* ctrl_battery_text();
+extern const char* ai_vision_text();
 /**
  * If you find doing pros::Motor() to be tedious and you'd prefer just to do
  * Motor, you can use the namespace with the following commented out line.

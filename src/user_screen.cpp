@@ -346,6 +346,22 @@ const char* imu_text() {
 // Zeroes the IMU.  Wired to the Reset button inside that popup.
 static void do_imu_reset() { chassis.drive_imu_reset(); }
 
+// Live AI Vision readout.  "--" means the sensor is not reporting - either it
+// is unplugged or it is on a different port than AI_VISION_PORT in main.cpp.
+const char* ai_vision_text() {
+  static char buf[48];
+  int n = ai_cam.get_object_count();
+  if (n < 0) {
+    snprintf(buf, sizeof(buf), "--  (check port)");
+  } else if (n == 0) {
+    snprintf(buf, sizeof(buf), "0 objects");
+  } else {
+    pros::AIVision::Object o = ai_cam.get_object(0);
+    snprintf(buf, sizeof(buf), "%d seen   id %d", n, (int)o.id);
+  }
+  return buf;
+}
+
 const char* selected_auton_text() {
   static char buf[32];
   static const char* names[] = { "Auto 1", "Auto 2", "Auto 3", "Auto 4", "Auto 5" };
@@ -584,6 +600,8 @@ void build_screens() {
   LiveLabelAdd("status_tab", 200, 88, battery_text, 500, 18, UI_GREEN);
   LabelAdd("status_tab",  20, 116, "Controller:", 18, UI_GRAY);
   LiveLabelAdd("status_tab", 160, 116, ctrl_battery_text, 1000, 18, UI_GREEN);
+  LabelAdd("status_tab",  20, 144, "AI Vision:", 18, UI_GRAY);
+  LiveLabelAdd("status_tab", 160, 144, ai_vision_text, 250, 18, UI_GREEN);
 
   // ── Auton detail pages — add your route description, field map, notes, etc. ─
   ButtonAdd("auton_1", 10, 10, 80, 32, UI_GOLD, "< Back", "auton_tab");
