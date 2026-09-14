@@ -452,12 +452,12 @@ void opcontrol() {
       //        LOW    - both retracted (Y held)      -> runs with the group
       bool port1_enabled = !(high_intake_extended && middle_intake_extended);
 
-      if (master.get_digital(DIGITAL_R1)) {
+      if (master.get_digital(DIGITAL_R2)) {
         r_motor_a.move(R_SPEED);
         r_motor_b.move(port1_enabled ? R_SPEED : 0);
         r_motor_c.move(R_SPEED);
         r_motor_d.move(-R_SPEED);
-      } else if (master.get_digital(DIGITAL_R2)) {
+      } else if (master.get_digital(DIGITAL_R1)) {
         r_motor_a.move(-R_SPEED);
         r_motor_b.move(port1_enabled ? -R_SPEED : 0);
         r_motor_c.move(-R_SPEED);
