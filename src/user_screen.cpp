@@ -324,6 +324,30 @@ static bool _driver_mode_combo_fired() {
   return false;
 }
 
+// Cascade diagnostics for the controller's middle row while in driver mode.
+// Temperature of each cascade motor, then their COMBINED current draw.
+//
+// What to look for:
+//  - Temps climbing past ~55C means the motors are derating and the cascade
+//    will feel weak.  Holding a raised lift is what causes this; moving is not.
+//  - Amps while sitting still and holding tells you how hard gravity is pulling.
+//    Near 0 means the gearing holds it and BRAKE_HOLD costs nothing.
+//  - High amps while the shaft is NOT moving means the two motors are fighting
+//    each other - one is mounted the wrong way round.
+static const char* ctrl_cascade_text() {
+  static char buf[20];
+  double ta = l_motor_a.get_temperature();
+  double tb = l_motor_b.get_temperature();
+  int    ca = l_motor_a.get_current_draw();   // mA
+  int    cb = l_motor_b.get_current_draw();
+  if (ta < 0) ta = 0;   // PROS_ERR_F when the motor is not plugged in
+  if (tb < 0) tb = 0;
+  if (ca < 0) ca = 0;
+  if (cb < 0) cb = 0;
+  snprintf(buf, sizeof(buf), "%d/%dC %.1fA", (int)ta, (int)tb, (ca + cb) / 1000.0);
+  return buf;
+}
+
 const char* battery_text() {
   static char buf[20];
   snprintf(buf, sizeof(buf), "Bat: %d%%", (int)pros::battery::get_capacity());
@@ -485,6 +509,7 @@ void handle_ctrl_input() {
     CtrlRumble(driver_mode ? "-" : ".");
     if (driver_mode) {
       CtrlLabel(0, "* DRIVER MODE *");  // confirm to driver that mode is active
+      CtrlLive(1, ctrl_cascade_text, 500);  // cascade temps + current
       CtrlLabel(2, "hold UP+X 1s");
     } else {
       ctrl_state = CTRL_HOME;  // always return to home when exiting driver mode
