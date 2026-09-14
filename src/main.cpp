@@ -98,6 +98,25 @@ bool middle_intake_extended = true;
 bool claw_extended          = false;
 bool c_flip_extended        = false;
 
+/////
+// CASCADE POSITION SOURCE
+/////
+// Everything that needs to know where the cascade is calls this, so swapping
+// the motor encoder for a rotation sensor is a change to this function alone.
+//
+// To switch to a rotation sensor:
+//   1. constexpr int8_t CASCADE_ROT_PORT = 6;   // negative reverses it
+//      pros::Rotation cascade_rot(CASCADE_ROT_PORT);
+//   2. return cascade_rot.get_position() / 100.0;
+//
+// NOTE the /100: pros::Rotation::get_position() returns CENTIdegrees, while
+// pros::Motor::get_position() returns degrees.  Without dividing, every error
+// is 100x too big and CASCADE_HOLD_KP slams the motors to the power cap.
+// Use get_position() (continuous) and not get_angle(), which wraps at 360.
+double cascade_position() {
+  return l_motor_a.get_position();
+}
+
 // Cascade hold state.  cascade_last_err is read by the controller readout in
 // user_screen.cpp so you can see the error while tuning KP/KD.
 bool   cascade_holding  = false;
@@ -444,11 +463,11 @@ void opcontrol() {
         // Latch the target the first tick after the buttons are released.
         if (!cascade_holding) {
           cascade_holding  = true;
-          cascade_target   = l_motor_a.get_position();
+          cascade_target   = cascade_position();
           cascade_last_err = 0;
         }
 
-        double pos = l_motor_a.get_position();
+        double pos = cascade_position();
         if (!(pos > -1e8 && pos < 1e8)) {
           // PROS_ERR_F is a NaN and every comparison with it is false, so test
           // for a GOOD reading.  With no encoder there is nothing to hold to.
