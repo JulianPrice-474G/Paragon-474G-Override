@@ -23,6 +23,11 @@ extern bool middle_intake_extended;
 extern bool claw_extended;
 extern bool c_flip_extended;
 
+// Cascade hold - see the CASCADE_HOLD_* constants at the top of main.cpp
+extern bool   cascade_holding;
+extern double cascade_target;
+extern double cascade_last_err;
+
 // AI Vision sensor - smart port 15
 extern pros::AIVision ai_cam;
 

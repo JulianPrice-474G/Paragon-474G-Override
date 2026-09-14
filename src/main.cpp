@@ -37,6 +37,22 @@ constexpr int L2_SPEED   = L_SPEED * 50 / 100;  // L2 - 50% of L_SPEED (= 63)
 constexpr int R_SPEED = 127;         // R1 / R2 group
 constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can ask for
 
+/////
+// CASCADE HOLD - CHANGE THESE
+/////
+// Replaces BRAKE_HOLD.  BRAKE_HOLD runs inside each motor's own firmware
+// against its own encoder, so two motors on one shaft latch different targets
+// and fight each other for ever.  This is one PD loop reading ONE encoder,
+// sending ONE number to both motors - they cannot disagree, and they split the
+// load instead of one carrying it.
+//
+// Tune KP first with KD at 0: raise it until the cascade stops sagging, and
+// back it off if it buzzes or bounces.  Then add a little KD to settle it.
+constexpr double CASCADE_HOLD_KP       = 2.0;
+constexpr double CASCADE_HOLD_KD       = 0.0;
+constexpr int    CASCADE_HOLD_MAX      = 60;  // power cap, so a bad target cannot cook the motors
+constexpr double CASCADE_HOLD_DEADBAND = 2.0; // degrees of slop before correcting, stops buzzing
+
 // L1 / L2 pair - these two ALWAYS spin opposite each other.
 // The opposite direction is commanded in code (one gets +speed, the other
 // -speed), not baked into a negative port, so the relationship is visible
@@ -81,6 +97,12 @@ bool high_intake_extended   = true;
 bool middle_intake_extended = true;
 bool claw_extended          = false;
 bool c_flip_extended        = false;
+
+// Cascade hold state.  cascade_last_err is read by the controller readout in
+// user_screen.cpp so you can see the error while tuning KP/KD.
+bool   cascade_holding  = false;
+double cascade_target   = 0;
+double cascade_last_err = 0;
 
 /////
 // AI VISION SENSOR - smart port (not ADI)
@@ -326,13 +348,10 @@ void opcontrol() {
   // sag under its own weight.  Set here rather than in initialize() so it is
   // re-applied every time opcontrol starts, e.g. after an auton test.
   //
-  // Only ONE motor holds.  BRAKE_HOLD runs a position PID against that motor's
-  // OWN encoder, so two motors holding the same shaft latch two slightly
-  // different targets and then push against each other for ever - measured at
-  // 0.9 A with the cascade resting on its bottom stop, load fully supported.
-  // The second motor coasts and is carried along by the shaft.  They still
-  // share the work whenever they are actually driven.
-  l_motor_a.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
+  // Both COAST: holding is done by our own PD loop below, which commands
+  // voltage directly.  Leaving either on BRAKE_HOLD would put the motor's
+  // internal position PID back in the fight.
+  l_motor_a.set_brake_mode(pros::E_MOTOR_BRAKE_COAST);
   l_motor_b.set_brake_mode(pros::E_MOTOR_BRAKE_COAST);
   static bool ctrl_flushed = false;
 
@@ -413,21 +432,51 @@ void opcontrol() {
       //  - L1: A forward, B backward, at full L_SPEED
       //  - L2: both flipped from what L1 does, at the slower L2_SPEED
       if (master.get_digital(DIGITAL_L1)) {
+        cascade_holding = false;  // re-latch the target when the button is let go
         l_motor_a.move(L_SPEED);
         l_motor_b.move(-L_SPEED);
       } else if (master.get_digital(DIGITAL_L2)) {
+        cascade_holding = false;
         l_motor_a.move(-L2_SPEED);
         l_motor_b.move(L2_SPEED);
       } else {
-        // Only A brakes - see the brake-mode comment at the top of opcontrol().
-        // B is left at zero voltage so it free-wheels instead of fighting A.
-        l_motor_a.brake();
-        l_motor_b.move(0);
+        // Idle: hold position with one PD loop driving both motors.
+        // Latch the target the first tick after the buttons are released.
+        if (!cascade_holding) {
+          cascade_holding  = true;
+          cascade_target   = l_motor_a.get_position();
+          cascade_last_err = 0;
+        }
+
+        double pos = l_motor_a.get_position();
+        if (!(pos > -1e8 && pos < 1e8)) {
+          // PROS_ERR_F is a NaN and every comparison with it is false, so test
+          // for a GOOD reading.  With no encoder there is nothing to hold to.
+          l_motor_a.move(0);
+          l_motor_b.move(0);
+        } else {
+          double err = cascade_target - pos;
+          double d   = err - cascade_last_err;
+          cascade_last_err = err;
+
+          int out = 0;
+          if (fabs(err) > CASCADE_HOLD_DEADBAND)
+            out = (int)(err * CASCADE_HOLD_KP + d * CASCADE_HOLD_KD);
+
+          if (out >  CASCADE_HOLD_MAX) out =  CASCADE_HOLD_MAX;
+          if (out < -CASCADE_HOLD_MAX) out = -CASCADE_HOLD_MAX;
+
+          // Same number to both, opposite signs - they are mounted opposed, so
+          // this makes them pull together rather than against each other.
+          l_motor_a.move(out);
+          l_motor_b.move(-out);
+        }
       }
 
     } else {
       // Parked while the UI has the controller.  move(0) rather than skipping,
       // or a motor holds whatever it was last told to do.
+      cascade_holding = false;  // out of driver mode: drop the hold target
       l_motor_a.move(0);
       l_motor_b.move(0);
       r_motor_a.move(0);

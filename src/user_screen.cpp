@@ -350,7 +350,11 @@ static const char* ctrl_cascade_text() {
     snprintf(buf, sizeof(buf), "cascade: no motor");
     return buf;
   }
-  snprintf(buf, sizeof(buf), "%d/%dC %.1fA", (int)ta, (int)tb, (ca + cb) / 1000.0);
+  // "e" is the cascade hold error in degrees - watch it while tuning
+  // CASCADE_HOLD_KP.  It should sit inside the deadband and not drift.
+  snprintf(buf, sizeof(buf), "%d/%dC %.1fA e%d",
+           (int)ta, (int)tb, (ca + cb) / 1000.0,
+           cascade_holding ? (int)cascade_last_err : 0);
   return buf;
 }
 
