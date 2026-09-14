@@ -352,12 +352,11 @@ static const char* ctrl_cascade_text() {
   }
   // "e" is the cascade hold error in degrees - watch it while tuning
   // CASCADE_HOLD_KP.  It should sit inside the deadband and not drift.
-  // "p" is the raw cascade position in degrees - read it off here when you are
-  // noting down macro heights.  "e" is the hold error while holding.
-  snprintf(buf, sizeof(buf), "%d/%dC %.1fA p%d e%d",
+  // "p" is the raw cascade position in degrees from the rotation sensor - read
+  // it off here when you are noting down macro heights.
+  snprintf(buf, sizeof(buf), "%d/%dC %.1fA p%d",
            (int)ta, (int)tb, (ca + cb) / 1000.0,
-           (int)cascade_position(),
-           cascade_holding ? (int)cascade_last_err : 0);
+           (int)cascade_position());
   return buf;
 }
 
