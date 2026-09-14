@@ -625,6 +625,17 @@ static pros::Controller _ctrl(pros::E_CONTROLLER_MASTER);
 
 static char _ctrl_text[3][20]  = {};   // text for each row (%-19s padded)
 static bool _ctrl_active[3]    = {};   // whether row has content to display
+
+// A row driven by a getter instead of fixed text.  CtrlLive() registers one
+// here; the controller task re-reads it on its own interval.  Writing static
+// text to a row with CtrlLabel()/CtrlLabelFmt() cancels its getter, which is
+// the behaviour the header documents.
+struct _CtrlLiveSpec {
+  const char* (*getter)();
+  int      interval_ms;
+  uint32_t last_ms;
+};
+static _CtrlLiveSpec _ctrl_live[3] = {};
 static bool _ctrl_dirty        = false;
 static bool _ctrl_task_started = false;
 static uint32_t _ctrl_last_send = 0;
@@ -656,6 +667,24 @@ static void _ctrl_task(void*) {
   while (true) {
     if (_building || _paused) { pros::delay(50); continue; }
     uint32_t now = pros::millis();
+    // Re-read any live rows first, so a change is picked up in the same pass
+    // that sends it rather than waiting for the next one.
+    for (int row = 0; row < 3; row++) {
+      _CtrlLiveSpec& ls = _ctrl_live[row];
+      if (!ls.getter) continue;
+      if (now - ls.last_ms < (uint32_t)ls.interval_ms) continue;
+      ls.last_ms = now;
+      const char* text = ls.getter();
+      if (!text) continue;
+      char padded[20];
+      snprintf(padded, sizeof(padded), "%-19s", text);
+      if (strncmp(padded, _ctrl_text[row], sizeof(padded)) != 0) {
+        strncpy(_ctrl_text[row], padded, sizeof(_ctrl_text[row]) - 1);
+        _ctrl_text[row][sizeof(_ctrl_text[row]) - 1] = '\0';
+        _ctrl_dirty = true;   // only resend when the text actually changed
+      }
+    }
+
     if (_ctrl_dirty || now - _ctrl_last_send >= _CTRL_REFRESH_MS) {
       _ctrl_dirty = false;
       _ctrl_send_all();
@@ -728,6 +757,7 @@ static void _start_ctrl_task() {
 // (clear + all rows) from the background task so every row arrives reliably.
 void CtrlLabel(int row, const char* text) {
   if (row < 0 || row > 2) return;
+  _ctrl_live[row].getter = nullptr;  // static text cancels any live getter
   snprintf(_ctrl_text[row], sizeof(_ctrl_text[row]), "%-19s", text ? text : "");
   _ctrl_active[row] = true;
   _ctrl_dirty = true;
@@ -742,6 +772,7 @@ void CtrlLabelFmt(int row, const char* fmt, ...) {
   va_start(args, fmt);
   vsnprintf(buf, sizeof(buf), fmt, args);
   va_end(args);
+  _ctrl_live[row].getter = nullptr;  // static text cancels any live getter
   snprintf(_ctrl_text[row], sizeof(_ctrl_text[row]), "%-19s", buf);
   _ctrl_active[row] = true;
   _ctrl_dirty = true;
@@ -751,19 +782,26 @@ void CtrlLabelFmt(int row, const char* fmt, ...) {
 // CtrlLive: kept for API compatibility — schedules a one-time write.
 void CtrlLive(int row, const char* (*getter)(), int interval_ms) {
   if (row < 0 || row > 2 || !getter) return;
+  if (interval_ms < 50) interval_ms = 50;   // the controller link cannot go faster
   const char* text = getter();
   snprintf(_ctrl_text[row], sizeof(_ctrl_text[row]), "%-19s", text ? text : "");
   _ctrl_active[row] = true;
   _ctrl_dirty = true;
+  // Store the getter so the controller task keeps re-reading it.  Without this
+  // the row shows whatever the first call returned, for ever.
+  _ctrl_live[row].getter      = getter;
+  _ctrl_live[row].interval_ms = interval_ms;
+  _ctrl_live[row].last_ms     = pros::millis();
   _start_ctrl_task();
 }
 
 // Clear one row (or all rows if row == -1).
 void CtrlClear(int row) {
   if (row == -1) {
-    for (int i = 0; i < 3; i++) { _ctrl_active[i] = false; }
+    for (int i = 0; i < 3; i++) { _ctrl_active[i] = false; _ctrl_live[i].getter = nullptr; }
   } else if (row >= 0 && row <= 2) {
     _ctrl_active[row] = false;
+    _ctrl_live[row].getter = nullptr;
   }
   _ctrl_dirty = true;
 }

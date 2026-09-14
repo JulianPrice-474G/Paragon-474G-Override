@@ -340,10 +340,16 @@ static const char* ctrl_cascade_text() {
   double tb = l_motor_b.get_temperature();
   int    ca = l_motor_a.get_current_draw();   // mA
   int    cb = l_motor_b.get_current_draw();
-  if (ta < 0) ta = 0;   // PROS_ERR_F when the motor is not plugged in
-  if (tb < 0) tb = 0;
-  if (ca < 0) ca = 0;
-  if (cb < 0) cb = 0;
+
+  // get_temperature() returns PROS_ERR_F - a NaN - when the motor is missing,
+  // and every comparison against NaN is false, so test for a GOOD value rather
+  // than a bad one.  Otherwise an unplugged motor prints garbage instead of
+  // telling you it is unplugged.
+  bool ok = (ta > 0) && (tb > 0) && (ca >= 0) && (cb >= 0);
+  if (!ok) {
+    snprintf(buf, sizeof(buf), "cascade: no motor");
+    return buf;
+  }
   snprintf(buf, sizeof(buf), "%d/%dC %.1fA", (int)ta, (int)tb, (ca + cb) / 1000.0);
   return buf;
 }
