@@ -48,6 +48,11 @@ constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can as
 //
 // Tune KP first with KD at 0: raise it until the cascade stops sagging, and
 // back it off if it buzzes or bounces.  Then add a little KD to settle it.
+//
+// NOTE: these were tuned against the MOTOR encoder.  The rotation sensor reads
+// the SHAFT, so the same movement is fewer degrees by the gear ratio and every
+// error is correspondingly smaller - KP almost certainly needs raising.  Watch
+// the "e" value on the controller while you retune.
 constexpr double CASCADE_HOLD_KP       = 2.0;
 constexpr double CASCADE_HOLD_KD       = 0.0;
 constexpr int    CASCADE_HOLD_MAX      = 60;  // power cap, so a bad target cannot cook the motors
@@ -114,7 +119,16 @@ bool c_flip_extended        = false;
 // is 100x too big and CASCADE_HOLD_KP slams the motors to the power cap.
 // Use get_position() (continuous) and not get_angle(), which wraps at 360.
 double cascade_position() {
-  return l_motor_a.get_position();
+  // /100 because Rotation::get_position() is in CENTIdegrees while
+  // Motor::get_position() is in degrees.  get_position() and not get_angle():
+  // get_angle() wraps at 360 and the cascade would appear to teleport.
+  double deg = cascade_rot.get_position() / 100.0;
+
+  // PROS_ERR when the sensor is missing or unplugged mid-match.  Fall back to
+  // the motor encoder rather than handing the hold loop a garbage target -
+  // less accurate, but it keeps holding instead of slamming to the power cap.
+  if (cascade_rot.get_position() == PROS_ERR) return l_motor_a.get_position();
+  return deg;
 }
 
 // Cascade hold state.  cascade_last_err is read by the controller readout in
@@ -126,6 +140,14 @@ double cascade_last_err = 0;
 /////
 // AI VISION SENSOR - smart port (not ADI)
 /////
+/////
+// CASCADE ROTATION SENSOR - smart port
+/////
+// Put a minus in front of the port if it counts backwards (raising the cascade
+// must make the number go UP, or the hold loop will drive the wrong way).
+constexpr int8_t CASCADE_ROT_PORT = 14;
+pros::Rotation cascade_rot(CASCADE_ROT_PORT);
+
 constexpr int8_t AI_VISION_PORT = 15;
 pros::AIVision ai_cam(AI_VISION_PORT);
 
