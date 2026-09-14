@@ -38,25 +38,16 @@ constexpr int R_SPEED = 127;         // R1 / R2 group
 constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can ask for
 
 /////
-// CASCADE HOLD - CHANGE THESE
+// CASCADE HOLD (currently unused - kept for the macro work)
 /////
-// Replaces BRAKE_HOLD.  BRAKE_HOLD runs inside each motor's own firmware
-// against its own encoder, so two motors on one shaft latch different targets
-// and fight each other for ever.  This is one PD loop reading ONE encoder,
-// sending ONE number to both motors - they cannot disagree, and they split the
-// load instead of one carrying it.
-//
-// Tune KP first with KD at 0: raise it until the cascade stops sagging, and
-// back it off if it buzzes or bounces.  Then add a little KD to settle it.
-//
-// NOTE: these were tuned against the MOTOR encoder.  The rotation sensor reads
-// the SHAFT, so the same movement is fewer degrees by the gear ratio and every
-// error is correspondingly smaller - KP almost certainly needs raising.  Watch
-// the "e" value on the controller while you retune.
+// These belong to a shared PD hold that drove both motors from one position
+// reading.  It is not wired up: the cascade currently uses the motors' own
+// BRAKE_HOLD (see opcontrol()).  Left here because the macro system will want
+// a position controller, and this is most of one.
 constexpr double CASCADE_HOLD_KP       = 2.0;
 constexpr double CASCADE_HOLD_KD       = 0.0;
-constexpr int    CASCADE_HOLD_MAX      = 60;  // power cap, so a bad target cannot cook the motors
-constexpr double CASCADE_HOLD_DEADBAND = 2.0; // degrees of slop before correcting, stops buzzing
+constexpr int    CASCADE_HOLD_MAX      = 60;  // power cap
+constexpr double CASCADE_HOLD_DEADBAND = 2.0; // degrees of slop before correcting
 
 // L1 / L2 pair - these two ALWAYS spin opposite each other.
 // The opposite direction is commanded in code (one gets +speed, the other
@@ -106,18 +97,8 @@ bool c_flip_extended        = false;
 /////
 // CASCADE POSITION SOURCE
 /////
-// Everything that needs to know where the cascade is calls this, so swapping
-// the motor encoder for a rotation sensor is a change to this function alone.
-//
-// To switch to a rotation sensor:
-//   1. constexpr int8_t CASCADE_ROT_PORT = 6;   // negative reverses it
-//      pros::Rotation cascade_rot(CASCADE_ROT_PORT);
-//   2. return cascade_rot.get_position() / 100.0;
-//
-// NOTE the /100: pros::Rotation::get_position() returns CENTIdegrees, while
-// pros::Motor::get_position() returns degrees.  Without dividing, every error
-// is 100x too big and CASCADE_HOLD_KP slams the motors to the power cap.
-// Use get_position() (continuous) and not get_angle(), which wraps at 360.
+// Single place that answers "where is the cascade", so anything reading it -
+// the controller readout now, the macros later - goes through one function.
 double cascade_position() {
   // /100 because Rotation::get_position() is in CENTIdegrees while
   // Motor::get_position() is in degrees.  get_position() and not get_angle():
@@ -285,7 +266,7 @@ void autonomous() {
 // ez_screen_task() here, plus the global `pros::Task ezScreenTask(ez_screen_task);`.
 // All three have been REMOVED for the brain UI.
 //  - They draw to the brain with ez::screen_print(), which is LLEMU.
-//  - initialize() calls pros::lcd::shutdown() and hands the display to the UI engine.
+//  - initialize() loads a screen of its own and hands the display to the UI engine.
 //  - The task is a global, so it starts before initialize() even runs.
 // Leaving it in means an LLEMU task and the LVGL UI engine both driving the screen.
 
