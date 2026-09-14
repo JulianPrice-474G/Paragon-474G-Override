@@ -325,8 +325,15 @@ void opcontrol() {
   // Cascade holds position when no button is pressed, so a raised lift does not
   // sag under its own weight.  Set here rather than in initialize() so it is
   // re-applied every time opcontrol starts, e.g. after an auton test.
+  //
+  // Only ONE motor holds.  BRAKE_HOLD runs a position PID against that motor's
+  // OWN encoder, so two motors holding the same shaft latch two slightly
+  // different targets and then push against each other for ever - measured at
+  // 0.9 A with the cascade resting on its bottom stop, load fully supported.
+  // The second motor coasts and is carried along by the shaft.  They still
+  // share the work whenever they are actually driven.
   l_motor_a.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
-  l_motor_b.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
+  l_motor_b.set_brake_mode(pros::E_MOTOR_BRAKE_COAST);
   static bool ctrl_flushed = false;
 
   while (true) {
@@ -412,10 +419,10 @@ void opcontrol() {
         l_motor_a.move(-L2_SPEED);
         l_motor_b.move(L2_SPEED);
       } else {
-        // brake() engages the brake mode set above.  move(0) would only drop the
-        // voltage to zero, which lets the cascade freewheel back down.
+        // Only A brakes - see the brake-mode comment at the top of opcontrol().
+        // B is left at zero voltage so it free-wheels instead of fighting A.
         l_motor_a.brake();
-        l_motor_b.brake();
+        l_motor_b.move(0);
       }
 
     } else {
