@@ -334,6 +334,10 @@ static const char* ctrl_sensors_text() {
   int d = distance_sensor.get();        // mm; PROS_ERR or 9999 when nothing is seen
   int p = (int)cascade_position();
 
+  // While a macro runs, its current step replaces the telemetry - you want to
+  // see where it got to, especially when it stalls or times out.
+  if (macro_running()) return macro_status_text();
+
   if (d < 0 || d > 9000)
     snprintf(buf, sizeof(buf), "d--   p%d", p);
   else

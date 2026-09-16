@@ -67,8 +67,8 @@ pros::Motor r_motor_d(R_MOTOR_D_PORT);
 /////
 constexpr char HIGH_INTAKE_PORT   = 'F';
 constexpr char MIDDLE_INTAKE_PORT = 'E';
-constexpr char CLAW_PORT          = 'C';  // toggled by RIGHT
-constexpr char C_FLIP_PORT        = 'D';  // toggled by DOWN
+constexpr char CLAW_PORT          = 'C';  // toggled by DOWN
+constexpr char C_FLIP_PORT        = 'D';  // toggled by LEFT
 
 // Single-acting solenoids.  true = extended, false = retracted.
 // If your pistons turn out to behave backwards, swap these two values - that is
@@ -406,6 +406,25 @@ void opcontrol() {
       //  - hold B: HIGH intake retracts  (this is the "middle" position)
       //  - hold Y: BOTH retract           (the "low" position)
       //  - release: whatever you were holding down goes back up ("high" position)
+      // ── Cascade macro ───────────────────────────────────────────────────
+      // RIGHT starts the sequence, RIGHT again cancels it.  It runs in its own
+      // task so the drivetrain keeps responding throughout.
+      if (master.get_digital_new_press(DIGITAL_RIGHT)) {
+        if (macro_running()) macro_cancel();
+        else                 macro_start();
+      }
+
+      // Touching the cascade manually also cancels - the driver should not have
+      // to find the right button to take back control.
+      if (macro_running() &&
+          (master.get_digital(DIGITAL_L1) || master.get_digital(DIGITAL_L2)))
+        macro_cancel();
+
+      // While a macro runs it owns the cascade, intake and claw.  Skip the
+      // manual controls for those, or both write every tick and the macro
+      // loses.  The drivetrain above is never owned.
+      if (!macro_running()) {
+
       // B and Y are TOGGLES, not holds - each press flips state and it stays.
       //  - B toggles high_intake on its own
       //  - Y toggles BOTH together, matching what holding Y used to do
@@ -429,12 +448,12 @@ void opcontrol() {
       // DOWN and RIGHT with new_press here - handle_ctrl_input() only consumes
       // LEFT/RIGHT/A/B while driver mode is OFF, and this block is driver-only.
       if (master.get_digital_new_press(DIGITAL_DOWN)) {
-        c_flip_extended = !c_flip_extended;
-        c_flip.set_value(c_flip_extended);
-      }
-      if (master.get_digital_new_press(DIGITAL_RIGHT)) {
         claw_extended = !claw_extended;
         claw.set_value(claw_extended);
+      }
+      if (master.get_digital_new_press(DIGITAL_LEFT)) {
+        c_flip_extended = !c_flip_extended;
+        c_flip.set_value(c_flip_extended);
       }
 
       // R1 / R2 group - four motors
@@ -479,6 +498,8 @@ void opcontrol() {
         l_motor_a.brake();
         l_motor_b.move(0);
       }
+
+      }  // end of !macro_running()
     } else {
       // Parked while the UI has the controller.  move(0) rather than skipping,
       // or a motor holds whatever it was last told to do.
