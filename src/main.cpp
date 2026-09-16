@@ -406,18 +406,21 @@ void opcontrol() {
       //  - hold B: HIGH intake retracts  (this is the "middle" position)
       //  - hold Y: BOTH retract           (the "low" position)
       //  - release: whatever you were holding down goes back up ("high" position)
-      bool high_want   = !(master.get_digital(DIGITAL_B) || master.get_digital(DIGITAL_Y));
-      bool middle_want = !master.get_digital(DIGITAL_Y);
-
-      // Only write to the solenoid when the state actually changes, rather than
-      // re-sending the same value every 10ms tick.
-      if (high_want != high_intake_extended) {
-        high_intake_extended = high_want;
-        high_intake.set_value(high_want);
+      // B and Y are TOGGLES, not holds - each press flips state and it stays.
+      //  - B toggles high_intake on its own
+      //  - Y toggles BOTH together, matching what holding Y used to do
+      // Y decides from high_intake's state so the pair cannot drift apart: if B
+      // has left them disagreeing, the first Y press lines them both up.
+      if (master.get_digital_new_press(DIGITAL_B)) {
+        high_intake_extended = !high_intake_extended;
+        high_intake.set_value(high_intake_extended);
       }
-      if (middle_want != middle_intake_extended) {
-        middle_intake_extended = middle_want;
-        middle_intake.set_value(middle_want);
+      if (master.get_digital_new_press(DIGITAL_Y)) {
+        bool want = !high_intake_extended;
+        high_intake_extended   = want;
+        middle_intake_extended = want;
+        high_intake.set_value(want);
+        middle_intake.set_value(want);
       }
 
       // Claw - DOWN arrow TOGGLES it.  Unlike the two above, this one latches:
