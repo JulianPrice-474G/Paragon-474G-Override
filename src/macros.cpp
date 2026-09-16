@@ -126,7 +126,7 @@ static void macro_task_fn(void*) {
     if (!cascade_to(CASCADE_LOW,     "1 low"))      break;
     if (!cascade_to(CASCADE_FLIP,    "2 flip up"))  break;
 
-    set_c_flip(!c_flip_extended);
+    set_c_flip(C_FLIP_FLIPPED);   // retract - it starts out extended
     if (!macro_wait(MACRO_PISTON_SETTLE, "3 flip"))  break;
 
     if (!cascade_to(CASCADE_COLLECT, "4 collect"))  break;
@@ -138,7 +138,7 @@ static void macro_task_fn(void*) {
     intake_run(false);
     if (!ok) break;
 
-    set_claw(!claw_extended);
+    set_claw(CLAW_CLOSED);
     if (!macro_wait(MACRO_CLAW_SETTLE, "6 claw")) break;
 
     // Intake keeps running while the cascade lifts, so anything still being
@@ -149,7 +149,7 @@ static void macro_task_fn(void*) {
     intake_run(false);
     if (!ok) break;
 
-    set_c_flip(!c_flip_extended);
+    set_c_flip(C_FLIP_REST);      // back out to where it started
     if (!macro_wait(MACRO_PISTON_SETTLE, "8 flip")) break;
 
     cascade_to(CASCADE_LOW, "9 lower");

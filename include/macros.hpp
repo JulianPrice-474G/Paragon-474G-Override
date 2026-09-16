@@ -31,6 +31,21 @@ constexpr int    CASCADE_STALL_MS  = 350;
 constexpr int CASCADE_RAISE_SIGN = 1;
 
 /////
+// PISTON STATES DURING THE MACRO - CHANGE THESE
+/////
+// The macro sets these states outright rather than toggling, so it does the
+// same thing no matter how the pistons were left beforehand.
+//
+// The flip piston starts EXTENDED and the macro RETRACTS it to flip, then puts
+// it back out at the end.  Swap the two if yours works the other way round.
+constexpr bool C_FLIP_REST    = true;   // extended - where it sits normally
+constexpr bool C_FLIP_FLIPPED = false;  // retracted - the flip itself
+
+// Which claw state is "closed" on your robot.  Flip if the macro opens the
+// claw where it should be gripping.
+constexpr bool CLAW_CLOSED = true;
+
+/////
 // MACRO TIMINGS - CHANGE THESE
 /////
 constexpr int MACRO_INTAKE_SPEED  = 127;   // 0-127, intake power during the macro
