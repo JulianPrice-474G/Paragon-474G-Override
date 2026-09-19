@@ -81,18 +81,18 @@ constexpr bool PISTON_RETRACTED = false;
 pros::adi::DigitalOut high_intake(HIGH_INTAKE_PORT,   PISTON_EXTENDED);
 pros::adi::DigitalOut middle_intake(MIDDLE_INTAKE_PORT, PISTON_EXTENDED);
 
-// Claw and C-flip both start RETRACTED, unlike the two intake solenoids above.
-// Flip either to PISTON_EXTENDED if it should be out at power-on.
-pros::adi::DigitalOut claw(CLAW_PORT,     PISTON_RETRACTED);
-pros::adi::DigitalOut c_flip(C_FLIP_PORT, PISTON_RETRACTED);
+// Claw and C-flip also start EXTENDED.  The second constructor argument is the
+// power-on state, so they are out before the match starts.
+pros::adi::DigitalOut claw(CLAW_PORT,     PISTON_EXTENDED);
+pros::adi::DigitalOut c_flip(C_FLIP_PORT, PISTON_EXTENDED);
 
 // Software mirror of what each solenoid was last told to do.  A DigitalOut
 // cannot be read back, so this is the only record of piston state - and the
 // r_motor_b interlock below depends on it.
 bool high_intake_extended   = true;
 bool middle_intake_extended = true;
-bool claw_extended          = false;
-bool c_flip_extended        = false;
+bool claw_extended          = true;
+bool c_flip_extended        = true;
 
 /////
 // CASCADE POSITION SOURCE
