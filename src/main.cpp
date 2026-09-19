@@ -124,7 +124,7 @@ double cascade_last_err = 0;
 /////
 // DISTANCE SENSOR - smart port
 /////
-constexpr int8_t DISTANCE_PORT = 16;
+// DISTANCE_PORT is set in include/subsystems.hpp so the readout can see it.
 pros::Distance distance_sensor(DISTANCE_PORT);
 
 /////

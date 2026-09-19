@@ -331,17 +331,30 @@ static bool _driver_mode_combo_fired() {
 //   d--  p243   ->  nothing in range, or the sensor is not on DISTANCE_PORT
 static const char* ctrl_sensors_text() {
   static char buf[20];
-  int d = distance_sensor.get();        // mm; PROS_ERR or 9999 when nothing is seen
-  int p = (int)cascade_position();
-
   // While a macro runs, its current step replaces the telemetry - you want to
   // see where it got to, especially when it stalls or times out.
   if (macro_running()) return macro_status_text();
 
-  if (d < 0 || d > 9000)
-    snprintf(buf, sizeof(buf), "d--   p%d", p);
-  else
-    snprintf(buf, sizeof(buf), "d%-4d p%d", d, p);
+  int p = (int)cascade_position();
+
+  // Say WHY there is no reading - "not seen" and "nothing in range" look the
+  // same on a bare "d--" but have completely different fixes.
+  pros::DeviceType t = pros::Device::get_plugged_type(DISTANCE_PORT);
+  if (t != pros::DeviceType::distance) {
+    // The brain does not see a distance sensor on this port at all.
+    const char* what =
+        t == pros::DeviceType::none     ? "none"  :
+        t == pros::DeviceType::motor    ? "motor" :
+        t == pros::DeviceType::rotation ? "rot"   :
+        t == pros::DeviceType::optical  ? "optic" : "other";
+    snprintf(buf, sizeof(buf), "%d:%s p%d", DISTANCE_PORT, what, p);
+    return buf;
+  }
+
+  int d = distance_sensor.get();          // mm, 9999 when nothing is in range
+  if (d == PROS_ERR)  snprintf(buf, sizeof(buf), "d:err p%d", p);
+  else if (d >= 9999) snprintf(buf, sizeof(buf), "d:far p%d", p);
+  else                snprintf(buf, sizeof(buf), "d%-4d p%d", d, p);
   return buf;
 }
 
