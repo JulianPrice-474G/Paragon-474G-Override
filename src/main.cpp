@@ -401,10 +401,6 @@ void ez_template_extras() {
 void opcontrol() {
   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
 
-  // Cascade holds position when no button is pressed, so a raised lift does not
-  // sag under its own weight.  Set here rather than in initialize() so it is
-  // re-applied every time opcontrol starts, e.g. after an auton test.
-  //
   // Only ONE cascade motor holds - see cascade_apply_hold_motor() above for why.
   // Re-applied here so it survives an auton test, which changes brake modes.
   cascade_apply_hold_motor();
@@ -412,7 +408,7 @@ void opcontrol() {
 
   while (true) {
     handle_ctrl_input();
-    ez_template_extras();        // ← keeps DOWN+B auton test and X PID tuner
+    ez_template_extras();        // ← keeps the LEFT+B auton test
 
     chassis.opcontrol_arcade_standard(ez::SPLIT);
 
@@ -424,10 +420,6 @@ void opcontrol() {
     if (DriverModeActive()) {
 
 
-      // Pistons - HOLD to retract, release to extend.  Not a toggle.
-      //  - hold B: HIGH intake retracts  (this is the "middle" position)
-      //  - hold Y: BOTH retract           (the "low" position)
-      //  - release: whatever you were holding down goes back up ("high" position)
       // ── Cascade collect/low toggle ──────────────────────────────────────
       // RIGHT sends the cascade to the collect height, or back to low if it is
       // already there.  Pressing it again mid-move cancels.  It runs in its own
@@ -460,11 +452,9 @@ void opcontrol() {
         middle_intake.set_value(want);
       }
 
-      // Claw - DOWN arrow TOGGLES it.  Unlike the two above, this one latches:
-      // press once to extend, press again to retract.
-      // Toggles: each press flips the solenoid and it stays there.  Safe to read
-      // DOWN and RIGHT with new_press here - handle_ctrl_input() only consumes
-      // LEFT/RIGHT/A/B while driver mode is OFF, and this block is driver-only.
+      // Claw on DOWN, C-flip on LEFT - both latching toggles.  Safe to read
+      // these with new_press: handle_ctrl_input() only consumes LEFT/RIGHT/A/B
+      // while driver mode is OFF, and this block is driver-only.
       if (master.get_digital_new_press(DIGITAL_DOWN)) {
         claw_extended = !claw_extended;
         claw.set_value(claw_extended);
@@ -474,15 +464,17 @@ void opcontrol() {
         c_flip.set_value(c_flip_extended);
       }
 
-      // R1 / R2 group - four motors
-      //  - R1: A, B, C forward and D backward
-      //  - R2: every one of them reversed from what R1 does
-      //  - r_motor_b (port 1) is INTERLOCKED.  It runs in every position EXCEPT
-      //    the high state, which is both pistons extended:
-      //        HIGH   - both extended (nothing held) -> stopped
-      //        MIDDLE - high retracted (B held)      -> runs with the group
-      //        LOW    - both retracted (Y held)      -> runs with the group
-      bool port1_enabled = !(high_intake_extended && middle_intake_extended);
+      // Intake - four motors, R2 runs them in, R1 reverses all of them.
+      //   port 1  (r_motor_a) fin      - always runs
+      //   port 11 (r_motor_d) fin      - always runs, mounted opposite the rest
+      //   port 4  (r_motor_b) dropdown - runs unless BOTH intake pistons are out
+      //   port 19 (r_motor_c) upper roller - runs ONLY at the collect height
+      //
+      // Dropdown interlock, from the two intake piston toggles (B and Y):
+      //        both extended   (high state)   -> stopped
+      //        high retracted  (middle state) -> runs with the group
+      //        both retracted  (low state)    -> runs with the group
+      bool dropdown_enabled = !(high_intake_extended && middle_intake_extended);
 
       // The upper roller (port 19) only turns while the cascade is AT the
       // collect height.  Anywhere else the fins (ports 1 and 11) and the
@@ -491,12 +483,12 @@ void opcontrol() {
 
       if (master.get_digital(DIGITAL_R2)) {
         r_motor_a.move(R_SPEED);
-        r_motor_b.move(port1_enabled  ? R_SPEED : 0);
+        r_motor_b.move(dropdown_enabled ? R_SPEED : 0);
         r_motor_c.move(roller_enabled ? R_SPEED : 0);
         r_motor_d.move(-R_SPEED);
       } else if (master.get_digital(DIGITAL_R1)) {
         r_motor_a.move(-R_SPEED);
-        r_motor_b.move(port1_enabled  ? -R_SPEED : 0);
+        r_motor_b.move(dropdown_enabled ? -R_SPEED : 0);
         r_motor_c.move(roller_enabled ? -R_SPEED : 0);
         r_motor_d.move(R_SPEED);
       } else {
