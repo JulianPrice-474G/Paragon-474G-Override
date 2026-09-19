@@ -325,7 +325,7 @@ static bool _driver_mode_combo_fired() {
 }
 
 // Controller middle row while in driver mode: distance sensor plus the cascade
-// rotation sensor, refreshed fast so it is usable as live feedback.
+// rotation sensor, refreshed once a second.
 //
 //   d120 p243   ->  object 120 mm away, cascade at 243 degrees
 //   d--  p243   ->  nothing in range, or the sensor is not on DISTANCE_PORT
@@ -506,7 +506,7 @@ void handle_ctrl_input() {
     CtrlRumble(driver_mode ? "-" : ".");
     if (driver_mode) {
       CtrlLabel(0, "* DRIVER MODE *");  // confirm to driver that mode is active
-      CtrlLive(1, ctrl_sensors_text, 50);   // distance + cascade position, fast
+      CtrlLive(1, ctrl_sensors_text, 1000); // distance + cascade position, once a second
       CtrlLabel(2, "hold UP+X 1s");
     } else {
       ctrl_state = CTRL_HOME;  // always return to home when exiting driver mode

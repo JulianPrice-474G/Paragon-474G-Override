@@ -124,10 +124,7 @@ double cascade_last_err = 0;
 /////
 // DISTANCE SENSOR - smart port
 /////
-// NOTE: port 12 is also listed as a left drivetrain motor in the chassis
-// constructor below.  A smart port holds one device, so while the sensor is
-// here that motor does not exist and the left side runs on port 20 alone.
-constexpr int8_t DISTANCE_PORT = 12;
+constexpr int8_t DISTANCE_PORT = 16;
 pros::Distance distance_sensor(DISTANCE_PORT);
 
 /////

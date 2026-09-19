@@ -25,7 +25,7 @@ extern bool c_flip_extended;
 
 // Cascade hold - see the CASCADE_HOLD_* constants at the top of main.cpp
 double cascade_position();  // cascade position in degrees, from the sensor
-extern pros::Distance distance_sensor;  // port 12
+extern pros::Distance distance_sensor;  // port 16
 extern pros::Rotation cascade_rot;  // port 14 - cascade position
 extern bool   cascade_holding;
 extern double cascade_target;
