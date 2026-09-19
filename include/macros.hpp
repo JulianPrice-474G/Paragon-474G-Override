@@ -11,6 +11,11 @@ constexpr double CASCADE_LOW     = 49;   // bottom / travel
 constexpr double CASCADE_COLLECT = 144;  // intake height
 constexpr double CASCADE_FLIP    = 201;  // where the flip piston fires
 
+// Upper travel limit.  L1 stops raising once the rotation sensor reads this,
+// so the cascade cannot be driven into its top stop.  Manual control only -
+// the macro's targets are all below it.
+constexpr double CASCADE_MAX = 1000;
+
 /////
 // CASCADE MOVEMENT - CHANGE THESE
 /////

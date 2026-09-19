@@ -507,8 +507,14 @@ void opcontrol() {
       if (macro_running()) {
         // macro owns the cascade
       } else if (master.get_digital(DIGITAL_L1)) {
-        l_motor_a.move(L_SPEED);
-        l_motor_b.move(-L_SPEED);
+        // Stop at the top limit instead of driving into the hard stop.  Hold
+        // rather than coast, so it stays put while the button is still held.
+        if (cascade_position() >= CASCADE_MAX) {
+          cascade_hold();
+        } else {
+          l_motor_a.move(L_SPEED);
+          l_motor_b.move(-L_SPEED);
+        }
       } else if (master.get_digital(DIGITAL_L2)) {
         l_motor_a.move(-L2_SPEED);
         l_motor_b.move(L2_SPEED);
