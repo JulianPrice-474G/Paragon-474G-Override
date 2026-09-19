@@ -100,7 +100,14 @@ bool cascade_at_collect() {
 static double _target = CASCADE_LOW;
 
 static void macro_task_fn(void*) {
-  cascade_to(_target, _target == CASCADE_COLLECT ? "-> collect" : "-> low");
+  bool arrived = cascade_to(_target,
+                            _target == CASCADE_COLLECT ? "-> collect" : "-> low");
+
+  // Back at low, hand the holding job to the other motor.  Only ONE motor holds
+  // the cascade, so that one carries the whole load and is the one that heats
+  // up; alternating spreads it.  Only on a completed trip to low - swapping
+  // after a cancel or a stall would change the holder mid-air.
+  if (arrived && _target == CASCADE_LOW) cascade_swap_hold_motor();
 
   cascade_stop();
   _running = false;

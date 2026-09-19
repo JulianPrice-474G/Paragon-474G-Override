@@ -17,7 +17,7 @@ void handle_ctrl_input();
 // ── L1 / L2 pair - two motors, always spinning opposite each other ──────────
 // TODO: set your real ports
 constexpr int8_t L_MOTOR_A_PORT = 13;
-constexpr int8_t L_MOTOR_B_PORT = 2;
+constexpr int8_t L_MOTOR_B_PORT = 6;
 
 // ── R1 / R2 group - four motors, three one way and the fourth the other ─────
 // TODO: set your real ports.  R_MOTOR_D is the odd one out - it always runs
@@ -110,6 +110,35 @@ double cascade_position() {
   // less accurate, but it keeps holding instead of slamming to the power cap.
   if (cascade_rot.get_position() == PROS_ERR) return l_motor_a.get_position();
   return deg;
+}
+
+// Which cascade motor currently does the holding.  Only ONE holds - two motors
+// in BRAKE_HOLD on the same shaft each run their own position PID against their
+// own encoder, latch different targets, and fight each other for ever.  The
+// holder carries the whole load, so it is the one that heats up; swapping after
+// every trip back to low spreads that between the two.
+int cascade_hold_motor = 0;   // 0 = l_motor_a holds, 1 = l_motor_b holds
+
+void cascade_apply_hold_motor() {
+  if (cascade_hold_motor == 0) {
+    l_motor_a.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
+    l_motor_b.set_brake_mode(pros::E_MOTOR_BRAKE_COAST);
+  } else {
+    l_motor_a.set_brake_mode(pros::E_MOTOR_BRAKE_COAST);
+    l_motor_b.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
+  }
+}
+
+void cascade_swap_hold_motor() {
+  cascade_hold_motor = 1 - cascade_hold_motor;
+  cascade_apply_hold_motor();
+}
+
+// Brake the holder, and leave the other at zero volts so it free-wheels rather
+// than fighting.  Called every tick the cascade is idle.
+void cascade_hold() {
+  if (cascade_hold_motor == 0) { l_motor_a.brake(); l_motor_b.move(0); }
+  else                         { l_motor_b.brake(); l_motor_a.move(0); }
 }
 
 // Cascade hold state.  cascade_last_err is read by the controller readout in
@@ -376,13 +405,9 @@ void opcontrol() {
   // sag under its own weight.  Set here rather than in initialize() so it is
   // re-applied every time opcontrol starts, e.g. after an auton test.
   //
-  // Only ONE motor holds.  BRAKE_HOLD runs a position PID against that motor's
-  // OWN encoder, so two motors holding the same shaft latch different targets
-  // and push against each other for ever - measured at 0.9 A with the cascade
-  // resting on its bottom stop, load fully supported.  The second motor coasts
-  // and is carried by the shaft.  They still share the work when driven.
-  l_motor_a.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
-  l_motor_b.set_brake_mode(pros::E_MOTOR_BRAKE_COAST);
+  // Only ONE cascade motor holds - see cascade_apply_hold_motor() above for why.
+  // Re-applied here so it survives an auton test, which changes brake modes.
+  cascade_apply_hold_motor();
   static bool ctrl_flushed = false;
 
   while (true) {
@@ -496,10 +521,9 @@ void opcontrol() {
         l_motor_a.move(-L2_SPEED);
         l_motor_b.move(L2_SPEED);
       } else {
-        // Only A brakes - see the brake-mode comment at the top of opcontrol().
-        // B is left at zero voltage so it free-wheels instead of fighting A.
-        l_motor_a.brake();
-        l_motor_b.move(0);
+        // Whichever motor is currently the holder brakes; the other free-wheels.
+        // The macro swaps them after each trip back to low.
+        cascade_hold();
       }
     } else {
       // Parked while the UI has the controller.  move(0) rather than skipping,

@@ -23,6 +23,14 @@ extern bool middle_intake_extended;
 extern bool claw_extended;
 extern bool c_flip_extended;
 
+// Which cascade motor holds: 0 = l_motor_a, 1 = l_motor_b.  Only one holds at
+// a time, and the macro swaps them after each trip back to low so the heat of
+// carrying the cascade is shared.
+extern int cascade_hold_motor;
+void cascade_apply_hold_motor();  // push the current choice to the motors
+void cascade_swap_hold_motor();   // change holder, then apply
+void cascade_hold();              // brake the holder, free-wheel the other
+
 // Cascade hold - see the CASCADE_HOLD_* constants at the top of main.cpp
 double cascade_position();  // cascade position in degrees, from the sensor
 constexpr int8_t DISTANCE_PORT = 16;
