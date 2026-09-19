@@ -403,8 +403,9 @@ void opcontrol() {
       //  - hold B: HIGH intake retracts  (this is the "middle" position)
       //  - hold Y: BOTH retract           (the "low" position)
       //  - release: whatever you were holding down goes back up ("high" position)
-      // ── Cascade macro ───────────────────────────────────────────────────
-      // RIGHT starts the sequence, RIGHT again cancels it.  It runs in its own
+      // ── Cascade collect/low toggle ──────────────────────────────────────
+      // RIGHT sends the cascade to the collect height, or back to low if it is
+      // already there.  Pressing it again mid-move cancels.  It runs in its own
       // task so the drivetrain keeps responding throughout.
       if (master.get_digital_new_press(DIGITAL_RIGHT)) {
         if (macro_running()) macro_cancel();
@@ -416,11 +417,6 @@ void opcontrol() {
       if (macro_running() &&
           (master.get_digital(DIGITAL_L1) || master.get_digital(DIGITAL_L2)))
         macro_cancel();
-
-      // While a macro runs it owns the cascade, intake and claw.  Skip the
-      // manual controls for those, or both write every tick and the macro
-      // loses.  The drivetrain above is never owned.
-      if (!macro_running()) {
 
       // B and Y are TOGGLES, not holds - each press flips state and it stays.
       //  - B toggles high_intake on its own
@@ -463,15 +459,20 @@ void opcontrol() {
       //        LOW    - both retracted (Y held)      -> runs with the group
       bool port1_enabled = !(high_intake_extended && middle_intake_extended);
 
+      // The upper roller (port 19) only turns while the cascade is AT the
+      // collect height.  Anywhere else the fins (ports 1 and 11) and the
+      // dropdown still run, but the roller is held at zero.
+      bool roller_enabled = cascade_at_collect();
+
       if (master.get_digital(DIGITAL_R2)) {
         r_motor_a.move(R_SPEED);
-        r_motor_b.move(port1_enabled ? R_SPEED : 0);
-        r_motor_c.move(R_SPEED);
+        r_motor_b.move(port1_enabled  ? R_SPEED : 0);
+        r_motor_c.move(roller_enabled ? R_SPEED : 0);
         r_motor_d.move(-R_SPEED);
       } else if (master.get_digital(DIGITAL_R1)) {
         r_motor_a.move(-R_SPEED);
-        r_motor_b.move(port1_enabled ? -R_SPEED : 0);
-        r_motor_c.move(-R_SPEED);
+        r_motor_b.move(port1_enabled  ? -R_SPEED : 0);
+        r_motor_c.move(roller_enabled ? -R_SPEED : 0);
         r_motor_d.move(R_SPEED);
       } else {
         r_motor_a.move(0);
@@ -483,7 +484,12 @@ void opcontrol() {
       // L1 / L2 pair - two motors, always opposite each other
       //  - L1: A forward, B backward, at full L_SPEED
       //  - L2: both flipped from what L1 does, at the slower L2_SPEED
-      if (master.get_digital(DIGITAL_L1)) {
+      // Skipped while the macro is moving the cascade: it owns these two motors
+      // for the duration, or both would write every tick and it would lose.
+      // The intake, claw and drivetrain stay under driver control throughout.
+      if (macro_running()) {
+        // macro owns the cascade
+      } else if (master.get_digital(DIGITAL_L1)) {
         l_motor_a.move(L_SPEED);
         l_motor_b.move(-L_SPEED);
       } else if (master.get_digital(DIGITAL_L2)) {
@@ -495,8 +501,6 @@ void opcontrol() {
         l_motor_a.brake();
         l_motor_b.move(0);
       }
-
-      }  // end of !macro_running()
     } else {
       // Parked while the UI has the controller.  move(0) rather than skipping,
       // or a motor holds whatever it was last told to do.

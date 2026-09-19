@@ -324,37 +324,30 @@ static bool _driver_mode_combo_fired() {
   return false;
 }
 
-// Controller middle row while in driver mode: distance sensor plus the cascade
-// rotation sensor, refreshed once a second.
+// Controller middle row while in driver mode: cascade motor temperatures,
+// their combined current draw, and the cascade position.
 //
-//   d120 p243   ->  object 120 mm away, cascade at 243 degrees
-//   d--  p243   ->  nothing in range, or the sensor is not on DISTANCE_PORT
+//   50/50C 1.8A p144
+//
+// While the cascade is moving to a height, the move's status replaces it.
 static const char* ctrl_sensors_text() {
   static char buf[20];
-  // While a macro runs, its current step replaces the telemetry - you want to
-  // see where it got to, especially when it stalls or times out.
+
   if (macro_running()) return macro_status_text();
 
-  int p = (int)cascade_position();
+  double ta = l_motor_a.get_temperature();
+  double tb = l_motor_b.get_temperature();
+  int    ca = l_motor_a.get_current_draw();   // mA
+  int    cb = l_motor_b.get_current_draw();
 
-  // Say WHY there is no reading - "not seen" and "nothing in range" look the
-  // same on a bare "d--" but have completely different fixes.
-  pros::DeviceType t = pros::Device::get_plugged_type(DISTANCE_PORT);
-  if (t != pros::DeviceType::distance) {
-    // The brain does not see a distance sensor on this port at all.
-    const char* what =
-        t == pros::DeviceType::none     ? "none"  :
-        t == pros::DeviceType::motor    ? "motor" :
-        t == pros::DeviceType::rotation ? "rot"   :
-        t == pros::DeviceType::optical  ? "optic" : "other";
-    snprintf(buf, sizeof(buf), "%d:%s p%d", DISTANCE_PORT, what, p);
+  // get_temperature() returns PROS_ERR_F - a NaN - when the motor is missing,
+  // and every comparison against NaN is false, so test for a GOOD value.
+  if (!((ta > 0) && (tb > 0) && (ca >= 0) && (cb >= 0))) {
+    snprintf(buf, sizeof(buf), "cascade: no motor");
     return buf;
   }
-
-  int d = distance_sensor.get();          // mm, 9999 when nothing is in range
-  if (d == PROS_ERR)  snprintf(buf, sizeof(buf), "d:err p%d", p);
-  else if (d >= 9999) snprintf(buf, sizeof(buf), "d:far p%d", p);
-  else                snprintf(buf, sizeof(buf), "d%-4d p%d", d, p);
+  snprintf(buf, sizeof(buf), "%d/%dC %.1fA p%d",
+           (int)ta, (int)tb, (ca + cb) / 1000.0, (int)cascade_position());
   return buf;
 }
 
@@ -519,7 +512,7 @@ void handle_ctrl_input() {
     CtrlRumble(driver_mode ? "-" : ".");
     if (driver_mode) {
       CtrlLabel(0, "* DRIVER MODE *");  // confirm to driver that mode is active
-      CtrlLive(1, ctrl_sensors_text, 1000); // distance + cascade position, once a second
+      CtrlLive(1, ctrl_sensors_text, 500);  // cascade temps, current and position
       CtrlLabel(2, "hold UP+X 1s");
     } else {
       ctrl_state = CTRL_HOME;  // always return to home when exiting driver mode

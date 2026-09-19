@@ -33,16 +33,6 @@ static void cascade_drive(int power) {
   l_motor_b.move(-power);
 }
 
-// Intake in the R2 direction - the one that pulls game objects in.
-static void intake_run(bool on) {
-  int p = on ? MACRO_INTAKE_SPEED : 0;
-  bool port1_enabled = !(high_intake_extended && middle_intake_extended);
-  r_motor_a.move(p);
-  r_motor_b.move(port1_enabled ? p : 0);
-  r_motor_c.move(p);
-  r_motor_d.move(-p);
-}
-
 /////
 // Move the cascade to a height
 /////
@@ -94,71 +84,25 @@ static bool cascade_to(double target, const char* step_name) {
   return false;
 }
 
-// Interruptible delay - a plain pros::delay() would ignore a cancel request for
-// its whole duration.
-static bool macro_wait(int ms, const char* step_name) {
-  _step = step_name;
-  const uint32_t start = pros::millis();
-  while (pros::millis() - start < (uint32_t)ms) {
-    if (_cancel) return false;
-    pros::delay(ez::util::DELAY_TIME);
-  }
-  return true;
-}
-
-static void set_c_flip(bool out) {
-  c_flip_extended = out;
-  c_flip.set_value(out);
-}
-
-static void set_claw(bool out) {
-  claw_extended = out;
-  claw.set_value(out);
+/////
+// Is the cascade at the collect height?
+/////
+bool cascade_at_collect() {
+  return fabs(cascade_position() - CASCADE_COLLECT) <= CASCADE_COLLECT_TOL;
 }
 
 /////
-// The sequence
+// The move
 /////
+// RIGHT toggles: at collect -> go to low, anywhere else -> go to collect.
+// The target is chosen from the cascade's ACTUAL position, so moving it by
+// hand with L1/L2 cannot leave the toggle pointing the wrong way.
+static double _target = CASCADE_LOW;
+
 static void macro_task_fn(void*) {
-  // Any early return lands on the cleanup at the bottom, so there is one exit
-  // path and the cascade and intake always end up released.
-  do {
-    if (!cascade_to(CASCADE_LOW,     "1 low"))      break;
-    if (!cascade_to(CASCADE_FLIP,    "2 flip up"))  break;
+  cascade_to(_target, _target == CASCADE_COLLECT ? "-> collect" : "-> low");
 
-    set_c_flip(C_FLIP_FLIPPED);   // retract - it starts out extended
-    if (!macro_wait(MACRO_PISTON_SETTLE, "3 flip"))  break;
-
-    if (!cascade_to(CASCADE_COLLECT, "4 collect"))  break;
-
-    // Intake runs for a fixed time at collect height.
-    _step = "5 intake";
-    intake_run(true);
-    bool ok = macro_wait(MACRO_INTAKE_MS, "5 intake");
-    intake_run(false);
-    if (!ok) break;
-
-    set_claw(CLAW_CLOSED);
-    if (!macro_wait(MACRO_CLAW_SETTLE, "6 claw")) break;
-
-    // Intake keeps running while the cascade lifts, so anything still being
-    // pulled in does not drop on the way up.
-    _step = "7 lift+intake";
-    intake_run(true);
-    ok = cascade_to(CASCADE_FLIP, "7 lift+intake");
-    intake_run(false);
-    if (!ok) break;
-
-    set_c_flip(C_FLIP_REST);      // back out to where it started
-    if (!macro_wait(MACRO_PISTON_SETTLE, "8 flip")) break;
-
-    cascade_to(CASCADE_LOW, "9 lower");
-  } while (false);
-
-  // Release everything we own.  Pistons are left where they got to - stopping
-  // mid-sequence should not fling the claw open with a game object in it.
   cascade_stop();
-  intake_run(false);
   _running = false;
   _cancel  = false;
   if (_step[0] != 'S' && _step[0] != 'T') _step = "done";
@@ -166,11 +110,12 @@ static void macro_task_fn(void*) {
 
 void macro_start() {
   if (_running) return;
+  _target  = cascade_at_collect() ? CASCADE_LOW : CASCADE_COLLECT;
   _running = true;
   _cancel  = false;
   _step    = "starting";
 
   // Reuse one task object rather than leaking a new one per run.
   if (_task != nullptr) { delete _task; _task = nullptr; }
-  _task = new pros::Task(macro_task_fn, nullptr, "Cascade Macro");
+  _task = new pros::Task(macro_task_fn, nullptr, "Cascade Move");
 }

@@ -30,44 +30,31 @@ constexpr int    CASCADE_STALL_MS  = 350;
 // Symptom of getting it wrong: the macro immediately stalls and aborts.
 constexpr int CASCADE_RAISE_SIGN = 1;
 
-/////
-// PISTON STATES DURING THE MACRO - CHANGE THESE
-/////
-// The macro sets these states outright rather than toggling, so it does the
-// same thing no matter how the pistons were left beforehand.
-//
-// The flip piston starts EXTENDED and the macro RETRACTS it to flip, then puts
-// it back out at the end.  Swap the two if yours works the other way round.
-constexpr bool C_FLIP_REST    = true;   // extended - where it sits normally
-constexpr bool C_FLIP_FLIPPED = false;  // retracted - the flip itself
-
-// Which claw state is "closed" on your robot.  Flip if the macro opens the
-// claw where it should be gripping.
-constexpr bool CLAW_CLOSED = true;
-
-/////
-// MACRO TIMINGS - CHANGE THESE
-/////
-constexpr int MACRO_INTAKE_SPEED  = 127;   // 0-127, intake power during the macro
-constexpr int MACRO_INTAKE_MS     = 3000;  // how long the intake runs at collect height
-constexpr int MACRO_PISTON_SETTLE = 300;   // ms to let a piston finish moving
-constexpr int MACRO_CLAW_SETTLE   = 400;   // ms to let the claw close before lifting
+// How close to CASCADE_COLLECT still counts as "in the collect state".  Wider
+// than CASCADE_MOVE_TOL on purpose: the cascade drifts a little while holding,
+// and the upper roller should not cut out when it does.
+constexpr double CASCADE_COLLECT_TOL = 12;
 
 /////
 // Running the macro
 /////
-// Starts the sequence in its own task, so the drivetrain never stops
-// responding.  Does nothing if one is already running.
+// Sends the cascade to the collect height, or back to low if it is already
+// there.  Runs in its own task, so the drivetrain never stops responding.
+// Pressing again while it moves cancels instead of starting a second one.
 void macro_start();
 
-// Asks a running macro to stop at its next check.  It will release the cascade
-// and intake; pistons stay wherever they got to.
+// Asks a running move to stop at its next check, leaving the cascade where it
+// is.  Nothing else is touched.
 void macro_cancel();
 
-// True while a macro owns the cascade, intake and claw.  opcontrol() checks
-// this and leaves those subsystems alone - otherwise both write every tick and
-// the macro loses.  The drivetrain is never owned.
+// True while the macro owns the CASCADE.  opcontrol() checks this and skips
+// the manual L1/L2 controls, or both write every tick and the macro loses.
+// The intake, claw and drivetrain stay under driver control throughout.
 bool macro_running();
 
 // One line of status for the controller screen.
 const char* macro_status_text();
+
+// True when the cascade is at the collect height, within CASCADE_COLLECT_TOL.
+// The upper intake roller only runs when this is true.
+bool cascade_at_collect();
