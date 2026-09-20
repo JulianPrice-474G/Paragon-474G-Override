@@ -128,12 +128,14 @@ static bool macro_wait(int ms, const char* step_name) {
 static bool _intake_owned = false;
 bool macro_owns_intake() { return _intake_owned; }
 
-static void intake_run(bool on) {
+// roller_back reverses ONLY the upper roller (port 19); the fins and dropdown
+// carry on in the normal direction.
+static void intake_run(bool on, bool roller_back = false) {
   int p = on ? MACRO_INTAKE_SPEED : 0;
   bool dropdown_enabled = !(high_intake_extended && middle_intake_extended);
   r_motor_a.move(-p);
   r_motor_b.move(dropdown_enabled ? -p : 0);
-  r_motor_c.move(-p);
+  r_motor_c.move(roller_back ? p : -p);
   r_motor_d.move(p);
 }
 
@@ -229,6 +231,10 @@ static void phase2_task(void*) {
   if (ok) ok = macro_wait(MACRO_FLIP_SETTLE, "6 settle") && step_pause("6 settle");
 
   if (ok) {
+    // Upper roller reverses from the moment the flip piston fires, and stays
+    // reversed until the cascade is back at low.  Fins and dropdown carry on
+    // forwards.
+    intake_run(true, true);
     set_c_flip(PISTON_ON);
     ok = macro_wait(MACRO_PISTON_SETTLE, "7 flip on") && step_pause("7 flip on");
   }

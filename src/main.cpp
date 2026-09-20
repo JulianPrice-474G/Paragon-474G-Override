@@ -72,7 +72,7 @@ pros::Motor l_motor_b(L_MOTOR_B_PORT);
 pros::Motor r_motor_a(R_MOTOR_A_PORT);
 pros::Motor r_motor_b(R_MOTOR_B_PORT);
 pros::Motor r_motor_c(R_MOTOR_C_PORT);
-pros::Motor r_motor_d(R_MOTOR_D_PORT);
+pros::Motor r_motor_d(R_MOTOR_D_PORT); 
 
 /////
 // PNEUMATICS - ADI (3-wire) ports, letters A-H
