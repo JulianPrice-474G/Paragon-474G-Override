@@ -7,15 +7,16 @@
 /////
 // Rotation sensor readings, the "p" value on the controller's middle row.
 // Drive the cascade where you want it, read p, put the number here.
-constexpr double CASCADE_LOW     = 180;  // bottom / travel
-constexpr double CASCADE_COLLECT = 276;  // intake height
-constexpr double CASCADE_FLIP    = 317;  // raised above collect, where the flip
-                                         // piston will fire
+// Defined at the top of src/main.cpp so they sit with the ports and speeds.
+// Plain variables, not constexpr, so they can be changed in one place.
+extern double CASCADE_LOW;      // bottom / travel
+extern double CASCADE_COLLECT;  // intake height
+extern double CASCADE_FLIP;     // raised above collect, where the flip piston fires
 
 // Upper travel limit.  L1 stops raising once the rotation sensor reads this,
 // so the cascade cannot be driven into its top stop.  Manual control only -
 // the macro's targets are all below it.
-constexpr double CASCADE_MAX = 1000;
+extern double CASCADE_MAX;      // L1 stops raising here
 
 /////
 // CASCADE MOVEMENT - CHANGE THESE

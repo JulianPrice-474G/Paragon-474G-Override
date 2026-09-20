@@ -38,6 +38,17 @@ constexpr int R_SPEED = 127;         // R1 / R2 group
 constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can ask for
 
 /////
+// CASCADE HEIGHTS - CHANGE THESE
+/////
+// Rotation sensor readings - the "p" value on the controller's middle row.
+// Drive the cascade where you want it, read p off the controller, put the
+// number here.  The macro and the L1 travel limit both use these.
+double CASCADE_LOW     = 180;   // bottom / travel
+double CASCADE_COLLECT = 276;   // intake height, where the macro parks
+double CASCADE_FLIP    = 317;   // above collect, where the flip piston fires
+double CASCADE_MAX     = 1000;  // L1 stops raising here
+
+/////
 // CASCADE HOLD (currently unused - kept for the macro work)
 /////
 // These belong to a shared PD hold that drove both motors from one position
