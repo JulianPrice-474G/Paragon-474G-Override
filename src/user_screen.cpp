@@ -333,7 +333,10 @@ static bool _driver_mode_combo_fired() {
 static const char* ctrl_sensors_text() {
   static char buf[20];
 
-  if (macro_running()) return macro_status_text();
+  // Keep the macro's status up while it runs, while it waits, and after a
+  // failure - otherwise a STALLED step disappears the instant it happens.
+  if (macro_running() || macro_waiting() || macro_failed())
+    return macro_status_text();
 
   double ta = l_motor_a.get_temperature();
   double tb = l_motor_b.get_temperature();

@@ -46,7 +46,7 @@ constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can as
 double CASCADE_LOW     = 180;   // bottom / travel
 double CASCADE_COLLECT = 300;   // intake height, where the macro parks
 double CASCADE_FLIP    = 317;   // above collect, where the flip piston fires
-double CASCADE_OUT     = 450;   // phase 2 raises to here, not flip height
+double CASCADE_OUT     = 375;   // phase 2 raises to here, not flip height
 double CASCADE_MAX     = 1000;  // L1 stops raising here
 
 /////

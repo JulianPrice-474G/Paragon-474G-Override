@@ -108,3 +108,8 @@ bool macro_waiting();
 // and skips its R1/R2 block - otherwise it writes zero to those motors every
 // tick and the macro's intake never spins.
 bool macro_owns_intake();
+
+// True if the last run ended STALLED or TIMEOUT.  Stays true until the next
+// press, so the failing step stays on the controller instead of vanishing the
+// moment the macro stops.
+bool macro_failed();

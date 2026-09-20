@@ -8,13 +8,16 @@
 static bool        _running     = false;
 static bool        _cancel      = false;
 static const char* _step        = "idle";
+static bool        _failed      = false;  // last run ended STALLED or TIMEOUT
 
 bool macro_running() { return _running; }
+bool macro_failed()  { return _failed; }
 void macro_cancel()  { if (_running) _cancel = true; }
 
 const char* macro_status_text() {
   static char buf[20];
-  snprintf(buf, sizeof(buf), "%-19s", _running ? _step : "ready");
+  snprintf(buf, sizeof(buf), "%-19s",
+           (_running || macro_waiting() || _failed) ? _step : "ready");
   return buf;
 }
 
@@ -183,7 +186,8 @@ static void phase1_task(void*) {
   _running = false;
   // Only park-and-arm if it actually arrived.  A cancel or stall drops back to
   // idle, so the roller never arms off a failed move.
-  _phase = ok ? PH_WAITING : PH_IDLE;
+  _phase  = ok ? PH_WAITING : PH_IDLE;
+  _failed = !ok;
   if (ok) _step = "WAITING - press";
   _cancel = false;
 }
@@ -223,6 +227,7 @@ static void phase2_task(void*) {
   _running = false;
   _phase   = PH_IDLE;
   _cancel  = false;
+  _failed  = !ok;
   if (ok) _step = "done";
 }
 
@@ -254,6 +259,7 @@ void macro_start() {
 
   _running = true;
   _cancel  = false;
+  _failed  = false;
   _step    = "starting";
   _req     = (_phase == PH_WAITING) ? REQ_PHASE2 : REQ_PHASE1;
 }
