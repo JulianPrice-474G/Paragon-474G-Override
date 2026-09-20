@@ -198,10 +198,10 @@ static void phase2_task(void*) {
   set_claw(PISTON_ON);
   bool ok = macro_wait(MACRO_PISTON_SETTLE, "4 claw") &&
             step_pause("4 claw") &&
-            cascade_to(CASCADE_FLIP, "5 flip") &&
-            step_pause("5 flip");
+            cascade_to(CASCADE_OUT, "5 out") &&
+            step_pause("5 out");
 
-  // Let the cascade stop swinging at flip height before the piston fires.
+  // Let the cascade stop swinging at the out height before the piston fires.
   if (ok) ok = macro_wait(MACRO_FLIP_SETTLE, "6 settle") && step_pause("6 settle");
 
   if (ok) {
