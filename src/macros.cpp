@@ -54,7 +54,23 @@ static bool cascade_to(double target, const char* step_name) {
     double err = target - pos;
 
     if (fabs(err) <= CASCADE_MOVE_TOL) {
-      cascade_stop();
+      // Brake rather than coast, then keep watching: a heavy cascade carries a
+      // long way past the target on momentum, and the old code stopped looking
+      // the instant it touched the target so it never pulled the overshoot back.
+      cascade_hold();
+      const uint32_t settle_start = pros::millis();
+      while (pros::millis() - settle_start < (uint32_t)CASCADE_SETTLE_MS) {
+        if (_cancel) { cascade_stop(); return false; }
+        double e = target - cascade_position();
+        if (fabs(e) > CASCADE_MOVE_TOL) {
+          int p = (e > 0) ? CASCADE_SETTLE_POWER : -CASCADE_SETTLE_POWER;
+          cascade_drive(p * CASCADE_RAISE_SIGN);
+        } else {
+          cascade_hold();
+        }
+        pros::delay(ez::util::DELAY_TIME);
+      }
+      cascade_hold();
       return true;
     }
 

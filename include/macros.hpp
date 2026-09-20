@@ -24,9 +24,16 @@ extern double CASCADE_MAX;      // L1 stops raising here
 /////
 constexpr int    CASCADE_MOVE_SPEED   = 90;   // 0-127, how hard it drives to a height
 constexpr double CASCADE_MOVE_TOL     = 5;    // degrees; close enough to call it arrived
-constexpr double CASCADE_MOVE_SLOW    = 30;   // degrees out, start easing off
-constexpr int    CASCADE_MOVE_MIN     = 25;   // floor power, or it stalls short of target
-constexpr int    CASCADE_MOVE_TIMEOUT = 2500; // ms before a move gives up
+constexpr double CASCADE_MOVE_SLOW    = 80;   // degrees out, start easing off
+constexpr int    CASCADE_MOVE_MIN     = 15;   // floor power, or it stalls short of target
+constexpr int    CASCADE_MOVE_TIMEOUT = 3000; // ms before a move gives up
+
+// After reaching the target the cascade is braked and watched for this long,
+// and driven back if momentum has carried it outside CASCADE_MOVE_TOL.  Without
+// this a move ends the moment it touches the target and never looks again, so
+// a heavy cascade coasts well past - 60 degrees past 375, measured.
+constexpr int    CASCADE_SETTLE_MS    = 400;  // ms
+constexpr int    CASCADE_SETTLE_POWER = 30;   // gentle correction power
 
 // If the cascade has not moved CASCADE_STALL_DEG in CASCADE_STALL_MS, something
 // is wrong - it is jammed, or the direction constant below is inverted - so the
