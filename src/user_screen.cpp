@@ -324,34 +324,21 @@ static bool _driver_mode_combo_fired() {
   return false;
 }
 
-// Controller middle row while in driver mode: cascade motor temperatures,
-// their combined current draw, and the cascade position.
+// Controller middle row while in driver mode.  The cascade position is ALWAYS
+// shown - it is the number you read off to set heights - with the macro step
+// beside it when one is running, waiting or has failed:
 //
-//   50/50C 1.8A p144
-//
-// While the cascade is moving to a height, the move's status replaces it.
-// Commanded piston states, for telling code problems from wiring problems.
-// A DigitalOut cannot be read back, so these are what the code last TOLD each
-// solenoid - not what it actually did.  If a piston is not moving but its
-// number here flips, the command is going out and the fault is electrical.
-//   C = claw   F = C-flip   H = high intake   M = middle intake
-static const char* ctrl_pistons_text() {
-  static char buf[20];
-  snprintf(buf, sizeof(buf), "C%d F%d H%d M%d",
-           claw_extended     ? 1 : 0,
-           c_flip_extended   ? 1 : 0,
-           high_intake_extended   ? 1 : 0,
-           middle_intake_extended ? 1 : 0);
-  return buf;
-}
-
+//   p300 50/50C 1.8A     idle
+//   p300 5 out           macro moving
+//   p435 STALLED         last run failed
 static const char* ctrl_sensors_text() {
   static char buf[20];
+  int pos = (int)cascade_position();
 
-  // Keep the macro's status up while it runs, while it waits, and after a
-  // failure - otherwise a STALLED step disappears the instant it happens.
-  if (macro_running() || macro_waiting() || macro_failed())
-    return macro_status_text();
+  if (macro_running() || macro_waiting() || macro_failed()) {
+    snprintf(buf, sizeof(buf), "p%-4d %s", pos, macro_status_text());
+    return buf;
+  }
 
   double ta = l_motor_a.get_temperature();
   double tb = l_motor_b.get_temperature();
@@ -361,11 +348,11 @@ static const char* ctrl_sensors_text() {
   // get_temperature() returns PROS_ERR_F - a NaN - when the motor is missing,
   // and every comparison against NaN is false, so test for a GOOD value.
   if (!((ta > 0) && (tb > 0) && (ca >= 0) && (cb >= 0))) {
-    snprintf(buf, sizeof(buf), "cascade: no motor");
+    snprintf(buf, sizeof(buf), "p%-4d no motor", pos);
     return buf;
   }
-  snprintf(buf, sizeof(buf), "%d/%dC %.1fA p%d",
-           (int)ta, (int)tb, (ca + cb) / 1000.0, (int)cascade_position());
+  snprintf(buf, sizeof(buf), "p%-4d %d/%dC %.1fA",
+           pos, (int)ta, (int)tb, (ca + cb) / 1000.0);
   return buf;
 }
 

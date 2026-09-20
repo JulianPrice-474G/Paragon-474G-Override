@@ -16,7 +16,7 @@ void macro_cancel()  { if (_running) _cancel = true; }
 
 const char* macro_status_text() {
   static char buf[20];
-  snprintf(buf, sizeof(buf), "%-19s",
+  snprintf(buf, sizeof(buf), "%-13s",
            (_running || macro_waiting() || _failed) ? _step : "ready");
   return buf;
 }
@@ -210,7 +210,7 @@ static void phase1_task(void*) {
   // idle, so the roller never arms off a failed move.
   _phase  = ok ? PH_WAITING : PH_IDLE;
   _failed = !ok;
-  if (ok) _step = "WAITING - press";
+  if (ok) _step = "WAITING";
   _cancel = false;
 }
 
