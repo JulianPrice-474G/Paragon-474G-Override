@@ -324,21 +324,26 @@ static bool _driver_mode_combo_fired() {
   return false;
 }
 
-// Controller middle row while in driver mode.  The cascade position is ALWAYS
-// shown - it is the number you read off to set heights - with the macro step
-// beside it when one is running, waiting or has failed:
+// Commanded piston states.  A DigitalOut cannot be read back, so these are what
+// the code last TOLD each solenoid, not what it did.
+//   C = claw   F = C-flip   H = high intake   M = middle intake
+static const char* ctrl_pistons_text() {
+  static char buf[20];
+  snprintf(buf, sizeof(buf), "C%d F%d H%d M%d",
+           claw_extended     ? 1 : 0,
+           c_flip_extended   ? 1 : 0,
+           high_intake_extended   ? 1 : 0,
+           middle_intake_extended ? 1 : 0);
+  return buf;
+}
+
+// Controller middle row while in driver mode: cascade position, then the
+// cascade motor temperatures and their combined current draw.
 //
-//   p300 50/50C 1.8A     idle
-//   p300 5 out           macro moving
-//   p435 STALLED         last run failed
+//   p300 50/50C 1.8A
 static const char* ctrl_sensors_text() {
   static char buf[20];
   int pos = (int)cascade_position();
-
-  if (macro_running() || macro_waiting() || macro_failed()) {
-    snprintf(buf, sizeof(buf), "p%-4d %s", pos, macro_status_text());
-    return buf;
-  }
 
   double ta = l_motor_a.get_temperature();
   double tb = l_motor_b.get_temperature();
