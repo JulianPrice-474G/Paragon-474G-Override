@@ -59,6 +59,11 @@ bool macro_running();
 // One line of status for the controller screen.
 const char* macro_status_text();
 
-// True when the cascade is at the collect height, within CASCADE_COLLECT_TOL.
-// The upper intake roller only runs when this is true.
+// True only after a macro move has COMPLETED at the collect height, and only
+// until the cascade leaves that window again.  The upper intake roller runs on
+// this, so driving past 276 with L1/L2 does not start it spinning.
 bool cascade_at_collect();
+
+// Physical proximity to the collect height, ignoring how it got there.  Used
+// to pick which way RIGHT toggles.
+bool cascade_near_collect();

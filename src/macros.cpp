@@ -87,8 +87,23 @@ static bool cascade_to(double target, const char* step_name) {
 /////
 // Is the cascade at the collect height?
 /////
-bool cascade_at_collect() {
+// Geometric check only - is the cascade physically near the collect height.
+// Used to decide which way RIGHT toggles.
+bool cascade_near_collect() {
   return fabs(cascade_position() - CASCADE_COLLECT) <= CASCADE_COLLECT_TOL;
+}
+
+// Armed ONLY by a macro move that completed at the collect height.  Driving
+// past 276 with L1/L2 does not arm it, so the upper roller cannot start
+// spinning just because the cascade happened to pass through the window.
+static bool _collect_armed = false;
+
+bool cascade_at_collect() {
+  if (!_collect_armed) return false;
+  // Disarm as soon as the cascade leaves the window - once the driver has moved
+  // it off collect by hand, the roller should stop until the macro puts it back.
+  if (!cascade_near_collect()) _collect_armed = false;
+  return _collect_armed;
 }
 
 /////
@@ -109,6 +124,11 @@ static void macro_task_fn(void*) {
   // after a cancel or a stall would change the holder mid-air.
   if (arrived && _target == CASCADE_LOW) cascade_swap_hold_motor();
 
+  // Arm the roller only on a completed macro move to collect.  A cancelled or
+  // stalled move leaves it disarmed.
+  if (_target == CASCADE_COLLECT) _collect_armed = arrived;
+  else                            _collect_armed = false;
+
   cascade_stop();
   _running = false;
   _cancel  = false;
@@ -117,7 +137,9 @@ static void macro_task_fn(void*) {
 
 void macro_start() {
   if (_running) return;
-  _target  = cascade_at_collect() ? CASCADE_LOW : CASCADE_COLLECT;
+  // Toggle direction comes from the PHYSICAL position, not the armed latch -
+  // otherwise a hand-driven cascade sitting at collect would be sent there again.
+  _target  = cascade_near_collect() ? CASCADE_LOW : CASCADE_COLLECT;
   _running = true;
   _cancel  = false;
   _step    = "starting";
