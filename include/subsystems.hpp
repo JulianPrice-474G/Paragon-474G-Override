@@ -23,6 +23,9 @@ extern bool middle_intake_extended;
 extern bool claw_extended;
 extern bool c_flip_extended;
 
+// De-energise every solenoid so the cylinders vent.
+void release_all_pistons();
+
 // Which cascade motor holds: 0 = l_motor_a, 1 = l_motor_b.  Only one holds at
 // a time, and the macro swaps them after each trip back to low so the heat of
 // carrying the cascade is shared.

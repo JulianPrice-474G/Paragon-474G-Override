@@ -153,6 +153,19 @@ void cascade_hold() {
   else                         { l_motor_b.brake(); l_motor_a.move(0); }
 }
 
+// De-energise every solenoid, so the cylinders vent and the robot is not left
+// holding pressure.  Called from disabled().
+void release_all_pistons() {
+  high_intake_extended   = false;
+  middle_intake_extended = false;
+  claw_extended          = false;
+  c_flip_extended        = false;
+  high_intake.set_value(false);
+  middle_intake.set_value(false);
+  claw.set_value(false);
+  c_flip.set_value(false);
+}
+
 // Cascade hold state.  cascade_last_err is read by the controller readout in
 // user_screen.cpp so you can see the error while tuning KP/KD.
 bool   cascade_holding  = false;
@@ -264,7 +277,9 @@ void initialize() {
  * the robot is enabled, this task will exit.
  */
 void disabled() {
-  // . . .
+  // Vent everything the moment the robot is disabled, so it is not left with
+  // pistons held out between matches.
+  release_all_pistons();
 }
 
 /**
