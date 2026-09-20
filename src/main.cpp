@@ -420,17 +420,15 @@ void opcontrol() {
     if (DriverModeActive()) {
 
 
-      // ── Cascade collect/low toggle ──────────────────────────────────────
-      // RIGHT sends the cascade to the collect height, or back to low if it is
-      // already there.  Pressing it again mid-move cancels.  It runs in its own
-      // task so the drivetrain keeps responding throughout.
-      if (master.get_digital_new_press(DIGITAL_RIGHT)) {
-        if (macro_running()) macro_cancel();
-        else                 macro_start();
-      }
+      // ── Cascade sequence, in two halves ─────────────────────────────────
+      //   press 1 -> flip height, then collect, then WAIT (roller armed)
+      //   press 2 -> flip height, then back to low
+      // Pressing while it is moving cancels instead.  Both halves run in their
+      // own task, so the drivetrain keeps responding throughout.
+      if (master.get_digital_new_press(DIGITAL_RIGHT)) macro_start();
 
-      // Touching the cascade manually also cancels - the driver should not have
-      // to find the right button to take back control.
+      // Touching the cascade manually also cancels a move - the driver should
+      // not have to find the right button to take back control.
       if (macro_running() &&
           (master.get_digital(DIGITAL_L1) || master.get_digital(DIGITAL_L2)))
         macro_cancel();

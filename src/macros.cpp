@@ -85,66 +85,72 @@ static bool cascade_to(double target, const char* step_name) {
 }
 
 /////
-// Is the cascade at the collect height?
+// Where the sequence is up to
 /////
-// Geometric check only - is the cascade physically near the collect height.
-// Used to decide which way RIGHT toggles.
+enum _Phase {
+  PH_IDLE,     // nothing running
+  PH_GOING,    // phase 1 moving: flip height, then collect
+  PH_WAITING,  // parked at collect, roller armed, waiting for press 2
+  PH_RETURN    // phase 2 moving: flip height, then low
+};
+static _Phase _phase = PH_IDLE;
+
+bool macro_waiting() { return _phase == PH_WAITING; }
+
+// Geometric check - is the cascade physically near the collect height.
 bool cascade_near_collect() {
   return fabs(cascade_position() - CASCADE_COLLECT) <= CASCADE_COLLECT_TOL;
 }
 
-// Armed ONLY by a macro move that completed at the collect height.  Driving
-// past 276 with L1/L2 does not arm it, so the upper roller cannot start
-// spinning just because the cascade happened to pass through the window.
-static bool _collect_armed = false;
-
+// The upper roller is allowed to spin ONLY while the sequence is parked at
+// collect.  Driving through that height with L1/L2 does not arm it.
 bool cascade_at_collect() {
-  if (!_collect_armed) return false;
-  // Disarm as soon as the cascade leaves the window - once the driver has moved
-  // it off collect by hand, the roller should stop until the macro puts it back.
-  if (!cascade_near_collect()) _collect_armed = false;
-  return _collect_armed;
+  return _phase == PH_WAITING;
 }
 
 /////
-// The move
+// The two halves
 /////
-// RIGHT toggles: at collect -> go to low, anywhere else -> go to collect.
-// The target is chosen from the cascade's ACTUAL position, so moving it by
-// hand with L1/L2 cannot leave the toggle pointing the wrong way.
-static double _target = CASCADE_LOW;
-
-static void macro_task_fn(void*) {
-  bool arrived = cascade_to(_target,
-                            _target == CASCADE_COLLECT ? "-> collect" : "-> low");
-
-  // Back at low, hand the holding job to the other motor.  Only ONE motor holds
-  // the cascade, so that one carries the whole load and is the one that heats
-  // up; alternating spreads it.  Only on a completed trip to low - swapping
-  // after a cancel or a stall would change the holder mid-air.
-  if (arrived && _target == CASCADE_LOW) cascade_swap_hold_motor();
-
-  // Arm the roller only on a completed macro move to collect.  A cancelled or
-  // stalled move leaves it disarmed.
-  if (_target == CASCADE_COLLECT) _collect_armed = arrived;
-  else                            _collect_armed = false;
+static void phase1_task(void*) {
+  bool ok = cascade_to(CASCADE_FLIP, "1 flip") &&
+            cascade_to(CASCADE_COLLECT, "2 collect");
 
   cascade_stop();
   _running = false;
-  _cancel  = false;
-  if (_step[0] != 'S' && _step[0] != 'T') _step = "done";
+  // Only park-and-arm if it actually arrived.  A cancel or stall drops back to
+  // idle, so the roller never arms off a failed move.
+  _phase = ok ? PH_WAITING : PH_IDLE;
+  if (ok) _step = "WAITING - press";
+  _cancel = false;
 }
 
-void macro_start() {
-  if (_running) return;
-  // Toggle direction comes from the PHYSICAL position, not the armed latch -
-  // otherwise a hand-driven cascade sitting at collect would be sent there again.
-  _target  = cascade_near_collect() ? CASCADE_LOW : CASCADE_COLLECT;
+static void phase2_task(void*) {
+  bool ok = cascade_to(CASCADE_FLIP, "3 flip") &&
+            cascade_to(CASCADE_LOW,  "4 low");
+
+  // Hand the holding job to the other motor after each completed return to low,
+  // so the heat of carrying the cascade is shared between them.
+  if (ok) cascade_swap_hold_motor();
+
+  cascade_stop();
+  _running = false;
+  _phase   = PH_IDLE;
+  _cancel  = false;
+  if (ok) _step = "done";
+}
+
+static void start_task(void (*fn)(void*), const char* name) {
   _running = true;
   _cancel  = false;
   _step    = "starting";
-
-  // Reuse one task object rather than leaking a new one per run.
   if (_task != nullptr) { delete _task; _task = nullptr; }
-  _task = new pros::Task(macro_task_fn, nullptr, "Cascade Move");
+  _task = new pros::Task(fn, nullptr, name);
+}
+
+void macro_start() {
+  // Pressing mid-move cancels rather than queueing anything.
+  if (_running) { _cancel = true; return; }
+
+  if (_phase == PH_WAITING) start_task(phase2_task, "Cascade Return");
+  else                      start_task(phase1_task, "Cascade Collect");
 }

@@ -9,6 +9,10 @@
 // Drive the cascade where you want it, read p, put the number here.
 constexpr double CASCADE_LOW     = 180;  // bottom / travel
 constexpr double CASCADE_COLLECT = 276;  // intake height
+// NOTE: you said flip state is also 276, which is the same as collect - so the
+// "go to flip, then go to collect" part of phase 1 is currently a single move.
+// Set whichever of these should actually differ.
+constexpr double CASCADE_FLIP    = 276;  // where the flip piston fires
 
 // Upper travel limit.  L1 stops raising once the rotation sensor reads this,
 // so the cascade cannot be driven into its top stop.  Manual control only -
@@ -42,18 +46,24 @@ constexpr double CASCADE_COLLECT_TOL = 12;
 /////
 // Running the macro
 /////
-// Sends the cascade to the collect height, or back to low if it is already
-// there.  Runs in its own task, so the drivetrain never stops responding.
-// Pressing again while it moves cancels instead of starting a second one.
+// One press of the macro button.  The sequence runs in two halves:
+//
+//   press 1 -> flip height, then collect height, then WAIT
+//              (the upper roller is armed for as long as it waits)
+//   press 2 -> flip height, then back to low
+//
+// Pressing WHILE the cascade is moving cancels instead.  Everything runs in
+// its own task, so the drivetrain never stops responding.
 void macro_start();
 
 // Asks a running move to stop at its next check, leaving the cascade where it
 // is.  Nothing else is touched.
 void macro_cancel();
 
-// True while the macro owns the CASCADE.  opcontrol() checks this and skips
-// the manual L1/L2 controls, or both write every tick and the macro loses.
-// The intake, claw and drivetrain stay under driver control throughout.
+// True while the macro is MOVING the cascade.  opcontrol() checks this and
+// skips the manual L1/L2 controls, or both write every tick and the macro
+// loses.  False while it waits at collect, so the driver keeps the cascade
+// during the wait.  Intake, claw and drivetrain are never taken.
 bool macro_running();
 
 // One line of status for the controller screen.
@@ -67,3 +77,6 @@ bool cascade_at_collect();
 // Physical proximity to the collect height, ignoring how it got there.  Used
 // to pick which way RIGHT toggles.
 bool cascade_near_collect();
+
+// True while the sequence is paused at collect waiting for the second press.
+bool macro_waiting();
