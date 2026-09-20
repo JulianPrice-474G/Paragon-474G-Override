@@ -9,10 +9,8 @@
 // Drive the cascade where you want it, read p, put the number here.
 constexpr double CASCADE_LOW     = 180;  // bottom / travel
 constexpr double CASCADE_COLLECT = 276;  // intake height
-// NOTE: you said flip state is also 276, which is the same as collect - so the
-// "go to flip, then go to collect" part of phase 1 is currently a single move.
-// Set whichever of these should actually differ.
-constexpr double CASCADE_FLIP    = 276;  // where the flip piston fires
+constexpr double CASCADE_FLIP    = 317;  // raised above collect, where the flip
+                                         // piston will fire
 
 // Upper travel limit.  L1 stops raising once the rotation sensor reads this,
 // so the cascade cannot be driven into its top stop.  Manual control only -

@@ -499,11 +499,16 @@ void opcontrol() {
       // L1 / L2 pair - two motors, always opposite each other
       //  - L1: A forward, B backward, at full L_SPEED
       //  - L2: both flipped from what L1 does, at the slower L2_SPEED
-      // Skipped while the macro is moving the cascade: it owns these two motors
-      // for the duration, or both would write every tick and it would lose.
+      // L1/L2 are locked out in two cases:
+      //  - while the macro is MOVING: it owns these motors, and both writing
+      //    every tick would make it lose
+      //  - while it is PARKED at collect waiting for the second press: the
+      //    cascade must stay exactly where the sequence left it
       // The intake, claw and drivetrain stay under driver control throughout.
       if (macro_running()) {
-        // macro owns the cascade
+        // macro owns the cascade - do not touch the motors
+      } else if (macro_waiting()) {
+        cascade_hold();   // parked: hold position, ignore L1/L2
       } else if (master.get_digital(DIGITAL_L1)) {
         // Stop at the top limit instead of driving into the hard stop.  Hold
         // rather than coast, so it stays put while the button is still held.
