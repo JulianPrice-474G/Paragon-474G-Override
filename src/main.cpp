@@ -79,8 +79,8 @@ pros::Motor r_motor_d(R_MOTOR_D_PORT);
 /////
 constexpr char HIGH_INTAKE_PORT   = 'F';
 constexpr char MIDDLE_INTAKE_PORT = 'E';
-constexpr char CLAW_PORT          = 'D';  // toggled by DOWN
-constexpr char C_FLIP_PORT        = 'C';  // toggled by LEFT
+constexpr char CLAW_PORT          = 'A';  // toggled by DOWN
+constexpr char C_FLIP_PORT        = 'B';  // toggled by LEFT
 
 // Single-acting solenoids.  true = extended, false = retracted.
 // If your pistons turn out to behave backwards, swap these two values - that is

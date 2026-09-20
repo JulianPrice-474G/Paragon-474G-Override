@@ -330,6 +330,21 @@ static bool _driver_mode_combo_fired() {
 //   50/50C 1.8A p144
 //
 // While the cascade is moving to a height, the move's status replaces it.
+// Commanded piston states, for telling code problems from wiring problems.
+// A DigitalOut cannot be read back, so these are what the code last TOLD each
+// solenoid - not what it actually did.  If a piston is not moving but its
+// number here flips, the command is going out and the fault is electrical.
+//   C = claw   F = C-flip   H = high intake   M = middle intake
+static const char* ctrl_pistons_text() {
+  static char buf[20];
+  snprintf(buf, sizeof(buf), "C%d F%d H%d M%d",
+           claw_extended     ? 1 : 0,
+           c_flip_extended   ? 1 : 0,
+           high_intake_extended   ? 1 : 0,
+           middle_intake_extended ? 1 : 0);
+  return buf;
+}
+
 static const char* ctrl_sensors_text() {
   static char buf[20];
 
@@ -516,7 +531,7 @@ void handle_ctrl_input() {
     if (driver_mode) {
       CtrlLabel(0, "* DRIVER MODE *");  // confirm to driver that mode is active
       CtrlLive(1, ctrl_sensors_text, 500);  // cascade temps, current and position
-      CtrlLabel(2, "hold UP+X 1s");
+      CtrlLive(2, ctrl_pistons_text, 200);  // piston states (exit is still UP+X)
     } else {
       ctrl_state = CTRL_HOME;  // always return to home when exiting driver mode
       _ctrl_home();
