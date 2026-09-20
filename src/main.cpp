@@ -79,8 +79,8 @@ pros::Motor r_motor_d(R_MOTOR_D_PORT);
 /////
 constexpr char HIGH_INTAKE_PORT   = 'F';
 constexpr char MIDDLE_INTAKE_PORT = 'E';
-constexpr char CLAW_PORT          = 'A';  // toggled by DOWN
-constexpr char C_FLIP_PORT        = 'B';  // toggled by LEFT
+constexpr char CLAW_PORT          = 'B';  // toggled by DOWN
+constexpr char C_FLIP_PORT        = 'A';  // toggled by LEFT
 
 // Single-acting solenoids.  true = extended, false = retracted.
 // If your pistons turn out to behave backwards, swap these two values - that is
@@ -95,16 +95,16 @@ pros::adi::DigitalOut middle_intake(MIDDLE_INTAKE_PORT, PISTON_EXTENDED);
 
 // Claw and C-flip also start EXTENDED.  The second constructor argument is the
 // power-on state, so they are out before the match starts.
-pros::adi::DigitalOut claw(CLAW_PORT,     PISTON_EXTENDED);
-pros::adi::DigitalOut c_flip(C_FLIP_PORT, PISTON_EXTENDED);
+pros::adi::DigitalOut claw(CLAW_PORT,     PISTON_RETRACTED);
+pros::adi::DigitalOut c_flip(C_FLIP_PORT, PISTON_RETRACTED);
 
 // Software mirror of what each solenoid was last told to do.  A DigitalOut
 // cannot be read back, so this is the only record of piston state - and the
 // r_motor_b interlock below depends on it.
 bool high_intake_extended   = true;
 bool middle_intake_extended = true;
-bool claw_extended          = true;
-bool c_flip_extended        = true;
+bool claw_extended          = false;
+bool c_flip_extended        = false;
 
 /////
 // CASCADE POSITION SOURCE

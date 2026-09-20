@@ -58,8 +58,8 @@ constexpr double CASCADE_COLLECT_TOL = 12;
 // "Activated" means the solenoid is energised, which is the extended state -
 // the same sense as PISTON_EXTENDED in main.cpp.  Swap these two if a piston
 // turns out to work the other way round on your robot.
-constexpr bool PISTON_ON  = true;   // activated / extended
-constexpr bool PISTON_OFF = false;  // released / retracted
+constexpr bool PISTON_ON  = false;  // activated  (inverted for these solenoids)
+constexpr bool PISTON_OFF = true;   // released   (inverted for these solenoids)
 
 // Time given to a solenoid to finish moving before the cascade starts again.
 constexpr int MACRO_PISTON_SETTLE = 300;  // ms
