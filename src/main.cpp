@@ -44,7 +44,7 @@ constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can as
 // Drive the cascade where you want it, read p off the controller, put the
 // number here.  The macro and the L1 travel limit both use these.
 double CASCADE_LOW     = 180;   // bottom / travel
-double CASCADE_COLLECT = 276;   // intake height, where the macro parks
+double CASCADE_COLLECT = 290;   // intake height, where the macro parks
 double CASCADE_FLIP    = 317;   // above collect, where the flip piston fires
 double CASCADE_MAX     = 1000;  // L1 stops raising here
 

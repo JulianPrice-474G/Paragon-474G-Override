@@ -98,19 +98,20 @@ static bool macro_wait(int ms, const char* step_name) {
 // Set a solenoid and keep the software mirror in step.  A DigitalOut cannot be
 // read back, so those mirrors are the only record of piston state - and the
 // dropdown interlock in opcontrol depends on them.
-// Intake, in the R2 (collect) direction.  The dropdown keeps its piston
-// interlock so the macro cannot drive it in the one state where it must not
-// run.  opcontrol skips its own R1/R2 block while _intake_owned is set.
+// Intake, in the R1 direction - the same way R1 spins it manually.  The
+// dropdown keeps its piston interlock so the macro cannot drive it in the one
+// state where it must not run.  opcontrol skips its own R1/R2 block while
+// _intake_owned is set.
 static bool _intake_owned = false;
 bool macro_owns_intake() { return _intake_owned; }
 
 static void intake_run(bool on) {
   int p = on ? MACRO_INTAKE_SPEED : 0;
   bool dropdown_enabled = !(high_intake_extended && middle_intake_extended);
-  r_motor_a.move(p);
-  r_motor_b.move(dropdown_enabled ? p : 0);
-  r_motor_c.move(p);
-  r_motor_d.move(-p);
+  r_motor_a.move(-p);
+  r_motor_b.move(dropdown_enabled ? -p : 0);
+  r_motor_c.move(-p);
+  r_motor_d.move(p);
 }
 
 static void set_c_flip(bool on) {
