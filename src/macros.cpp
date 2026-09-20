@@ -84,6 +84,31 @@ static bool cascade_to(double target, const char* step_name) {
   return false;
 }
 
+// Interruptible delay - a plain pros::delay() would ignore a cancel request
+// for its whole duration.
+static bool macro_wait(int ms, const char* step_name) {
+  _step = step_name;
+  const uint32_t start = pros::millis();
+  while (pros::millis() - start < (uint32_t)ms) {
+    if (_cancel) return false;
+    pros::delay(ez::util::DELAY_TIME);
+  }
+  return true;
+}
+
+// Set a solenoid and keep the software mirror in step.  A DigitalOut cannot be
+// read back, so those mirrors are the only record of piston state - and the
+// dropdown interlock in opcontrol depends on them.
+static void set_c_flip(bool on) {
+  c_flip_extended = on;
+  c_flip.set_value(on);
+}
+
+static void set_claw(bool on) {
+  claw_extended = on;
+  claw.set_value(on);
+}
+
 /////
 // Where the sequence is up to
 /////
@@ -112,8 +137,21 @@ bool cascade_at_collect() {
 // The two halves
 /////
 static void phase1_task(void*) {
-  bool ok = cascade_to(CASCADE_FLIP, "1 flip") &&
-            cascade_to(CASCADE_COLLECT, "2 collect");
+  // Preflight: put the pistons into a known state before anything moves, so
+  // the sequence behaves the same however they were left.
+  set_c_flip(PISTON_ON);
+  set_claw(PISTON_OFF);
+
+  bool ok = macro_wait(MACRO_PISTON_SETTLE, "0 preflight") &&
+            cascade_to(CASCADE_FLIP, "1 flip");
+
+  // At flip height, release the flip piston.
+  if (ok) {
+    set_c_flip(PISTON_OFF);
+    ok = macro_wait(MACRO_PISTON_SETTLE, "2 release");
+  }
+
+  if (ok) ok = cascade_to(CASCADE_COLLECT, "3 collect");
 
   cascade_stop();
   _running = false;
@@ -125,8 +163,18 @@ static void phase1_task(void*) {
 }
 
 static void phase2_task(void*) {
-  bool ok = cascade_to(CASCADE_FLIP, "3 flip") &&
-            cascade_to(CASCADE_LOW,  "4 low");
+  // Grip first, then lift.
+  set_claw(PISTON_ON);
+  bool ok = macro_wait(MACRO_PISTON_SETTLE, "4 claw") &&
+            cascade_to(CASCADE_FLIP, "5 flip");
+
+  // Back at flip height, put the flip piston back on.
+  if (ok) {
+    set_c_flip(PISTON_ON);
+    ok = macro_wait(MACRO_PISTON_SETTLE, "6 flip on");
+  }
+
+  if (ok) ok = cascade_to(CASCADE_LOW, "7 low");
 
   // Hand the holding job to the other motor after each completed return to low,
   // so the heat of carrying the cascade is shared between them.
