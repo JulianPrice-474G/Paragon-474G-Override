@@ -7,9 +7,10 @@
 /////
 // Rotation sensor readings, the "p" value on the controller's middle row.
 // Drive the cascade where you want it, read p, put the number here.
-constexpr double CASCADE_LOW     = 49;   // bottom / travel
-constexpr double CASCADE_COLLECT = 144;  // intake height
-constexpr double CASCADE_FLIP    = 201;  // where the flip piston fires
+constexpr double CASCADE_LOW     = 180;  // bottom / travel
+constexpr double CASCADE_COLLECT = 276;  // intake height
+constexpr double CASCADE_FLIP    = 3017; // where the flip piston fires - UNUSED
+                                         // right now, nothing reads it
 
 // Upper travel limit.  L1 stops raising once the rotation sensor reads this,
 // so the cascade cannot be driven into its top stop.  Manual control only -
