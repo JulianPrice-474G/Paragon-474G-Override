@@ -5,7 +5,6 @@
 /////
 // State
 /////
-static pros::Task* _task        = nullptr;
 static bool        _running     = false;
 static bool        _cancel      = false;
 static const char* _step        = "idle";
@@ -187,18 +186,34 @@ static void phase2_task(void*) {
   if (ok) _step = "done";
 }
 
-static void start_task(void (*fn)(void*), const char* name) {
-  _running = true;
-  _cancel  = false;
-  _step    = "starting";
-  if (_task != nullptr) { delete _task; _task = nullptr; }
-  _task = new pros::Task(fn, nullptr, name);
+// ONE long-lived worker rather than a task per press.  pros::Task has no
+// destructor - it is a thin wrapper around a handle - so `delete` freed the
+// wrapper while leaving the RTOS task behind, leaking one per press.
+enum _Req { REQ_NONE, REQ_PHASE1, REQ_PHASE2 };
+static volatile _Req _req = REQ_NONE;
+
+static void macro_worker(void*) {
+  while (true) {
+    _Req r = _req;
+    if (r != REQ_NONE) {
+      _req = REQ_NONE;
+      if (r == REQ_PHASE1) phase1_task(nullptr);
+      else                 phase2_task(nullptr);
+    }
+    pros::delay(ez::util::DELAY_TIME);
+  }
 }
 
 void macro_start() {
   // Pressing mid-move cancels rather than queueing anything.
   if (_running) { _cancel = true; return; }
 
-  if (_phase == PH_WAITING) start_task(phase2_task, "Cascade Return");
-  else                      start_task(phase1_task, "Cascade Collect");
+  // Created on first use and never destroyed.  `static` inside the function so
+  // it cannot run before the motors and sensors are constructed.
+  static pros::Task worker(macro_worker, nullptr, "Cascade Macro");
+
+  _running = true;
+  _cancel  = false;
+  _step    = "starting";
+  _req     = (_phase == PH_WAITING) ? REQ_PHASE2 : REQ_PHASE1;
 }
