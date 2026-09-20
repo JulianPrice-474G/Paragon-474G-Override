@@ -60,6 +60,10 @@ constexpr int MACRO_FLIP_SETTLE = 500;  // ms
 // Intake power while the macro runs it (phase 2).
 constexpr int MACRO_INTAKE_SPEED = 127;  // 0-127
 
+// TESTING: pause this long after every single action, so each step can be
+// watched on its own.  Set to 0 for normal speed once it is verified.
+constexpr int MACRO_STEP_DELAY = 1000;  // ms
+
 /////
 // Running the macro
 /////

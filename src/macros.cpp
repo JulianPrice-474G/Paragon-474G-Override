@@ -123,6 +123,15 @@ static void set_claw(bool on) {
   claw.set_value(on);
 }
 
+// Testing pause between actions.  Keeps the finished step's label on the
+// controller so you can see which one just completed, and stays cancellable.
+static bool step_pause(const char* label) {
+  if (MACRO_STEP_DELAY <= 0) return !_cancel;
+  static char buf[20];
+  snprintf(buf, sizeof(buf), "%s ...", label);
+  return macro_wait(MACRO_STEP_DELAY, buf);
+}
+
 /////
 // Where the sequence is up to
 /////
@@ -157,15 +166,17 @@ static void phase1_task(void*) {
   set_claw(PISTON_OFF);
 
   bool ok = macro_wait(MACRO_PISTON_SETTLE, "0 preflight") &&
-            cascade_to(CASCADE_FLIP, "1 flip");
+            step_pause("0 preflight") &&
+            cascade_to(CASCADE_FLIP, "1 flip") &&
+            step_pause("1 flip");
 
   // At flip height, release the flip piston.
   if (ok) {
     set_c_flip(PISTON_OFF);
-    ok = macro_wait(MACRO_PISTON_SETTLE, "2 release");
+    ok = macro_wait(MACRO_PISTON_SETTLE, "2 release") && step_pause("2 release");
   }
 
-  if (ok) ok = cascade_to(CASCADE_COLLECT, "3 collect");
+  if (ok) ok = cascade_to(CASCADE_COLLECT, "3 collect") && step_pause("3 collect");
 
   cascade_stop();
   _running = false;
@@ -185,14 +196,16 @@ static void phase2_task(void*) {
   // Grip first, then lift.
   set_claw(PISTON_ON);
   bool ok = macro_wait(MACRO_PISTON_SETTLE, "4 claw") &&
-            cascade_to(CASCADE_FLIP, "5 flip");
+            step_pause("4 claw") &&
+            cascade_to(CASCADE_FLIP, "5 flip") &&
+            step_pause("5 flip");
 
   // Let the cascade stop swinging at flip height before the piston fires.
-  if (ok) ok = macro_wait(MACRO_FLIP_SETTLE, "6 settle");
+  if (ok) ok = macro_wait(MACRO_FLIP_SETTLE, "6 settle") && step_pause("6 settle");
 
   if (ok) {
     set_c_flip(PISTON_ON);
-    ok = macro_wait(MACRO_PISTON_SETTLE, "7 flip on");
+    ok = macro_wait(MACRO_PISTON_SETTLE, "7 flip on") && step_pause("7 flip on");
   }
 
   if (ok) ok = cascade_to(CASCADE_LOW, "8 low");
