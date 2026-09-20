@@ -98,6 +98,21 @@ static bool macro_wait(int ms, const char* step_name) {
 // Set a solenoid and keep the software mirror in step.  A DigitalOut cannot be
 // read back, so those mirrors are the only record of piston state - and the
 // dropdown interlock in opcontrol depends on them.
+// Intake, in the R2 (collect) direction.  The dropdown keeps its piston
+// interlock so the macro cannot drive it in the one state where it must not
+// run.  opcontrol skips its own R1/R2 block while _intake_owned is set.
+static bool _intake_owned = false;
+bool macro_owns_intake() { return _intake_owned; }
+
+static void intake_run(bool on) {
+  int p = on ? MACRO_INTAKE_SPEED : 0;
+  bool dropdown_enabled = !(high_intake_extended && middle_intake_extended);
+  r_motor_a.move(p);
+  r_motor_b.move(dropdown_enabled ? p : 0);
+  r_motor_c.move(p);
+  r_motor_d.move(-p);
+}
+
 static void set_c_flip(bool on) {
   c_flip_extended = on;
   c_flip.set_value(on);
@@ -162,18 +177,29 @@ static void phase1_task(void*) {
 }
 
 static void phase2_task(void*) {
+  // Intake runs for the whole of phase 2, from this press until it is back at
+  // low.  _intake_owned stops opcontrol writing zero over the top of it.
+  _intake_owned = true;
+  intake_run(true);
+
   // Grip first, then lift.
   set_claw(PISTON_ON);
   bool ok = macro_wait(MACRO_PISTON_SETTLE, "4 claw") &&
             cascade_to(CASCADE_FLIP, "5 flip");
 
-  // Back at flip height, put the flip piston back on.
+  // Let the cascade stop swinging at flip height before the piston fires.
+  if (ok) ok = macro_wait(MACRO_FLIP_SETTLE, "6 settle");
+
   if (ok) {
     set_c_flip(PISTON_ON);
-    ok = macro_wait(MACRO_PISTON_SETTLE, "6 flip on");
+    ok = macro_wait(MACRO_PISTON_SETTLE, "7 flip on");
   }
 
-  if (ok) ok = cascade_to(CASCADE_LOW, "7 low");
+  if (ok) ok = cascade_to(CASCADE_LOW, "8 low");
+
+  // Release the intake on every exit path, cancel and stall included.
+  intake_run(false);
+  _intake_owned = false;
 
   // Hand the holding job to the other motor after each completed return to low,
   // so the heat of carrying the cascade is shared between them.

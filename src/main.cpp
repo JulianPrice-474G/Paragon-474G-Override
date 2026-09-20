@@ -479,7 +479,12 @@ void opcontrol() {
       // dropdown still run, but the roller is held at zero.
       bool roller_enabled = cascade_at_collect();
 
-      if (master.get_digital(DIGITAL_R2)) {
+      // Skipped while the macro drives the intake itself - otherwise the else
+      // branch below writes zero to these motors every tick and the macro's
+      // intake never actually spins.
+      if (macro_owns_intake()) {
+        // macro owns the intake
+      } else if (master.get_digital(DIGITAL_R2)) {
         r_motor_a.move(R_SPEED);
         r_motor_b.move(dropdown_enabled ? R_SPEED : 0);
         r_motor_c.move(roller_enabled ? R_SPEED : 0);

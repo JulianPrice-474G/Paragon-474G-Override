@@ -53,6 +53,13 @@ constexpr bool PISTON_OFF = false;  // released / retracted
 // Time given to a solenoid to finish moving before the cascade starts again.
 constexpr int MACRO_PISTON_SETTLE = 300;  // ms
 
+// Pause at flip height in phase 2 before the flip piston fires, so the cascade
+// has stopped swinging first.
+constexpr int MACRO_FLIP_SETTLE = 500;  // ms
+
+// Intake power while the macro runs it (phase 2).
+constexpr int MACRO_INTAKE_SPEED = 127;  // 0-127
+
 /////
 // Running the macro
 /////
@@ -90,3 +97,8 @@ bool cascade_near_collect();
 
 // True while the sequence is paused at collect waiting for the second press.
 bool macro_waiting();
+
+// True while the macro is driving the intake itself.  opcontrol() checks this
+// and skips its R1/R2 block - otherwise it writes zero to those motors every
+// tick and the macro's intake never spins.
+bool macro_owns_intake();
