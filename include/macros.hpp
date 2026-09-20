@@ -24,8 +24,10 @@ extern double CASCADE_MAX;      // L1 stops raising here
 /////
 constexpr int    CASCADE_MOVE_SPEED   = 90;   // 0-127, how hard it drives to a height
 constexpr double CASCADE_MOVE_TOL     = 5;    // degrees; close enough to call it arrived
-constexpr double CASCADE_MOVE_SLOW    = 80;   // degrees out, start easing off
-constexpr int    CASCADE_MOVE_MIN     = 15;   // floor power, or it stalls short of target
+constexpr double CASCADE_MOVE_SLOW    = 50;   // degrees out, start easing off
+constexpr int    CASCADE_MOVE_MIN     = 35;   // floor power - MUST be enough to move a
+                                              // loaded cascade, or the approach creeps to a
+                                              // halt and the stall guard fires
 constexpr int    CASCADE_MOVE_TIMEOUT = 3000; // ms before a move gives up
 
 // After reaching the target the cascade is braked and watched for this long,
@@ -39,7 +41,7 @@ constexpr int    CASCADE_SETTLE_POWER = 30;   // gentle correction power
 // is wrong - it is jammed, or the direction constant below is inverted - so the
 // move aborts instead of driving into a hard stop until the timeout expires.
 constexpr double CASCADE_STALL_DEG = 2;
-constexpr int    CASCADE_STALL_MS  = 350;
+constexpr int    CASCADE_STALL_MS  = 600;
 
 // Set to -1 if positive motor power LOWERS the cascade instead of raising it.
 // Symptom of getting it wrong: the macro immediately stalls and aborts.

@@ -79,7 +79,11 @@ static bool cascade_to(double target, const char* step_name) {
     if (fabs(pos - last_pos) >= CASCADE_STALL_DEG) {
       last_pos      = pos;
       last_progress = pros::millis();
-    } else if (pros::millis() - last_progress > (uint32_t)CASCADE_STALL_MS) {
+    } else if (fabs(err) > CASCADE_MOVE_SLOW &&
+               pros::millis() - last_progress > (uint32_t)CASCADE_STALL_MS) {
+      // Only call it a stall while still driving hard.  Inside the easing zone
+      // the cascade legitimately creeps, and treating that as a jam aborts a
+      // move that was about to finish.
       cascade_stop();
       _step = "STALLED";
       return false;
