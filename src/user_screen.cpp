@@ -408,7 +408,7 @@ const char* ai_vision_text() {
 
 const char* selected_auton_text() {
   static char buf[32];
-  static const char* names[] = { "Auto 1", "Auto 2", "Auto 3", "Auto 4", "Auto 5" };
+  static const char* names[] = { "SAWP", "Skills", "1 pin", "Auto 4", "Auto 5" };
   int idx = SelectedAuton();
   if (idx < 0 || idx >= (int)(sizeof(names) / sizeof(names[0])))
     snprintf(buf, sizeof(buf), "Selected: none");
@@ -477,7 +477,7 @@ static void _ctrl_nav() {
 }
 
 static void _ctrl_auton(int idx) {
-  static const char* names[] = { "Auto 1", "Auto 2", "Auto 3", "Auto 4", "Auto 5" };  // match your button names
+  static const char* names[] = { "SAWP", "Skills", "1 pin", "Auto 4", "Auto 5" };  // match your button names
   CtrlLabel(0, names[idx]);
   CtrlLabel(1, "(A)sel  (B)back");
   CtrlLabel(2, "(< >) Nxt Auton");
@@ -486,7 +486,7 @@ static void _ctrl_auton(int idx) {
 // Controller confirmation after A selects an auton.  Without this the display is
 // identical before and after the press, so there is no way to tell it registered.
 static void _ctrl_selected(int idx) {
-  static const char* names[] = { "Auto 1", "Auto 2", "Auto 3", "Auto 4", "Auto 5" };
+  static const char* names[] = { "SAWP", "Skills", "1 pin", "Auto 4", "Auto 5" };
   CtrlLabel(0, names[idx]);
   CtrlLabel(1, "** SELECTED **");
   CtrlLabel(2, "(< >) Nxt Auton");
@@ -630,9 +630,9 @@ void build_screens() {
 
   // Three auton buttons — auton_idx (last number) must match case N in autonomous().
   ButtonPressStyle(UI_PRESS_RIPPLE);
-  ButtonAdd("auton_tab",   5, 44, 89, 158, UI_GOLD,    "Auto 1", "auton_1", UI_ELEM_GROW, 0);
-  ButtonAdd("auton_tab", 100, 44, 89, 158, UI_GOLD,    "Auto 2", "auton_2", UI_ELEM_GROW, 1);
-  ButtonAdd("auton_tab", 195, 44, 89, 158, UI_GOLD,    "Auto 3", "auton_3", UI_ELEM_GROW, 2);
+  ButtonAdd("auton_tab",   5, 44, 89, 158, UI_GOLD,    "SAWP", "auton_1", UI_ELEM_GROW, 0);
+  ButtonAdd("auton_tab", 100, 44, 89, 158, UI_GOLD,    "Skills", "auton_2", UI_ELEM_GROW, 1);
+  ButtonAdd("auton_tab", 195, 44, 89, 158, UI_GOLD,    "1 pin", "auton_3", UI_ELEM_GROW, 2);
   ButtonAdd("auton_tab", 290, 44, 89, 158, UI_GOLD,    "Auto 4", "auton_4", UI_ELEM_GROW, 3);
   ButtonAdd("auton_tab", 385, 44, 89, 158, UI_GOLD,    "Auto 5", "auton_5", UI_ELEM_GROW, 4);
   ButtonPressStyle(UI_PRESS_NONE);
@@ -658,7 +658,7 @@ void build_screens() {
 
   // ── Auton detail pages — add your route description, field map, notes, etc. ─
   ButtonAdd("auton_1", 10, 10, 80, 32, UI_GOLD, "< Back", "auton_tab");
-  LabelAdd( "auton_1", 130, 18, "Auto 1", 20, UI_WHITE);
+  LabelAdd( "auton_1", 130, 18, "SAWP", 20, UI_WHITE);
   ButtonAdd("auton_1", 390, 10, 80, 32, UI_GREEN, "IMU", "popup:imu");
   BoxAdd(   "auton_1",   0, 52, 480,   2, UI_GRAY, 0);
   // Gold panel filling the page body.  Added BEFORE the label so the label
@@ -667,7 +667,7 @@ void build_screens() {
   LabelAdd( "auton_1", 140, 137, "Put auton info here", 18, UI_BLACK);
 
   ButtonAdd("auton_2", 10, 10, 80, 32, UI_GOLD, "< Back", "auton_tab");
-  LabelAdd( "auton_2", 130, 18, "Auto 2", 20, UI_WHITE);
+  LabelAdd( "auton_2", 130, 18, "Skills", 20, UI_WHITE);
   ButtonAdd("auton_2", 390, 10, 80, 32, UI_GREEN, "IMU", "popup:imu");
   BoxAdd(   "auton_2",   0, 52, 480,   2, UI_GRAY, 0);
   // Gold panel filling the page body.  Added BEFORE the label so the label
@@ -676,7 +676,7 @@ void build_screens() {
   LabelAdd( "auton_2", 140, 137, "Put auton info here", 18, UI_BLACK);
 
   ButtonAdd("auton_3", 10, 10, 80, 32, UI_GOLD, "< Back", "auton_tab");
-  LabelAdd( "auton_3", 130, 18, "Auto 3", 20, UI_WHITE);
+  LabelAdd( "auton_3", 130, 18, "1 pin", 20, UI_WHITE);
   ButtonAdd("auton_3", 390, 10, 80, 32, UI_GREEN, "IMU", "popup:imu");
   BoxAdd(   "auton_3",   0, 52, 480,   2, UI_GRAY, 0);
   // Gold panel filling the page body.  Added BEFORE the label so the label
