@@ -58,7 +58,7 @@ void default_constants() {
 ///
 // SAWP - the "SAWP" button on the brain (slot 1)
 ///
-void auto_1() {
+void sawp() {
   // Your code here.
   //
   // To face the nearest target with the AI Vision sensor:
@@ -76,14 +76,14 @@ void auto_1() {
 ///
 // Skills - the "Skills" button on the brain (slot 2)
 ///
-void auto_2() {
+void skills() {
   // Your code here.
 }
 
 ///
 // 1 pin - the "1 pin" button on the brain (slot 3)
 ///
-void auto_3() {
+void one_pin() {
   // Your code here.
 }
 
