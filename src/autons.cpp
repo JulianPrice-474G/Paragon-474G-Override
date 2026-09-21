@@ -174,7 +174,7 @@ void auto_5() {
   // stops short by the same amount every time.  Constants are at the top of
   // this file in default_constants().
 
-  const int PID_TEST = 1;
+  const int PID_TEST = 4;
 
   switch (PID_TEST) {
     // ── 1. HEADING - pid_heading_constants_set ──────────────────────────────
@@ -216,17 +216,21 @@ void auto_5() {
     // ── 4. SWING - pid_swing_constants_set ──────────────────────────────────
     // Both directions: an uneven drivetrain swings differently each way, which
     // turning in place hides because both sides contribute.
+    // Note the swing type ALTERNATES.  LEFT_SWING locks the left side and
+    // drives the right; returning with LEFT_SWING again would have to drive
+    // that same side in reverse, which is weaker and lands short.  Using the
+    // opposite swing to come back keeps every motion a forward drive.
     case 4:
       chassis.pid_swing_set(ez::LEFT_SWING, 90_deg, SWING_SPEED, 45);
       chassis.pid_wait();
       pros::delay(700);
-      chassis.pid_swing_set(ez::LEFT_SWING, 0_deg, SWING_SPEED, 45);
+      chassis.pid_swing_set(ez::RIGHT_SWING, 0_deg, SWING_SPEED, 45);
       chassis.pid_wait();
       pros::delay(700);
       chassis.pid_swing_set(ez::RIGHT_SWING, -90_deg, SWING_SPEED, 45);
       chassis.pid_wait();
       pros::delay(700);
-      chassis.pid_swing_set(ez::RIGHT_SWING, 0_deg, SWING_SPEED, 45);
+      chassis.pid_swing_set(ez::LEFT_SWING, 0_deg, SWING_SPEED, 45);
       chassis.pid_wait();
       break;
 
