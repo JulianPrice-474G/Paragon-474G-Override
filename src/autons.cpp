@@ -159,7 +159,80 @@ void auto_4() {
 void auto_5() {
   auton_setup();
 
-  // Your code here.
+  // ── PID tuning bench ──────────────────────────────────────────────────────
+  // Change PID_TEST below, upload, select "PID Test" on the brain, then hold
+  // LEFT+B for 1 second in opcontrol to run it.  Re-run as often as you like.
+  //
+  // Tune in this order - each one depends on the ones before it:
+  //   1 heading  keeps the robot straight while driving
+  //   2 drive    distance accuracy
+  //   3 turn     angle accuracy, turning in place
+  //   4 swing    angle accuracy, pivoting about one side
+  //
+  // For each: set D to 0, raise P until it overshoots and oscillates a little,
+  // then raise D until that settles.  Leave I at 0 unless it consistently
+  // stops short by the same amount every time.  Constants are at the top of
+  // this file in default_constants().
+
+  const int PID_TEST = 1;
+
+  switch (PID_TEST) {
+    // ── 1. HEADING - pid_heading_constants_set ──────────────────────────────
+    // Watch whether it holds a straight line, not where it stops.  Mark the
+    // start point and see how far sideways it has drifted after 96 inches.
+    case 1:
+      chassis.pid_drive_set(48_in, DRIVE_SPEED, true);
+      chassis.pid_wait();
+      pros::delay(500);
+      chassis.pid_drive_set(-48_in, DRIVE_SPEED, true);
+      chassis.pid_wait();
+      break;
+
+    // ── 2. DRIVE - pid_drive_constants_set ──────────────────────────────────
+    // Tape-measure it.  It should land on 24 inches and come back to where it
+    // started, in one smooth motion without hunting.
+    case 2:
+      chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
+      chassis.pid_wait();
+      pros::delay(1000);
+      chassis.pid_drive_set(-24_in, DRIVE_SPEED, true);
+      chassis.pid_wait();
+      break;
+
+    // ── 3. TURN - pid_turn_constants_set ────────────────────────────────────
+    // Square the robot to a tile first.  After the 90 / -90 pair it should be
+    // back where it started; the 180 catches errors the small turns hide.
+    case 3:
+      chassis.pid_turn_set(90_deg, TURN_SPEED);
+      chassis.pid_wait();
+      pros::delay(700);
+      chassis.pid_turn_set(0_deg, TURN_SPEED);
+      chassis.pid_wait();
+      pros::delay(700);
+      chassis.pid_turn_set(180_deg, TURN_SPEED);
+      chassis.pid_wait();
+      break;
+
+    // ── 4. SWING - pid_swing_constants_set ──────────────────────────────────
+    // Both directions: an uneven drivetrain swings differently each way, which
+    // turning in place hides because both sides contribute.
+    case 4:
+      chassis.pid_swing_set(ez::LEFT_SWING, 90_deg, SWING_SPEED, 45);
+      chassis.pid_wait();
+      pros::delay(700);
+      chassis.pid_swing_set(ez::LEFT_SWING, 0_deg, SWING_SPEED, 45);
+      chassis.pid_wait();
+      pros::delay(700);
+      chassis.pid_swing_set(ez::RIGHT_SWING, -90_deg, SWING_SPEED, 45);
+      chassis.pid_wait();
+      pros::delay(700);
+      chassis.pid_swing_set(ez::RIGHT_SWING, 0_deg, SWING_SPEED, 45);
+      chassis.pid_wait();
+      break;
+
+    default:
+      break;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
