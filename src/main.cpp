@@ -316,11 +316,11 @@ void autonomous() {
   // The number in each case must match the auton_idx you gave that
   // ButtonAdd in build_screens().
   switch (get_selected_auton()) {
-    case 0: auto_1(); break;
-    case 1: auto_2(); break;
-    case 2: auto_3(); break;
-    case 3: auto_4(); break;
-    case 4: auto_5(); break;
+    case 0: auto_1(); break;   // SAWP
+    case 1: auto_2(); break;   // Skills
+    case 2: auto_3(); break;   // 1 pin
+    case 3: auto_4(); break;   // Auto 4
+    case 4: auto_5(); break;   // Auto 5
     default:                           break;   // nothing selected
   }
 }

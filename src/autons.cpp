@@ -56,7 +56,7 @@ void default_constants() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 ///
-// Auto 1 - runs when slot 1 is selected on the brain
+// SAWP - the "SAWP" button on the brain (slot 1)
 ///
 void auto_1() {
   // Your code here.
@@ -74,28 +74,28 @@ void auto_1() {
 }
 
 ///
-// Auto 2 - runs when slot 2 is selected on the brain
+// Skills - the "Skills" button on the brain (slot 2)
 ///
 void auto_2() {
   // Your code here.
 }
 
 ///
-// Auto 3 - runs when slot 3 is selected on the brain
+// 1 pin - the "1 pin" button on the brain (slot 3)
 ///
 void auto_3() {
   // Your code here.
 }
 
 ///
-// Auto 4 - runs when slot 4 is selected on the brain
+// Auto 4 - the "Auto 4" button on the brain (slot 4)
 ///
 void auto_4() {
   // Your code here.
 }
 
 ///
-// Auto 5 - runs when slot 5 is selected on the brain
+// Auto 5 - the "Auto 5" button on the brain (slot 5)
 ///
 void auto_5() {
   // Your code here.
