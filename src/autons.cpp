@@ -56,27 +56,82 @@ void default_constants() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 ///
+///
+// Subsystem setup - call this first in every auton
+///
+// autonomous() already resets the CHASSIS before your routine runs: PID
+// targets, IMU heading, drive encoders, odometry and brake mode.  This covers
+// everything else, so a routine starts from a known state whatever opcontrol
+// or a previous run left behind.
+void auton_setup() {
+  // Stop anything still turning from opcontrol or a cancelled macro.
+  l_motor_a.move(0);
+  l_motor_b.move(0);
+  r_motor_a.move(0);
+  r_motor_b.move(0);
+  r_motor_c.move(0);
+  r_motor_d.move(0);
+
+  // One cascade motor holds, the other coasts - see main.cpp.  Re-applied here
+  // because autonomous() changes the DRIVE brake mode and a previous auton may
+  // have left these set differently.
+  cascade_apply_hold_motor();
+
+  // Pistons to a known starting state.  Change these to whatever the robot
+  // should look like on the tile at the start of a match.
+  high_intake_extended   = true;
+  middle_intake_extended = true;
+  claw_extended          = false;
+  c_flip_extended        = false;
+  high_intake.set_value(high_intake_extended);
+  middle_intake.set_value(middle_intake_extended);
+  claw.set_value(claw_extended);
+  c_flip.set_value(c_flip_extended);
+
+  // Cascade position reference.  The rotation sensor counts from wherever it
+  // powered up, so absolute heights (CASCADE_LOW, CASCADE_COLLECT ...) only
+  // mean anything if the cascade starts in a known place.
+  //
+  // UNCOMMENT THIS ONLY IF THE CASCADE IS ALWAYS ON ITS BOTTOM STOP AT THE
+  // START OF A MATCH - it makes that position read zero, which would shift
+  // every height constant.  Verify what the sensor reads at the stop first.
+  // cascade_rot.reset_position();
+
+  pros::delay(50);   // let the solenoids start moving before the robot does
+}
+
 // SAWP - the "SAWP" button on the brain (slot 1)
 ///
 void sawp() {
+  auton_setup();
+
   // Your code here.
   //
-  // To face the nearest target with the AI Vision sensor:
+  // Driving (all distances in inches, angles in degrees):
+  //   chassis.pid_drive_set(24_in, DRIVE_SPEED, true);   // true = slew from a stop
+  //   chassis.pid_wait();                                 // block until it arrives
+  //   chassis.pid_turn_set(90_deg, TURN_SPEED);
+  //   chassis.pid_wait();
   //
-  //   if (vision_align(2000)) {
-  //     // aligned - drive at it, score, whatever
-  //   } else {
-  //     // nothing found within 2 s - fall back to a fixed route
-  //   }
+  // Subsystems - these are plain calls, nothing waits for them:
+  //   claw.set_value(true);   claw_extended   = true;   // keep the mirror in step
+  //   c_flip.set_value(true); c_flip_extended = true;
+  //   r_motor_a.move(127);                               // intake, see opcontrol
+  //                                                      // for the full group
   //
-  // vision_align() stops the drive before returning either way, and the tuning
-  // constants live at the top of include/vision.hpp.
+  // AI Vision:
+  //   if (vision_align(2000)) { /* facing a target */ }
+  //   else                    { /* nothing found, fall back */ }
+  // vision_align() stops the drive before returning either way; its tuning
+  // constants are at the top of include/vision.hpp.
 }
 
 ///
 // Skills - the "Skills" button on the brain (slot 2)
 ///
 void skills() {
+  auton_setup();
+
   // Your code here.
 }
 
@@ -84,6 +139,8 @@ void skills() {
 // 1 pin - the "1 pin" button on the brain (slot 3)
 ///
 void one_pin() {
+  auton_setup();
+
   // Your code here.
 }
 
@@ -91,6 +148,8 @@ void one_pin() {
 // Auto 4 - the "Auto 4" button on the brain (slot 4)
 ///
 void auto_4() {
+  auton_setup();
+
   // Your code here.
 }
 
@@ -98,6 +157,8 @@ void auto_4() {
 // Auto 5 - the "Auto 5" button on the brain (slot 5)
 ///
 void auto_5() {
+  auton_setup();
+
   // Your code here.
 }
 

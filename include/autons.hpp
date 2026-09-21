@@ -6,6 +6,10 @@ void default_constants();
 // These are what the five buttons on the brain actually run.  Write them in
 // src/autons.cpp.  The example routines below are EZ-Template's reference code
 // and are no longer wired to anything - leave them, copy from them, or delete.
+// Subsystem setup - call first in every auton.  The chassis is already reset
+// by autonomous() before your routine runs.
+void auton_setup();
+
 void sawp();
 void skills();
 void one_pin();
