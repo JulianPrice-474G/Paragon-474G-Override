@@ -59,6 +59,15 @@ void intake_set(int power, bool roller = true);
 // again replaces the running spin rather than queueing one.  ms = 0 or
 // speed = 0 stops it, same as intake_spin_stop().
 void intake_spin(int ms, int speed);
+
+// Just the two fins - the dropdown and the upper roller are left alone.
+// fins_set() drives them directly; fins_spin() takes the same ms/speed as
+// intake_spin() and runs in the background the same way.
+//
+// intake_spin() and fins_spin() share one worker, so starting either replaces
+// whatever was running - they cannot fight over the fin motors.
+void fins_set(int power);
+void fins_spin(int ms, int speed);
 void intake_spin_stop();
 bool intake_spin_active();
 

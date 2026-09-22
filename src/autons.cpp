@@ -115,6 +115,9 @@ void sawp() {
   //   intake_spin(3000, 127);   // 3 seconds, then stops itself
   //   intake_spin(-1, 127);     // run until stopped
   //   intake_spin_stop();       // stop now
+  //
+  //   fins_spin(3000, 127);     // same, but ONLY the two fins - dropdown and
+  //   fins_set(127);            // upper roller are left alone
   //   // +127 runs it the same way R1 does; negative for the other way.
   //   // All of these return immediately, so the next drive starts straight
   //   // away with the intake still turning.

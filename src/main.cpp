@@ -180,6 +180,14 @@ void intake_set(int power, bool roller) {
   upper_roller.move(roller ? -power : 0);
 }
 
+// Just the two fins.  fin_2 is mounted opposite, so it is always commanded the
+// other way round - positive runs them the same way R1 does.  The dropdown and
+// the upper roller are left alone.
+void fins_set(int power) {
+  fin_1.move(-power);
+  fin_2.move(power);
+}
+
 // Run the intake for a set time WITHOUT blocking - it returns immediately and a
 // background task stops the motors when the time is up.  Use it to keep the
 // intake turning through a drive or turn:
@@ -194,6 +202,7 @@ void intake_set(int power, bool roller) {
 static volatile int  _spin_until_ms = 0;
 static volatile int  _spin_speed    = 0;
 static volatile bool _spin_active   = false;
+static volatile bool _spin_fins     = false;  // true = fins only, false = whole group
 
 bool intake_spin_active() { return _spin_active; }
 
@@ -201,31 +210,37 @@ static void intake_spin_task(void*) {
   while (true) {
     if (_spin_active) {
       // _spin_until_ms < 0 means run until something stops it.
-      if (_spin_until_ms >= 0 && (int)pros::millis() >= _spin_until_ms) {
-        _spin_active = false;
-        intake_set(0);
-      } else {
-        intake_set(_spin_speed);
-      }
+      bool done = (_spin_until_ms >= 0 && (int)pros::millis() >= _spin_until_ms);
+      int  power = done ? 0 : _spin_speed;
+      if (_spin_fins) fins_set(power);
+      else            intake_set(power);
+      if (done) _spin_active = false;
     }
     pros::delay(ez::util::DELAY_TIME);
   }
 }
 
-void intake_spin(int ms, int speed) {
+// Shared by intake_spin() and fins_spin(), so the two can never fight over the
+// fin motors - starting either one replaces whatever was running.
+static void spin_start(int ms, int speed, bool fins_only) {
   // One worker, created on first use and never destroyed.  pros::Task has no
   // destructor, so spawning one per call would leak a task every time.
   static pros::Task worker(intake_spin_task, nullptr, "Intake Spin");
 
   if (ms == 0 || speed == 0) {   // stop
     _spin_active = false;
-    intake_set(0);
+    if (_spin_fins) fins_set(0);
+    else            intake_set(0);
     return;
   }
+  _spin_fins     = fins_only;
   _spin_speed    = speed;
   _spin_until_ms = (ms < 0) ? -1 : (int)pros::millis() + ms;
   _spin_active   = true;
 }
+
+void intake_spin(int ms, int speed) { spin_start(ms, speed, false); }
+void fins_spin(int ms, int speed)   { spin_start(ms, speed, true); }
 
 void intake_spin_stop() { intake_spin(0, 0); }
 
