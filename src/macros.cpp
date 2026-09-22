@@ -125,10 +125,10 @@ bool macro_owns_intake() { return _intake_owned; }
 static void intake_run(bool on, bool roller_back = false) {
   int p = on ? MACRO_INTAKE_SPEED : 0;
   bool dropdown_enabled = !(high_intake_extended && middle_intake_extended);
-  r_motor_a.move(-p);
-  r_motor_b.move(dropdown_enabled ? -p : 0);
-  r_motor_c.move(roller_back ? p : -p);
-  r_motor_d.move(p);
+  fin_1.move(-p);
+  dropdown.move(dropdown_enabled ? -p : 0);
+  upper_roller.move(roller_back ? p : -p);
+  fin_2.move(p);
 }
 
 

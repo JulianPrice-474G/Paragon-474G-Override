@@ -8,10 +8,10 @@ extern Drive chassis;
 // Motors - the ports for these are set at the top of main.cpp
 extern pros::Motor l_motor_a;  // L1 / L2 pair - always opposite l_motor_b
 extern pros::Motor l_motor_b;
-extern pros::Motor r_motor_a;  // R1 / R2 group - a, b, c together
-extern pros::Motor r_motor_b;
-extern pros::Motor r_motor_c;
-extern pros::Motor r_motor_d;  // always opposite a, b, c
+extern pros::Motor fin_1;  // R1 / R2 group - a, b, c together
+extern pros::Motor dropdown;
+extern pros::Motor upper_roller;
+extern pros::Motor fin_2;  // always opposite a, b, c
 
 // Pneumatics - single-acting solenoids, both default to extended
 extern pros::adi::DigitalOut high_intake;
@@ -34,9 +34,22 @@ void flip_set(bool on);
 void high_intake_set(bool on);
 void middle_intake_set(bool on);
 
-// Whole intake group, -127 to 127, positive collects.  Handles r_motor_d
+// Whole intake group, -127 to 127, positive collects.  Handles fin_2
 // running opposite and keeps the dropdown's piston interlock.
 void intake_set(int power);
+
+// Run the intake for a set time WITHOUT blocking.  Returns immediately; a
+// background task stops the motors when the time is up, so the intake keeps
+// turning through a drive or turn:
+//
+//   intake_spin(3000, 127);
+//   chassis.pid_drive_set(24_in, DRIVE_SPEED);
+//   chassis.pid_wait();
+//
+// Calling it again replaces the running spin rather than queueing one.
+void intake_spin(int ms, int speed);
+void intake_spin_stop();
+bool intake_spin_active();
 
 // Cascade pair, -127 to 127.  The two motors always run opposite each other.
 void cascade_set(int power);

@@ -22,10 +22,10 @@ constexpr int8_t L_MOTOR_B_PORT = 6;
 // ── R1 / R2 group - four motors, three one way and the fourth the other ─────
 // TODO: set your real ports.  R_MOTOR_D is the odd one out - it always runs
 // opposite to the other three.
-constexpr int8_t R_MOTOR_A_PORT = 1;
-constexpr int8_t R_MOTOR_B_PORT = 4;   // drop-down intake - cut by the piston interlock
-constexpr int8_t R_MOTOR_C_PORT = 19;
-constexpr int8_t R_MOTOR_D_PORT = 11;  // the one that spins opposite the other two
+constexpr int8_t FIN_1_PORT = 1;
+constexpr int8_t DROPDOWN_PORT = 4;   // drop-down intake - cut by the piston interlock
+constexpr int8_t UPPER_ROLLER_PORT = 19;
+constexpr int8_t FIN_2_PORT = 11;  // the one that spins opposite the other two
 
 
 /////
@@ -69,10 +69,10 @@ pros::Motor l_motor_a(L_MOTOR_A_PORT);
 pros::Motor l_motor_b(L_MOTOR_B_PORT);
 
 // R1 / R2 group - A, B and C run together; D always runs opposite to them.
-pros::Motor r_motor_a(R_MOTOR_A_PORT);
-pros::Motor r_motor_b(R_MOTOR_B_PORT);
-pros::Motor r_motor_c(R_MOTOR_C_PORT);
-pros::Motor r_motor_d(R_MOTOR_D_PORT); 
+pros::Motor fin_1(FIN_1_PORT);
+pros::Motor dropdown(DROPDOWN_PORT);
+pros::Motor upper_roller(UPPER_ROLLER_PORT);
+pros::Motor fin_2(FIN_2_PORT); 
 
 /////
 // PNEUMATICS - ADI (3-wire) ports, letters A-H
@@ -100,7 +100,7 @@ pros::adi::DigitalOut c_flip(C_FLIP_PORT, PISTON_RETRACTED);
 
 // Software mirror of what each solenoid was last told to do.  A DigitalOut
 // cannot be read back, so this is the only record of piston state - and the
-// r_motor_b interlock below depends on it.
+// dropdown interlock below depends on it.
 bool high_intake_extended   = true;
 bool middle_intake_extended = true;
 bool claw_extended          = false;
@@ -166,15 +166,63 @@ void high_intake_set(bool on)   { high_intake_extended   = on; high_intake.set_v
 void middle_intake_set(bool on) { middle_intake_extended = on; middle_intake.set_value(on); }
 
 // Whole intake group in one call: -127 to 127, positive collects.  Handles
-// r_motor_d running opposite the others, and keeps the dropdown interlock -
+// fin_2 running opposite the others, and keeps the dropdown interlock -
 // port 4 stays stopped while both intake pistons are extended.
 void intake_set(int power) {
   bool dropdown_enabled = !(high_intake_extended && middle_intake_extended);
-  r_motor_a.move(-power);
-  r_motor_b.move(dropdown_enabled ? -power : 0);
-  r_motor_c.move(-power);
-  r_motor_d.move(power);
+  fin_1.move(-power);
+  dropdown.move(dropdown_enabled ? -power : 0);
+  upper_roller.move(-power);
+  fin_2.move(power);
 }
+
+// Run the intake for a set time WITHOUT blocking - it returns immediately and a
+// background task stops the motors when the time is up.  Use it to keep the
+// intake turning through a drive or turn:
+//
+//   intake_spin(3000, 127);                     // returns at once
+//   chassis.pid_drive_set(24_in, DRIVE_SPEED);  // intake still running
+//   chassis.pid_wait();
+//
+// Calling it again replaces the running spin rather than queueing.  ms <= 0 or
+// speed 0 stops it.  intake_spin_active() is true while one is in progress, and
+// opcontrol leaves the intake alone while it is.
+static volatile int  _spin_until_ms = 0;
+static volatile int  _spin_speed    = 0;
+static volatile bool _spin_active   = false;
+
+bool intake_spin_active() { return _spin_active; }
+
+static void intake_spin_task(void*) {
+  while (true) {
+    if (_spin_active) {
+      if ((int)pros::millis() >= _spin_until_ms) {
+        _spin_active = false;
+        intake_set(0);
+      } else {
+        intake_set(_spin_speed);
+      }
+    }
+    pros::delay(ez::util::DELAY_TIME);
+  }
+}
+
+void intake_spin(int ms, int speed) {
+  // One worker, created on first use and never destroyed.  pros::Task has no
+  // destructor, so spawning one per call would leak a task every time.
+  static pros::Task worker(intake_spin_task, nullptr, "Intake Spin");
+
+  if (ms <= 0 || speed == 0) {
+    _spin_active = false;
+    intake_set(0);
+    return;
+  }
+  _spin_speed    = speed;
+  _spin_until_ms = (int)pros::millis() + ms;
+  _spin_active   = true;
+}
+
+void intake_spin_stop() { intake_spin(0, 0); }
 
 // Cascade pair: -127 to 127.  The two motors always run opposite each other.
 void cascade_set(int power) {
@@ -515,10 +563,10 @@ void opcontrol() {
       }
 
       // Intake - four motors, R2 runs them in, R1 reverses all of them.
-      //   port 1  (r_motor_a) fin      - always runs
-      //   port 11 (r_motor_d) fin      - always runs, mounted opposite the rest
-      //   port 4  (r_motor_b) dropdown - runs unless BOTH intake pistons are out
-      //   port 19 (r_motor_c) upper roller - runs ONLY at the collect height
+      //   port 1  (fin_1) fin      - always runs
+      //   port 11 (fin_2) fin      - always runs, mounted opposite the rest
+      //   port 4  (dropdown) dropdown - runs unless BOTH intake pistons are out
+      //   port 19 (upper_roller) upper roller - runs ONLY at the collect height
       //
       // Dropdown interlock, from the two intake piston toggles (B and Y):
       //        both extended   (high state)   -> stopped
@@ -534,23 +582,23 @@ void opcontrol() {
       // Skipped while the macro drives the intake itself - otherwise the else
       // branch below writes zero to these motors every tick and the macro's
       // intake never actually spins.
-      if (macro_owns_intake()) {
-        // macro owns the intake
+      if (macro_owns_intake() || intake_spin_active()) {
+        // the macro or a timed intake_spin() owns the intake
       } else if (master.get_digital(DIGITAL_R2)) {
-        r_motor_a.move(R_SPEED);
-        r_motor_b.move(dropdown_enabled ? R_SPEED : 0);
-        r_motor_c.move(roller_enabled ? R_SPEED : 0);
-        r_motor_d.move(-R_SPEED);
+        fin_1.move(R_SPEED);
+        dropdown.move(dropdown_enabled ? R_SPEED : 0);
+        upper_roller.move(roller_enabled ? R_SPEED : 0);
+        fin_2.move(-R_SPEED);
       } else if (master.get_digital(DIGITAL_R1)) {
-        r_motor_a.move(-R_SPEED);
-        r_motor_b.move(dropdown_enabled ? -R_SPEED : 0);
-        r_motor_c.move(roller_enabled ? -R_SPEED : 0);
-        r_motor_d.move(R_SPEED);
+        fin_1.move(-R_SPEED);
+        dropdown.move(dropdown_enabled ? -R_SPEED : 0);
+        upper_roller.move(roller_enabled ? -R_SPEED : 0);
+        fin_2.move(R_SPEED);
       } else {
-        r_motor_a.move(0);
-        r_motor_b.move(0);
-        r_motor_c.move(0);
-        r_motor_d.move(0);
+        fin_1.move(0);
+        dropdown.move(0);
+        upper_roller.move(0);
+        fin_2.move(0);
       }
 
       // L1 / L2 pair - two motors, always opposite each other
@@ -588,10 +636,10 @@ void opcontrol() {
       // or a motor holds whatever it was last told to do.
       l_motor_a.move(0);
       l_motor_b.move(0);
-      r_motor_a.move(0);
-      r_motor_b.move(0);
-      r_motor_c.move(0);
-      r_motor_d.move(0);
+      fin_1.move(0);
+      dropdown.move(0);
+      upper_roller.move(0);
+      fin_2.move(0);
       // Pistons hold their state and are not re-commanded here.
     }
 
