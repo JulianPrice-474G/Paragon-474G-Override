@@ -101,6 +101,9 @@ void sawp() {
   //
   // Driving (all distances in inches, angles in degrees):
   //   chassis.pid_drive_set(24_in, DRIVE_SPEED, true);   // true = slew from a stop
+  //   drive_arc(90, 100, 40);   // simpler arc: left speed, right speed, and
+  //   drive_arc(0, 40, 100);    // the heading to stop at.  No pid_wait().
+  //
   //   chassis.pid_wait();                                 // block until it arrives
   //   chassis.pid_turn_set(90_deg, TURN_SPEED);
   //   chassis.pid_wait();

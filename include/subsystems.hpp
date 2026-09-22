@@ -66,6 +66,18 @@ void intake_spin(int ms, int speed);
 //
 // intake_spin() and fins_spin() share one worker, so starting either replaces
 // whatever was running - they cannot fight over the fin motors.
+// Simple arc: give it the two side speeds and the heading to stop at, and it
+// drives until the robot faces that heading.  Blocks, so no pid_wait() after.
+//
+//   drive_arc(90, 100, 40);    // curve right to 90 degrees
+//   drive_arc(0, 40, 100);     // curve back to 0
+//   drive_arc(90, 80, -80);    // spin on the spot
+//
+// Heading is ABSOLUTE, like pid_turn_set.  Open-loop - the speeds you give are
+// the speeds it drives at - so it will not self-correct like the PID motions.
+// Returns false on timeout.
+bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_ms = 3000);
+
 void fins_set(int power);
 void fins_spin(int ms, int speed);
 void intake_spin_stop();

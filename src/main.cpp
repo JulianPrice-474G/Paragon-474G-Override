@@ -37,6 +37,9 @@ constexpr int L2_SPEED   = L_SPEED * 50 / 100;  // L2 - 50% of L_SPEED (= 63)
 constexpr int R_SPEED = 127;         // R1 / R2 group
 constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can ask for
 
+// How close to the target heading drive_arc() calls it arrived.
+constexpr double ARC_TOL_DEG = 2;
+
 /////
 // CASCADE HEIGHTS - CHANGE THESE
 /////
@@ -178,6 +181,57 @@ void intake_set(int power, bool roller) {
   fin_2.move(power);                                  // mounted opposite
   dropdown.move(dropdown_enabled ? -power : 0);
   upper_roller.move(roller ? -power : 0);
+}
+
+/////
+// drive_arc - the simple version of a swing
+/////
+// You give it the two side speeds and the heading to stop at.  It drives both
+// sides at those speeds until the robot is facing target_deg, then stops.
+//
+//   drive_arc(90, 100, 40);    // curve right to 90 degrees
+//   drive_arc(0, 40, 100);     // curve back to 0 the other way
+//   drive_arc(90, 80, -80);    // spin on the spot to 90
+//
+// The heading is ABSOLUTE, like pid_turn_set - 90 means "end up facing 90",
+// not "turn 90 more".  Blocks until it arrives, so no pid_wait() afterwards.
+//
+// This is open-loop: the speeds you give are the speeds it drives at, and the
+// only feedback is when to stop.  That makes it predictable, but it will not
+// correct itself the way the PID motions do - expect to overshoot slightly at
+// high speeds, and lower the speeds rather than fighting it.
+//
+// Returns false if it ran out of time instead of reaching the heading.
+bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_ms) {
+  const uint32_t start = pros::millis();
+
+  // Shortest way round, so 350 -> 10 turns 20 degrees rather than 340.
+  auto error_to_target = [&]() {
+    double e = target_deg - chassis.drive_imu_get();
+    while (e >  180) e -= 360;
+    while (e < -180) e += 360;
+    return e;
+  };
+
+  double first = error_to_target();
+  if (fabs(first) < 1) { chassis.drive_set(0, 0); return true; }
+
+  while (pros::millis() - start < (uint32_t)timeout_ms) {
+    double e = error_to_target();
+
+    // Stop on arrival, or the moment we cross the target - with fixed speeds
+    // there is nothing to slow us down, so the crossing is what catches it.
+    if (fabs(e) <= ARC_TOL_DEG || (e > 0) != (first > 0)) {
+      chassis.drive_set(0, 0);
+      return true;
+    }
+
+    chassis.drive_set(left_speed, right_speed);
+    pros::delay(ez::util::DELAY_TIME);
+  }
+
+  chassis.drive_set(0, 0);
+  return false;
 }
 
 // Just the two fins.  fin_2 is mounted opposite, so it is always commanded the
