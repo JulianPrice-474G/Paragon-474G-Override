@@ -589,20 +589,11 @@ void opcontrol() {
       if (macro_owns_intake() || intake_spin_active()) {
         // the macro or a timed intake_spin() owns the intake
       } else if (master.get_digital(DIGITAL_R2)) {
-        fin_1.move(R_SPEED);
-        dropdown.move(dropdown_enabled ? R_SPEED : 0);
-        upper_roller.move(roller_enabled ? R_SPEED : 0);
-        fin_2.move(-R_SPEED);
+        intake_set(-R_SPEED, roller_enabled);
       } else if (master.get_digital(DIGITAL_R1)) {
-        fin_1.move(-R_SPEED);
-        dropdown.move(dropdown_enabled ? -R_SPEED : 0);
-        upper_roller.move(roller_enabled ? -R_SPEED : 0);
-        fin_2.move(R_SPEED);
+        intake_set(R_SPEED, roller_enabled);
       } else {
-        fin_1.move(0);
-        dropdown.move(0);
-        upper_roller.move(0);
-        fin_2.move(0);
+        intake_set(0);
       }
 
       // L1 / L2 pair - two motors, always opposite each other
@@ -624,12 +615,10 @@ void opcontrol() {
         if (cascade_position() >= CASCADE_MAX) {
           cascade_hold();
         } else {
-          l_motor_a.move(L_SPEED);
-          l_motor_b.move(-L_SPEED);
+          cascade_set(L_SPEED);
         }
       } else if (master.get_digital(DIGITAL_L2)) {
-        l_motor_a.move(-L2_SPEED);
-        l_motor_b.move(L2_SPEED);
+        cascade_set(-L2_SPEED);
       } else {
         // Whichever motor is currently the holder brakes; the other free-wheels.
         // The macro swaps them after each trip back to low.
@@ -638,12 +627,8 @@ void opcontrol() {
     } else {
       // Parked while the UI has the controller.  move(0) rather than skipping,
       // or a motor holds whatever it was last told to do.
-      l_motor_a.move(0);
-      l_motor_b.move(0);
-      fin_1.move(0);
-      dropdown.move(0);
-      upper_roller.move(0);
-      fin_2.move(0);
+      cascade_set(0);
+      intake_set(0);
       // Pistons hold their state and are not re-commanded here.
     }
 
