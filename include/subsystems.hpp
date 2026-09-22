@@ -44,15 +44,20 @@ void middle_intake_set(bool on);
 // all four motors turn.
 void intake_set(int power, bool roller = true);
 
-// Run the intake for a set time WITHOUT blocking.  Returns immediately; a
-// background task stops the motors when the time is up, so the intake keeps
-// turning through a drive or turn:
+// Run the intake WITHOUT blocking.  Returns immediately and a background task
+// drives the motors, so the intake keeps turning through a drive or turn:
 //
-//   intake_spin(3000, 127);
-//   chassis.pid_drive_set(24_in, DRIVE_SPEED);
+//   intake_spin(3000, 127);                      // 3 seconds, then stops itself
+//   chassis.pid_drive_set(24_in, DRIVE_SPEED);   // starts straight away
 //   chassis.pid_wait();
 //
-// Calling it again replaces the running spin rather than queueing one.
+//   intake_spin(-1, 127);                        // run until stopped
+//   ...
+//   intake_spin_stop();
+//
+// speed is -127 to 127; positive runs it the same way R1 does.  Calling it
+// again replaces the running spin rather than queueing one.  ms = 0 or
+// speed = 0 stops it, same as intake_spin_stop().
 void intake_spin(int ms, int speed);
 void intake_spin_stop();
 bool intake_spin_active();

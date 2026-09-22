@@ -200,7 +200,8 @@ bool intake_spin_active() { return _spin_active; }
 static void intake_spin_task(void*) {
   while (true) {
     if (_spin_active) {
-      if ((int)pros::millis() >= _spin_until_ms) {
+      // _spin_until_ms < 0 means run until something stops it.
+      if (_spin_until_ms >= 0 && (int)pros::millis() >= _spin_until_ms) {
         _spin_active = false;
         intake_set(0);
       } else {
@@ -216,13 +217,13 @@ void intake_spin(int ms, int speed) {
   // destructor, so spawning one per call would leak a task every time.
   static pros::Task worker(intake_spin_task, nullptr, "Intake Spin");
 
-  if (ms <= 0 || speed == 0) {
+  if (ms == 0 || speed == 0) {   // stop
     _spin_active = false;
     intake_set(0);
     return;
   }
   _spin_speed    = speed;
-  _spin_until_ms = (int)pros::millis() + ms;
+  _spin_until_ms = (ms < 0) ? -1 : (int)pros::millis() + ms;
   _spin_active   = true;
 }
 
