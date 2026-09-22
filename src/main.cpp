@@ -165,15 +165,19 @@ void flip_set(bool on)          { c_flip_extended        = on; c_flip.set_value(
 void high_intake_set(bool on)   { high_intake_extended   = on; high_intake.set_value(on); }
 void middle_intake_set(bool on) { middle_intake_extended = on; middle_intake.set_value(on); }
 
-// Whole intake group in one call: -127 to 127, positive collects.  Handles
-// fin_2 running opposite the others, and keeps the dropdown interlock -
-// port 4 stays stopped while both intake pistons are extended.
-void intake_set(int power) {
+// Whole intake group in one call: -127 to 127, positive runs it the same way
+// the R1 button does.  roller = false holds the upper roller at zero, which is
+// what driver control does outside the collect height; everything else leaves
+// it true so all FOUR motors turn.
+void intake_set(int power, bool roller) {
+  // Dropdown interlock: port 4 stays stopped while BOTH intake pistons are
+  // extended, and runs in every other position.  Same rule as R1/R2.
   bool dropdown_enabled = !(high_intake_extended && middle_intake_extended);
+
   fin_1.move(-power);
+  fin_2.move(power);                                  // mounted opposite
   dropdown.move(dropdown_enabled ? -power : 0);
-  upper_roller.move(-power);
-  fin_2.move(power);
+  upper_roller.move(roller ? -power : 0);
 }
 
 // Run the intake for a set time WITHOUT blocking - it returns immediately and a

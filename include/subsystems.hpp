@@ -34,9 +34,15 @@ void flip_set(bool on);
 void high_intake_set(bool on);
 void middle_intake_set(bool on);
 
-// Whole intake group, -127 to 127, positive collects.  Handles fin_2
-// running opposite and keeps the dropdown's piston interlock.
-void intake_set(int power);
+// Whole intake group, -127 to 127.  Positive runs it the same way the R1
+// button does.  fin_2 is commanded opposite the others because it is mounted
+// that way, and the dropdown keeps its piston interlock - stopped only while
+// BOTH intake pistons are extended.
+//
+// roller = false holds the upper roller at zero, which is what driver control
+// does outside the collect height.  Autons and intake_spin() leave it true, so
+// all four motors turn.
+void intake_set(int power, bool roller = true);
 
 // Run the intake for a set time WITHOUT blocking.  Returns immediately; a
 // background task stops the motors when the time is up, so the intake keeps
