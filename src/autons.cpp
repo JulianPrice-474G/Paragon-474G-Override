@@ -99,34 +99,57 @@ void sawp() {
 
   // Your code here.
   //
-  // Driving (all distances in inches, angles in degrees):
-  //   chassis.pid_drive_set(24_in, DRIVE_SPEED, true);   // true = slew from a stop
-  //   drive_arc(90, 100, 40);   // simpler arc: left speed, right speed, and
-  //   drive_arc(0, 40, 100);    // the heading to stop at.  No pid_wait().
+  // ── DRIVING ───────────────────────────────────────────────────────────────
+  // Distances in inches, angles in degrees.  Angles are ABSOLUTE: 90_deg means
+  // "end up facing 90", not "turn 90 more".
   //
-  //   chassis.pid_wait();                                 // block until it arrives
-  //   chassis.pid_turn_set(90_deg, TURN_SPEED);
+  //   chassis.pid_drive_set(24_in, DRIVE_SPEED, true);  // true = slew, long
+  //   chassis.pid_wait();                               //   moves from a stop
+  //
+  //   chassis.pid_turn_set(90_deg, TURN_SPEED);         // turn on the spot
   //   chassis.pid_wait();
   //
-  // Subsystems.  All of these return immediately - nothing waits.
+  //   chassis.pid_swing_set(ez::LEFT_SWING, 90_deg, SWING_SPEED, 45);
+  //   chassis.pid_wait();          // pivot about one side; 4th number is how
+  //                                // much the held side helps (0 = locked)
+  //
+  // Waiting:
+  //   chassis.pid_wait();               // until it has settled - use before
+  //                                     //   grabbing or scoring
+  //   chassis.pid_wait_quick_chain();   // exits early and runs on into the
+  //                                     //   next move - use between legs
+  //   chassis.pid_wait_until(12_in);    // returns partway through, so you can
+  //                                     //   start the intake while still driving
+  //
+  // Simpler alternative to a swing - give it the two side speeds and the
+  // heading to stop at.  Blocks, so no pid_wait() after it:
+  //   drive_arc(90, 100, 40);           // curve right to 90
+  //   drive_arc(0, 40, 100);            // curve back to 0
+  //   drive_arc(90, 80, -80);           // spin on the spot
+  // Open-loop: it drives at exactly the speeds you give and only checks when
+  // to stop, so it will not self-correct.  Lower the speeds if it overshoots.
+  //
+  // ── SUBSYSTEMS ────────────────────────────────────────────────────────────
+  // All of these return immediately - nothing waits for them.
   //
   //   claw_set(true);           // pistons: true = activated
   //   flip_set(false);
   //   high_intake_set(true);
   //   middle_intake_set(false);
   //
-  //   intake_spin(3000, 127);   // 3 seconds, then stops itself
-  //   intake_spin(-1, 127);     // run until stopped
-  //   intake_spin_stop();       // stop now
+  //   intake_spin(3000, 127);   // all four intake motors, 3 s, then stops
+  //   intake_spin(-1, 127);     //   itself.  -1 = run until stopped.
+  //   intake_spin_stop();
   //
-  //   fins_spin(3000, 127);     // same, but ONLY the two fins - dropdown and
-  //   fins_set(127);            // upper roller are left alone
-  //   // +127 runs it the same way R1 does; negative for the other way.
-  //   // All of these return immediately, so the next drive starts straight
-  //   // away with the intake still turning.
+  //   fins_spin(3000, 127);     // same but ONLY the two fins - the dropdown
+  //   fins_set(127);            //   and upper roller are left alone
   //
   //   cascade_set(90);          // both cascade motors, +ve raises
   //   cascade_set(0);
+  //
+  // +127 runs the intake the same way R1 does; negative for the other way.
+  // The spins run in the background, so the next drive starts straight away
+  // with the intake still turning.
   //
   // Use these rather than .set_value() or .move() directly: they keep the
   // piston mirrors in step and handle the intake group's wiring for you.
