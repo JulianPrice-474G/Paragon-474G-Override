@@ -1,4 +1,5 @@
 #include "main.h"
+#include "subsystems.hpp"
 
 /////
 // For installation, upgrading, documentations, and tutorials, check out our website!
@@ -160,8 +161,8 @@ void sawp() {
   // vision_align() stops the drive before returning either way; its tuning
   // constants are at the top of include/vision.hpp.
 
-
-
+fins_spin(500, 127);
+drive_arc( 90, 80, 127);
   
 }
 
