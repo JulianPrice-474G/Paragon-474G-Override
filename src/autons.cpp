@@ -112,14 +112,15 @@ void sawp() {
   //   high_intake_set(true);
   //   middle_intake_set(false);
   //
-  //   intake_set(127);          // all four intake motors, +127 runs the same
-  //   intake_set(0);            // way R1 does.  Negative for the other way.
+  //   intake_spin(3000, 127);   // 3 seconds, then stops itself
+  //   intake_spin(-1, 127);     // run until stopped
+  //   intake_spin_stop();       // stop now
+  //   // +127 runs it the same way R1 does; negative for the other way.
+  //   // All of these return immediately, so the next drive starts straight
+  //   // away with the intake still turning.
   //
   //   cascade_set(90);          // both cascade motors, +ve raises
   //   cascade_set(0);
-  //
-  //   intake_spin(3000, 127);   // runs the intake 3 s IN THE BACKGROUND, so
-  //                             // the next drive starts straight away
   //
   // Use these rather than .set_value() or .move() directly: they keep the
   // piston mirrors in step and handle the intake group's wiring for you.
