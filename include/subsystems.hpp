@@ -23,6 +23,24 @@ extern bool middle_intake_extended;
 extern bool claw_extended;
 extern bool c_flip_extended;
 
+/////
+// Subsystem helpers - prefer these to touching the devices directly
+/////
+// Set a piston and its state mirror together.  Never call .set_value() on a
+// solenoid directly: the mirrors are the only record of piston state, and the
+// dropdown interlock and the DOWN/LEFT toggles both read them.
+void claw_set(bool on);
+void flip_set(bool on);
+void high_intake_set(bool on);
+void middle_intake_set(bool on);
+
+// Whole intake group, -127 to 127, positive collects.  Handles r_motor_d
+// running opposite and keeps the dropdown's piston interlock.
+void intake_set(int power);
+
+// Cascade pair, -127 to 127.  The two motors always run opposite each other.
+void cascade_set(int power);
+
 // De-energise every solenoid so the cylinders vent.
 void release_all_pistons();
 

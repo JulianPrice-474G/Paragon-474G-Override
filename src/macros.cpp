@@ -24,16 +24,8 @@ const char* macro_status_text() {
 /////
 // Subsystem helpers
 /////
-static void cascade_stop() {
-  l_motor_a.move(0);
-  l_motor_b.move(0);
-}
-
-// The cascade pair always runs opposite each other, exactly as L1/L2 drive it.
-static void cascade_drive(int power) {
-  l_motor_a.move(power);
-  l_motor_b.move(-power);
-}
+static void cascade_stop()            { cascade_set(0); }
+static void cascade_drive(int power)  { cascade_set(power); }
 
 /////
 // Move the cascade to a height
@@ -139,15 +131,7 @@ static void intake_run(bool on, bool roller_back = false) {
   r_motor_d.move(p);
 }
 
-static void set_c_flip(bool on) {
-  c_flip_extended = on;
-  c_flip.set_value(on);
-}
 
-static void set_claw(bool on) {
-  claw_extended = on;
-  claw.set_value(on);
-}
 
 // Testing pause between actions.  Keeps the finished step's label on the
 // controller so you can see which one just completed, and stays cancellable.
@@ -188,8 +172,8 @@ bool cascade_at_collect() {
 static void phase1_task(void*) {
   // Preflight: put the pistons into a known state before anything moves, so
   // the sequence behaves the same however they were left.
-  set_c_flip(PISTON_ON);
-  set_claw(PISTON_OFF);
+  flip_set(PISTON_ON);
+  claw_set(PISTON_OFF);
 
   bool ok = macro_wait(MACRO_PISTON_SETTLE, "0 preflight") &&
             step_pause("0 preflight") &&
@@ -198,7 +182,7 @@ static void phase1_task(void*) {
 
   // At flip height, release the flip piston.
   if (ok) {
-    set_c_flip(PISTON_OFF);
+    flip_set(PISTON_OFF);
     ok = macro_wait(MACRO_PISTON_SETTLE, "2 release") && step_pause("2 release");
   }
 
@@ -221,7 +205,7 @@ static void phase2_task(void*) {
   intake_run(true);
 
   // Grip first, then lift.
-  set_claw(PISTON_ON);
+  claw_set(PISTON_ON);
   bool ok = macro_wait(MACRO_PISTON_SETTLE, "4 claw") &&
             step_pause("4 claw") &&
             cascade_to(CASCADE_OUT, "5 out") &&
@@ -235,7 +219,7 @@ static void phase2_task(void*) {
     // reversed until the cascade is back at low.  Fins and dropdown carry on
     // forwards.
     intake_run(true, true);
-    set_c_flip(PISTON_ON);
+    flip_set(PISTON_ON);
     ok = macro_wait(MACRO_PISTON_SETTLE, "7 flip on") && step_pause("7 flip on");
   }
 

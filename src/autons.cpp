@@ -65,12 +65,8 @@ void default_constants() {
 // or a previous run left behind.
 void auton_setup() {
   // Stop anything still turning from opcontrol or a cancelled macro.
-  l_motor_a.move(0);
-  l_motor_b.move(0);
-  r_motor_a.move(0);
-  r_motor_b.move(0);
-  r_motor_c.move(0);
-  r_motor_d.move(0);
+  cascade_set(0);
+  intake_set(0);
 
   // One cascade motor holds, the other coasts - see main.cpp.  Re-applied here
   // because autonomous() changes the DRIVE brake mode and a previous auton may
@@ -79,14 +75,10 @@ void auton_setup() {
 
   // Pistons to a known starting state.  Change these to whatever the robot
   // should look like on the tile at the start of a match.
-  high_intake_extended   = true;
-  middle_intake_extended = true;
-  claw_extended          = false;
-  c_flip_extended        = false;
-  high_intake.set_value(high_intake_extended);
-  middle_intake.set_value(middle_intake_extended);
-  claw.set_value(claw_extended);
-  c_flip.set_value(c_flip_extended);
+  high_intake_set(true);
+  middle_intake_set(true);
+  claw_set(false);
+  flip_set(false);
 
   // Cascade position reference.  The rotation sensor counts from wherever it
   // powered up, so absolute heights (CASCADE_LOW, CASCADE_COLLECT ...) only
@@ -113,17 +105,24 @@ void sawp() {
   //   chassis.pid_turn_set(90_deg, TURN_SPEED);
   //   chassis.pid_wait();
   //
-  // Subsystems - these are plain calls, nothing waits for them:
-  //   claw.set_value(true);   claw_extended   = true;   // keep the mirror in step
-  //   c_flip.set_value(true); c_flip_extended = true;
-  //   r_motor_a.move(127);                               // intake, see opcontrol
-  //                                                      // for the full group
+  // Subsystems - these return immediately, nothing waits for them:
+  //   claw_set(true);          flip_set(false);
+  //   high_intake_set(true);   middle_intake_set(false);
+  //   intake_set(127);         intake_set(0);     // whole group, +ve collects
+  //   cascade_set(90);         cascade_set(0);    // both cascade motors
+  //
+  // Use these rather than .set_value() or .move() directly - they keep the
+  // piston mirrors in step and handle the intake group's wiring for you.
   //
   // AI Vision:
   //   if (vision_align(2000)) { /* facing a target */ }
   //   else                    { /* nothing found, fall back */ }
   // vision_align() stops the drive before returning either way; its tuning
   // constants are at the top of include/vision.hpp.
+
+
+
+  
 }
 
 ///

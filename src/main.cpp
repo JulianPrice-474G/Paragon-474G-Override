@@ -153,17 +153,42 @@ void cascade_hold() {
   else                         { l_motor_b.brake(); l_motor_a.move(0); }
 }
 
+/////
+// Subsystem helpers - use these instead of driving the devices directly
+/////
+// Each piston helper sets the solenoid AND its software mirror together.  A
+// DigitalOut cannot be read back, so those mirrors are the only record of
+// piston state - the dropdown interlock and the DOWN/LEFT toggles both read
+// them, and they go wrong silently if a set_value() is done without one.
+void claw_set(bool on)          { claw_extended          = on; claw.set_value(on); }
+void flip_set(bool on)          { c_flip_extended        = on; c_flip.set_value(on); }
+void high_intake_set(bool on)   { high_intake_extended   = on; high_intake.set_value(on); }
+void middle_intake_set(bool on) { middle_intake_extended = on; middle_intake.set_value(on); }
+
+// Whole intake group in one call: -127 to 127, positive collects.  Handles
+// r_motor_d running opposite the others, and keeps the dropdown interlock -
+// port 4 stays stopped while both intake pistons are extended.
+void intake_set(int power) {
+  bool dropdown_enabled = !(high_intake_extended && middle_intake_extended);
+  r_motor_a.move(-power);
+  r_motor_b.move(dropdown_enabled ? -power : 0);
+  r_motor_c.move(-power);
+  r_motor_d.move(power);
+}
+
+// Cascade pair: -127 to 127.  The two motors always run opposite each other.
+void cascade_set(int power) {
+  l_motor_a.move(power);
+  l_motor_b.move(-power);
+}
+
 // De-energise every solenoid, so the cylinders vent and the robot is not left
 // holding pressure.  Called from disabled().
 void release_all_pistons() {
-  high_intake_extended   = false;
-  middle_intake_extended = false;
-  claw_extended          = false;
-  c_flip_extended        = false;
-  high_intake.set_value(false);
-  middle_intake.set_value(false);
-  claw.set_value(false);
-  c_flip.set_value(false);
+  high_intake_set(false);
+  middle_intake_set(false);
+  claw_set(false);
+  flip_set(false);
 }
 
 // Cascade hold state.  cascade_last_err is read by the controller readout in
