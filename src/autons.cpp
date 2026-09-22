@@ -105,13 +105,23 @@ void sawp() {
   //   chassis.pid_turn_set(90_deg, TURN_SPEED);
   //   chassis.pid_wait();
   //
-  // Subsystems - these return immediately, nothing waits for them:
-  //   claw_set(true);          flip_set(false);
-  //   high_intake_set(true);   middle_intake_set(false);
-  //   intake_set(127);         intake_set(0);     // whole group, +ve collects
-  //   cascade_set(90);         cascade_set(0);    // both cascade motors
+  // Subsystems.  All of these return immediately - nothing waits.
   //
-  // Use these rather than .set_value() or .move() directly - they keep the
+  //   claw_set(true);           // pistons: true = activated
+  //   flip_set(false);
+  //   high_intake_set(true);
+  //   middle_intake_set(false);
+  //
+  //   intake_set(127);          // all four intake motors, +127 runs the same
+  //   intake_set(0);            // way R1 does.  Negative for the other way.
+  //
+  //   cascade_set(90);          // both cascade motors, +ve raises
+  //   cascade_set(0);
+  //
+  //   intake_spin(3000, 127);   // runs the intake 3 s IN THE BACKGROUND, so
+  //                             // the next drive starts straight away
+  //
+  // Use these rather than .set_value() or .move() directly: they keep the
   // piston mirrors in step and handle the intake group's wiring for you.
   //
   // AI Vision:
