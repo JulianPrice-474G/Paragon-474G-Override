@@ -240,6 +240,17 @@ bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_m
   return false;
 }
 
+// Single intake motors, for when you want one on its own.  Same sign
+// convention as intake_set: positive runs it the way R1 does.
+void roller_set(int power) { upper_roller.move(-power); }
+
+// The dropdown keeps its interlock even when driven on its own - it must not
+// run while both intake pistons are extended.
+void dropdown_set(int power) {
+  bool enabled = !(high_intake_extended && middle_intake_extended);
+  dropdown.move(enabled ? -power : 0);
+}
+
 // Just the two fins.  fin_2 is mounted opposite, so it is always commanded the
 // other way round - positive runs them the same way R1 does.  The dropdown and
 // the upper roller are left alone.

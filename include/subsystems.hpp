@@ -78,6 +78,12 @@ void intake_spin(int ms, int speed);
 // Returns false on timeout.
 bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_ms = 3000);
 
+// Single intake motors on their own.  Positive runs them the way R1 does.
+// dropdown_set keeps the piston interlock - it will not run while both intake
+// pistons are extended.
+void roller_set(int power);    // port 19, the upper roller
+void dropdown_set(int power);  // port 4
+
 void fins_set(int power);
 void fins_spin(int ms, int speed);
 void intake_spin_stop();
