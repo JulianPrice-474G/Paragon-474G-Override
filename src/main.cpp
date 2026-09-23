@@ -259,60 +259,82 @@ void fins_set(int power) {
   fin_2.move(power);
 }
 
-// Run the intake for a set time WITHOUT blocking - it returns immediately and a
-// background task stops the motors when the time is up.  Use it to keep the
-// intake turning through a drive or turn:
+// Timed, non-blocking spins.  Each call returns immediately and a background
+// task drives the motors, so the next drive or turn starts straight away:
 //
-//   intake_spin(3000, 127);                     // returns at once
-//   chassis.pid_drive_set(24_in, DRIVE_SPEED);  // intake still running
+//   roller_spin(800, 127);                      // returns at once
+//   chassis.pid_drive_set(24_in, DRIVE_SPEED);  // roller still spinning
 //   chassis.pid_wait();
 //
-// Calling it again replaces the running spin rather than queueing.  ms <= 0 or
-// speed 0 stops it.  intake_spin_active() is true while one is in progress, and
-// opcontrol leaves the intake alone while it is.
-static volatile int  _spin_until_ms = 0;
-static volatile int  _spin_speed    = 0;
-static volatile bool _spin_active   = false;
-static volatile bool _spin_fins     = false;  // true = fins only, false = whole group
+// ms > 0 runs for that long, ms < 0 runs until stopped, ms == 0 or speed == 0
+// stops that group now.  Positive speed runs the motors the way R1 does.
+//
+// The three groups are INDEPENDENT and can overlap - a roller spin does not
+// disturb a fins spin.  intake_spin() is shorthand for setting all three at
+// once.  Starting the same group again replaces its previous spin.
+struct _SpinCh {
+  int  until_ms;   // absolute deadline, or -1 for "until stopped"
+  int  speed;
+  bool active;
+};
+static volatile _SpinCh _ch_fins   = {0, 0, false};
+static volatile _SpinCh _ch_roller = {0, 0, false};
+static volatile _SpinCh _ch_drop   = {0, 0, false};
 
-bool intake_spin_active() { return _spin_active; }
+bool intake_spin_active() {
+  return _ch_fins.active || _ch_roller.active || _ch_drop.active;
+}
+
+// Returns the power this channel should be driving at now, expiring it if its
+// time is up.
+static int _ch_power(volatile _SpinCh& c) {
+  if (!c.active) return 0;
+  if (c.until_ms >= 0 && (int)pros::millis() >= c.until_ms) {
+    c.active = false;
+    return 0;
+  }
+  return c.speed;
+}
 
 static void intake_spin_task(void*) {
+  bool was_driving = false;
   while (true) {
-    if (_spin_active) {
-      // _spin_until_ms < 0 means run until something stops it.
-      bool done = (_spin_until_ms >= 0 && (int)pros::millis() >= _spin_until_ms);
-      int  power = done ? 0 : _spin_speed;
-      if (_spin_fins) fins_set(power);
-      else            intake_set(power);
-      if (done) _spin_active = false;
+    bool driving = intake_spin_active();
+
+    // Write while any group is running, plus one final pass on the tick
+    // everything stops - so the motors are actually zeroed.  After that, stop
+    // writing entirely, or this would fight opcontrol every tick.
+    if (driving || was_driving) {
+      fins_set(_ch_power(_ch_fins));
+      roller_set(_ch_power(_ch_roller));
+      dropdown_set(_ch_power(_ch_drop));
     }
+    was_driving = driving;
     pros::delay(ez::util::DELAY_TIME);
   }
 }
 
-// Shared by intake_spin() and fins_spin(), so the two can never fight over the
-// fin motors - starting either one replaces whatever was running.
-static void spin_start(int ms, int speed, bool fins_only) {
+static void _ch_start(volatile _SpinCh& c, int ms, int speed) {
   // One worker, created on first use and never destroyed.  pros::Task has no
   // destructor, so spawning one per call would leak a task every time.
   static pros::Task worker(intake_spin_task, nullptr, "Intake Spin");
 
-  if (ms == 0 || speed == 0) {   // stop
-    _spin_active = false;
-    if (_spin_fins) fins_set(0);
-    else            intake_set(0);
-    return;
-  }
-  _spin_fins     = fins_only;
-  _spin_speed    = speed;
-  _spin_until_ms = (ms < 0) ? -1 : (int)pros::millis() + ms;
-  _spin_active   = true;
+  if (ms == 0 || speed == 0) { c.active = false; return; }
+  c.speed    = speed;
+  c.until_ms = (ms < 0) ? -1 : (int)pros::millis() + ms;
+  c.active   = true;
 }
 
-void intake_spin(int ms, int speed) { spin_start(ms, speed, false); }
-void fins_spin(int ms, int speed)   { spin_start(ms, speed, true); }
+void fins_spin(int ms, int speed)     { _ch_start(_ch_fins,   ms, speed); }
+void roller_spin(int ms, int speed)   { _ch_start(_ch_roller, ms, speed); }
+void dropdown_spin(int ms, int speed) { _ch_start(_ch_drop,   ms, speed); }
 
+// All three groups together.
+void intake_spin(int ms, int speed) {
+  fins_spin(ms, speed);
+  roller_spin(ms, speed);
+  dropdown_spin(ms, speed);
+}
 void intake_spin_stop() { intake_spin(0, 0); }
 
 // Cascade pair: -127 to 127.  The two motors always run opposite each other.

@@ -44,28 +44,21 @@ void middle_intake_set(bool on);
 // all four motors turn.
 void intake_set(int power, bool roller = true);
 
-// Run the intake WITHOUT blocking.  Returns immediately and a background task
-// drives the motors, so the intake keeps turning through a drive or turn:
+// Timed, non-blocking spins.  Each returns immediately and a background task
+// drives the motors, so the next drive or turn starts straight away:
 //
-//   intake_spin(3000, 127);                      // 3 seconds, then stops itself
-//   chassis.pid_drive_set(24_in, DRIVE_SPEED);   // starts straight away
+//   roller_spin(800, 127);                      // returns at once
+//   chassis.pid_drive_set(24_in, DRIVE_SPEED);  // roller still spinning
 //   chassis.pid_wait();
 //
-//   intake_spin(-1, 127);                        // run until stopped
-//   ...
-//   intake_spin_stop();
+//   ms > 0   run for that long, then stop
+//   ms < 0   run until stopped
+//   ms == 0  stop that group now (so does speed == 0)
 //
-// speed is -127 to 127; positive runs it the same way R1 does.  Calling it
-// again replaces the running spin rather than queueing one.  ms = 0 or
-// speed = 0 stops it, same as intake_spin_stop().
-void intake_spin(int ms, int speed);
-
-// Just the two fins - the dropdown and the upper roller are left alone.
-// fins_set() drives them directly; fins_spin() takes the same ms/speed as
-// intake_spin() and runs in the background the same way.
-//
-// intake_spin() and fins_spin() share one worker, so starting either replaces
-// whatever was running - they cannot fight over the fin motors.
+// Positive speed runs the motors the way R1 does.  The three groups are
+// INDEPENDENT and can overlap - a roller spin does not disturb a fins spin.
+// intake_spin() is shorthand for all three at once.  Starting the same group
+// again replaces its previous spin.
 // Simple arc: give it the two side speeds and the heading to stop at, and it
 // drives until the robot faces that heading.  Blocks, so no pid_wait() after.
 //
@@ -78,14 +71,17 @@ void intake_spin(int ms, int speed);
 // Returns false on timeout.
 bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_ms = 3000);
 
-// Single intake motors on their own.  Positive runs them the way R1 does.
-// dropdown_set keeps the piston interlock - it will not run while both intake
-// pistons are extended.
+// Drive one part of the intake directly - it keeps running until you set it
+// again.  Positive runs them the way R1 does; fin_2 is commanded opposite
+// automatically, and dropdown_set keeps the piston interlock.
+void fins_set(int power);      // fin_1 + fin_2
 void roller_set(int power);    // port 19, the upper roller
 void dropdown_set(int power);  // port 4
 
-void fins_set(int power);
 void fins_spin(int ms, int speed);
+void roller_spin(int ms, int speed);
+void dropdown_spin(int ms, int speed);
+void intake_spin(int ms, int speed);
 void intake_spin_stop();
 bool intake_spin_active();
 

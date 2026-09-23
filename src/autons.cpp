@@ -138,12 +138,17 @@ void sawp() {
   //   high_intake_set(true);
   //   middle_intake_set(false);
   //
-  //   intake_spin(3000, 127);   // all four intake motors, 3 s, then stops
-  //   intake_spin(-1, 127);     //   itself.  -1 = run until stopped.
+  //   intake_spin(3000, 127);   // all four, 3 s then stops itself
+  //   intake_spin(-1, 127);     // -1 = run until stopped
   //   intake_spin_stop();
   //
-  //   fins_spin(3000, 127);     // same but ONLY the two fins - the dropdown
-  //   fins_set(127);            //   and upper roller are left alone
+  //   fins_spin(800, 127);      // one group at a time - these are INDEPENDENT
+  //   roller_spin(500, 127);    //   and overlap freely, so the roller can run
+  //   dropdown_spin(-1, 127);   //   while the fins are doing something else
+  //
+  //   fins_set(127);            // direct versions - run until set again
+  //   roller_set(127);
+  //   dropdown_set(127);
   //
   //   cascade_set(90);          // both cascade motors, +ve raises
   //   cascade_set(0);
