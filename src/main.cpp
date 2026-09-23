@@ -242,7 +242,7 @@ bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_m
 
 // Single intake motors, for when you want one on its own.  Same sign
 // convention as intake_set: positive runs it the way R1 does.
-void roller_set(int power) { upper_roller.move(-power); }
+void upper_roller_set(int power) { upper_roller.move(-power); }
 
 // The dropdown keeps its interlock even when driven on its own - it must not
 // run while both intake pistons are extended.
@@ -262,7 +262,7 @@ void fins_set(int power) {
 // Timed, non-blocking spins.  Each call returns immediately and a background
 // task drives the motors, so the next drive or turn starts straight away:
 //
-//   roller_spin(800, 127);                      // returns at once
+//   upper_roller_spin(800, 127);                      // returns at once
 //   chassis.pid_drive_set(24_in, DRIVE_SPEED);  // roller still spinning
 //   chassis.pid_wait();
 //
@@ -306,7 +306,7 @@ static void intake_spin_task(void*) {
     // writing entirely, or this would fight opcontrol every tick.
     if (driving || was_driving) {
       fins_set(_ch_power(_ch_fins));
-      roller_set(_ch_power(_ch_roller));
+      upper_roller_set(_ch_power(_ch_roller));
       dropdown_set(_ch_power(_ch_drop));
     }
     was_driving = driving;
@@ -326,13 +326,13 @@ static void _ch_start(volatile _SpinCh& c, int ms, int speed) {
 }
 
 void fins_spin(int ms, int speed)     { _ch_start(_ch_fins,   ms, speed); }
-void roller_spin(int ms, int speed)   { _ch_start(_ch_roller, ms, speed); }
+void upper_roller_spin(int ms, int speed)   { _ch_start(_ch_roller, ms, speed); }
 void dropdown_spin(int ms, int speed) { _ch_start(_ch_drop,   ms, speed); }
 
 // All three groups together.
 void intake_spin(int ms, int speed) {
   fins_spin(ms, speed);
-  roller_spin(ms, speed);
+  upper_roller_spin(ms, speed);
   dropdown_spin(ms, speed);
 }
 void intake_spin_stop() { intake_spin(0, 0); }

@@ -143,11 +143,11 @@ void sawp() {
   //   intake_spin_stop();
   //
   //   fins_spin(800, 127);      // one group at a time - these are INDEPENDENT
-  //   roller_spin(500, 127);    //   and overlap freely, so the roller can run
+  //   upper_roller_spin(500, 127);    //   and overlap freely, so the roller can run
   //   dropdown_spin(-1, 127);   //   while the fins are doing something else
   //
   //   fins_set(127);            // direct versions - run until set again
-  //   roller_set(127);
+  //   upper_roller_set(127);
   //   dropdown_set(127);
   //
   //   cascade_set(90);          // both cascade motors, +ve raises

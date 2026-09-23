@@ -47,7 +47,7 @@ void intake_set(int power, bool roller = true);
 // Timed, non-blocking spins.  Each returns immediately and a background task
 // drives the motors, so the next drive or turn starts straight away:
 //
-//   roller_spin(800, 127);                      // returns at once
+//   upper_roller_spin(800, 127);                      // returns at once
 //   chassis.pid_drive_set(24_in, DRIVE_SPEED);  // roller still spinning
 //   chassis.pid_wait();
 //
@@ -75,11 +75,11 @@ bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_m
 // again.  Positive runs them the way R1 does; fin_2 is commanded opposite
 // automatically, and dropdown_set keeps the piston interlock.
 void fins_set(int power);      // fin_1 + fin_2
-void roller_set(int power);    // port 19, the upper roller
+void upper_roller_set(int power);    // port 19, the upper roller
 void dropdown_set(int power);  // port 4
 
 void fins_spin(int ms, int speed);
-void roller_spin(int ms, int speed);
+void upper_roller_spin(int ms, int speed);
 void dropdown_spin(int ms, int speed);
 void intake_spin(int ms, int speed);
 void intake_spin_stop();
