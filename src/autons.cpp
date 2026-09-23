@@ -166,7 +166,7 @@ void sawp() {
   // vision_align() stops the drive before returning either way; its tuning
   // constants are at the top of include/vision.hpp.
 
-fins_spin(500, 127);
+upper_roller_spin(800,127);
 drive_arc( 90, 80, 127);
   
 }

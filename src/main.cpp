@@ -46,9 +46,9 @@ constexpr double ARC_TOL_DEG = 2;
 // Rotation sensor readings - the "p" value on the controller's middle row.
 // Drive the cascade where you want it, read p off the controller, put the
 // number here.  The macro and the L1 travel limit both use these.
-double CASCADE_LOW     = 180;   // bottom / travel
-double CASCADE_COLLECT = 300;   // intake height, where the macro parks
-double CASCADE_FLIP    = 317;   // above collect, where the flip piston fires
+double CASCADE_LOW     = 190;   // bottom / travel
+double CASCADE_COLLECT = 290;   // intake height, where the macro parks
+double CASCADE_FLIP    = 320;   // above collect, where the flip piston fires
 double CASCADE_OUT     = 400;   // phase 2 raises to here on the second click
 
 // How long after the cascade STARTS its second-click rise the flip piston
@@ -56,6 +56,11 @@ double CASCADE_OUT     = 400;   // phase 2 raises to here on the second click
 // the cascade get further up first.  If it is longer than the move takes, the
 // piston fires as the move finishes.
 int CASCADE_FLIP_DELAY_MS = 300;
+
+// First click: how long to wait at flip height AFTER the flip piston releases,
+// before the cascade starts down to collect.  Gives the piston time to finish
+// moving while the cascade is still still.
+int CASCADE_FLIP_RELEASE_MS = 500;
 double CASCADE_MAX     = 1000;  // L1 stops raising here
 
 /////

@@ -195,10 +195,12 @@ static void phase1_task(void*) {
             cascade_to(CASCADE_FLIP, "1 flip") &&
             step_pause("1 flip");
 
-  // At flip height, release the flip piston.
+  // At flip height, release the flip piston, then hold still for
+  // CASCADE_FLIP_RELEASE_MS so it can finish moving before the cascade starts
+  // back down.
   if (ok) {
     flip_set(PISTON_OFF);
-    ok = macro_wait(MACRO_PISTON_SETTLE, "2 release") && step_pause("2 release");
+    ok = macro_wait(CASCADE_FLIP_RELEASE_MS, "2 release") && step_pause("2 release");
   }
 
   if (ok) ok = cascade_to(CASCADE_COLLECT, "3 collect") && step_pause("3 collect");
