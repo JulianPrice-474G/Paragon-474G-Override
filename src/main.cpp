@@ -49,7 +49,9 @@ constexpr double ARC_TOL_DEG = 2;
 double CASCADE_LOW     = 180;   // bottom / travel
 double CASCADE_COLLECT = 300;   // intake height, where the macro parks
 double CASCADE_FLIP    = 317;   // above collect, where the flip piston fires
-double CASCADE_OUT     = 400;   // phase 2 raises to here, not flip height
+double CASCADE_OUT     = 400;   // phase 2 raises to here, then flips
+double CASCADE_FLIP_LIFT = 60;  // how much FURTHER it rises while the flip
+                                //   piston is actually flipping, at full speed
 double CASCADE_MAX     = 1000;  // L1 stops raising here
 
 /////

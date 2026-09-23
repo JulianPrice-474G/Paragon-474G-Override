@@ -32,7 +32,8 @@ static void cascade_drive(int power)  { cascade_set(power); }
 /////
 // Returns false if it was cancelled, timed out, or stalled.  Always leaves the
 // cascade stopped, so a failure cannot leave a motor driving.
-static bool cascade_to(double target, const char* step_name) {
+static bool cascade_to(double target, const char* step_name,
+                       int max_speed = CASCADE_MOVE_SPEED) {
   _step = step_name;
 
   const uint32_t start        = pros::millis();
@@ -85,7 +86,7 @@ static bool cascade_to(double target, const char* step_name) {
     // not overshoot and oscillate around the target.
     double scale = fabs(err) / CASCADE_MOVE_SLOW;
     if (scale > 1.0) scale = 1.0;
-    int power = (int)(CASCADE_MOVE_SPEED * scale);
+    int power = (int)(max_speed * scale);
     if (power < CASCADE_MOVE_MIN) power = CASCADE_MOVE_MIN;
     if (err < 0) power = -power;
 
@@ -219,8 +220,13 @@ static void phase2_task(void*) {
     // reversed until the cascade is back at low.  Fins and dropdown carry on
     // forwards.
     intake_run(true, true);
+
+    // Fire the piston and start lifting in the same breath - no wait between
+    // them, so the cascade is rising WHILE the claw flips rather than after.
+    // Full speed on purpose: this is a short burst, not a positioning move.
     flip_set(PISTON_ON);
-    ok = macro_wait(MACRO_PISTON_SETTLE, "7 flip on") && step_pause("7 flip on");
+    ok = cascade_to(CASCADE_OUT + CASCADE_FLIP_LIFT, "7 flip+lift", 127) &&
+         step_pause("7 flip+lift");
   }
 
   if (ok) ok = cascade_to(CASCADE_LOW, "8 low");

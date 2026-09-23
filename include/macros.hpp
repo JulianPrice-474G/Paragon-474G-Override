@@ -12,7 +12,8 @@
 extern double CASCADE_LOW;      // bottom / travel
 extern double CASCADE_COLLECT;  // intake height
 extern double CASCADE_FLIP;     // raised above collect, where the flip piston fires
-extern double CASCADE_OUT;      // phase 2 raise height, above flip
+extern double CASCADE_OUT;       // phase 2 raise height, above flip
+extern double CASCADE_FLIP_LIFT; // extra rise while the flip piston flips
 
 // Upper travel limit.  L1 stops raising once the rotation sensor reads this,
 // so the cascade cannot be driven into its top stop.  Manual control only -
