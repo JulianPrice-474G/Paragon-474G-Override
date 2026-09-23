@@ -32,16 +32,27 @@ static void cascade_drive(int power)  { cascade_set(power); }
 /////
 // Returns false if it was cancelled, timed out, or stalled.  Always leaves the
 // cascade stopped, so a failure cannot leave a motor driving.
+// action, if given, is called once, action_delay_ms after the move starts - so
+// something can happen DURING the movement rather than before or after it.
 static bool cascade_to(double target, const char* step_name,
-                       int max_speed = CASCADE_MOVE_SPEED) {
+                       int max_speed = CASCADE_MOVE_SPEED,
+                       int action_delay_ms = -1, void (*action)() = nullptr) {
   _step = step_name;
 
   const uint32_t start        = pros::millis();
   uint32_t       last_progress = start;
   double         last_pos      = cascade_position();
+  bool           action_fired  = false;
 
   while (pros::millis() - start < (uint32_t)CASCADE_MOVE_TIMEOUT) {
     if (_cancel) { cascade_stop(); return false; }
+
+    // Fire the timed action once, however far into the move it falls.
+    if (action && !action_fired &&
+        (int)(pros::millis() - start) >= action_delay_ms) {
+      action_fired = true;
+      action();
+    }
 
     double pos = cascade_position();
     double err = target - pos;
@@ -64,6 +75,9 @@ static bool cascade_to(double target, const char* step_name,
         pros::delay(ez::util::DELAY_TIME);
       }
       cascade_hold();
+      // Move finished before the delay elapsed - fire it anyway rather than
+      // losing it.
+      if (action && !action_fired) { action_fired = true; action(); }
       return true;
     }
 
@@ -199,6 +213,12 @@ static void phase1_task(void*) {
   _cancel = false;
 }
 
+// Fired partway through phase 2's rise - see CASCADE_FLIP_DELAY_MS.
+static void fire_flip() {
+  intake_run(true, true);   // upper roller reverses from here to the end
+  flip_set(PISTON_ON);
+}
+
 static void phase2_task(void*) {
   // Intake runs for the whole of phase 2, from this press until it is back at
   // low.  _intake_owned stops opcontrol writing zero over the top of it.
@@ -207,29 +227,16 @@ static void phase2_task(void*) {
 
   // Grip first, then lift.
   claw_set(PISTON_ON);
-  bool ok = macro_wait(MACRO_PISTON_SETTLE, "4 claw") &&
-            step_pause("4 claw") &&
-            cascade_to(CASCADE_OUT, "5 out") &&
-            step_pause("5 out");
+  bool ok = macro_wait(MACRO_PISTON_SETTLE, "4 claw") && step_pause("4 claw");
 
-  // Let the cascade stop swinging at the out height before the piston fires.
-  if (ok) ok = macro_wait(MACRO_FLIP_SETTLE, "6 settle") && step_pause("6 settle");
+  // Rise to the out height, with the flip piston firing partway UP rather than
+  // after arriving - CASCADE_FLIP_DELAY_MS into the move.  The upper roller
+  // reverses at the same moment and stays reversed until the end.
+  if (ok) ok = cascade_to(CASCADE_OUT, "5 out", CASCADE_MOVE_SPEED,
+                          CASCADE_FLIP_DELAY_MS, fire_flip) &&
+               step_pause("5 out");
 
-  if (ok) {
-    // Upper roller reverses from the moment the flip piston fires, and stays
-    // reversed until the cascade is back at low.  Fins and dropdown carry on
-    // forwards.
-    intake_run(true, true);
-
-    // Fire the piston and start lifting in the same breath - no wait between
-    // them, so the cascade is rising WHILE the claw flips rather than after.
-    // Full speed on purpose: this is a short burst, not a positioning move.
-    flip_set(PISTON_ON);
-    ok = cascade_to(CASCADE_OUT + CASCADE_FLIP_LIFT, "7 flip+lift", 127) &&
-         step_pause("7 flip+lift");
-  }
-
-  if (ok) ok = cascade_to(CASCADE_LOW, "8 low");
+  if (ok) ok = cascade_to(CASCADE_LOW, "6 low");
 
   // Release the intake on every exit path, cancel and stall included.
   intake_run(false);

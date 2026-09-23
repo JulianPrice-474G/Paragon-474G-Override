@@ -49,9 +49,13 @@ constexpr double ARC_TOL_DEG = 2;
 double CASCADE_LOW     = 180;   // bottom / travel
 double CASCADE_COLLECT = 300;   // intake height, where the macro parks
 double CASCADE_FLIP    = 317;   // above collect, where the flip piston fires
-double CASCADE_OUT     = 400;   // phase 2 raises to here, then flips
-double CASCADE_FLIP_LIFT = 60;  // how much FURTHER it rises while the flip
-                                //   piston is actually flipping, at full speed
+double CASCADE_OUT     = 400;   // phase 2 raises to here on the second click
+
+// How long after the cascade STARTS its second-click rise the flip piston
+// extends.  0 fires it the instant the cascade begins moving; raise it to let
+// the cascade get further up first.  If it is longer than the move takes, the
+// piston fires as the move finishes.
+int CASCADE_FLIP_DELAY_MS = 300;
 double CASCADE_MAX     = 1000;  // L1 stops raising here
 
 /////

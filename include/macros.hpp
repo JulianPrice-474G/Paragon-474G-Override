@@ -12,8 +12,8 @@
 extern double CASCADE_LOW;      // bottom / travel
 extern double CASCADE_COLLECT;  // intake height
 extern double CASCADE_FLIP;     // raised above collect, where the flip piston fires
-extern double CASCADE_OUT;       // phase 2 raise height, above flip
-extern double CASCADE_FLIP_LIFT; // extra rise while the flip piston flips
+extern double CASCADE_OUT;         // phase 2 raise height, above flip
+extern int    CASCADE_FLIP_DELAY_MS;  // ms into that rise before the piston fires
 
 // Upper travel limit.  L1 stops raising once the rotation sensor reads this,
 // so the cascade cannot be driven into its top stop.  Manual control only -
@@ -64,10 +64,6 @@ constexpr bool PISTON_OFF = true;   // released   (inverted for these solenoids)
 
 // Time given to a solenoid to finish moving before the cascade starts again.
 constexpr int MACRO_PISTON_SETTLE = 300;  // ms
-
-// Pause at flip height in phase 2 before the flip piston fires, so the cascade
-// has stopped swinging first.
-constexpr int MACRO_FLIP_SETTLE = 500;  // ms
 
 // Intake power while the macro runs it (phase 2).
 constexpr int MACRO_INTAKE_SPEED = 127;  // 0-127
