@@ -482,6 +482,12 @@ void initialize() {
                                 pros::AivisionModeType::objects);
   ai_cam.set_tag_family(pros::AivisionTagFamily::tag_16H5);
 
+  // Put the intake pistons in the HIGH position at power-on - both extended.
+  // Commanded explicitly rather than relying on the DigitalOut constructor's
+  // initial state, so the solenoids actually receive it.
+  high_intake_set(PISTON_EXTENDED);
+  middle_intake_set(PISTON_EXTENDED);
+
   EngineInit();
   build_screens();  // sets up brain screen + initial controller display
   CtrlFlush();
