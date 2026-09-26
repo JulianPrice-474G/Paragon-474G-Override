@@ -393,6 +393,19 @@ void cascade_set(int power) {
 
 // De-energise every solenoid, so the cylinders vent and the robot is not left
 // holding pressure.  Called from disabled().
+// The intake selector, exactly as the Y and B buttons drive it.  Driver
+// control and autons both call these, so a simulated press in an auton does
+// the same thing a real one does.
+//   Y  -> MIDDLE, or back to HIGH if already MIDDLE
+//   B  -> LOW,    or back to HIGH if already LOW
+void intake_pos_set(IntakePos pos) {
+  intake_pos = pos;
+  high_intake_set  (pos == INTAKE_HIGH);   // upper: only in HIGH
+  middle_intake_set(pos != INTAKE_LOW);    // middle: HIGH and MIDDLE
+}
+void press_y() { intake_pos_set(intake_pos == INTAKE_MIDDLE ? INTAKE_HIGH : INTAKE_MIDDLE); }
+void press_b() { intake_pos_set(intake_pos == INTAKE_LOW    ? INTAKE_HIGH : INTAKE_LOW); }
+
 void release_all_pistons() {
   high_intake_set(false);
   middle_intake_set(false);
@@ -711,17 +724,8 @@ void opcontrol() {
         // Both buttons SET the position rather than flipping each piston from
         // its own value.  That is what makes it consistent - the old version
         // could leave the pair in a combination neither button expected.
-        IntakePos want_pos = intake_pos;
-        if (master.get_digital_new_press(DIGITAL_Y))
-          want_pos = (intake_pos == INTAKE_MIDDLE) ? INTAKE_HIGH : INTAKE_MIDDLE;
-        if (master.get_digital_new_press(DIGITAL_B))
-          want_pos = (intake_pos == INTAKE_LOW) ? INTAKE_HIGH : INTAKE_LOW;
-
-        if (want_pos != intake_pos) {
-          intake_pos = want_pos;
-          high_intake_set  (intake_pos == INTAKE_HIGH);  // upper: only in HIGH
-          middle_intake_set(intake_pos != INTAKE_LOW);   // middle: HIGH + MIDDLE
-        }
+        if (master.get_digital_new_press(DIGITAL_Y)) press_y();
+        if (master.get_digital_new_press(DIGITAL_B)) press_b();
 
       // Claw on DOWN, C-flip on LEFT - both latching toggles.  Safe to read
       // these with new_press: handle_ctrl_input() only consumes LEFT/RIGHT/A/B

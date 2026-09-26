@@ -29,6 +29,15 @@ extern bool c_flip_extended;
 enum IntakePos { INTAKE_HIGH, INTAKE_MIDDLE, INTAKE_LOW };
 extern IntakePos intake_pos;
 
+// Simulate the Y and B buttons - use these in autons.  Same code driver control
+// runs, so they behave identically, including the toggle back to HIGH.
+//   press_y()  -> MIDDLE, or HIGH if already MIDDLE
+//   press_b()  -> LOW,    or HIGH if already LOW
+// intake_pos_set() jumps straight to a position without the toggle.
+void press_y();
+void press_b();
+void intake_pos_set(IntakePos pos);
+
 /////
 // Subsystem helpers - prefer these to touching the devices directly
 /////
