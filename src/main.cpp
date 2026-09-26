@@ -194,6 +194,18 @@ static void led_paint_gradient(hitlib::LedStrand& strand, int count) {
 // RAW TEST: bypasses HitLib completely and drives the strips with plain PROS.
 // If this does not light them, no library change will - the fault is the port,
 // the wiring, the strip type or the power.
+// PORT SWEEP: lights every ADI port A-H in turn, 2 s each, white.  Whichever
+// port the strip is actually plugged into will light when its turn comes, and
+// the controller's bottom row names the port being driven.
+//
+// WARNING: this drives the SOLENOID ports too (A, B, E, F).  Only run it on a
+// test brain, or with the pneumatics disconnected.
+constexpr bool LED_PORT_SWEEP = true;
+
+const bool LED_PORT_SWEEP_ON = LED_PORT_SWEEP;
+static char _led_sweep_text[20] = "sweep --";
+const char* led_sweep_text() { return _led_sweep_text; }
+
 constexpr bool LED_RAW_TEST = true;
 
 constexpr bool LED_TEST = true;
@@ -554,7 +566,25 @@ void initialize() {
   // RAW LED TEST - first thing, before anything else can get in the way.
   // Runs in initialize() rather than opcontrol() because opcontrol only runs
   // once the robot is ENABLED; this lights them as soon as the program starts.
-  if (LED_RAW_TEST) {
+  if (LED_PORT_SWEEP) {
+    static pros::Task sweep([](void*) {
+      pros::delay(1000);   // let PROS bring the ADI ports up
+      while (true) {
+        for (uint8_t port = 1; port <= 8; port++) {
+          snprintf(_led_sweep_text, sizeof(_led_sweep_text),
+                   "ADI %c  n=%d", 'A' + port - 1, (int)LED_A_COUNT);
+          // Construct inside the loop: one Led at a time, so ports do not
+          // fight, and the object is destroyed before the next is made.
+          pros::adi::Led led(port, LED_A_COUNT);
+          for (int i = 0; i < 40; i++) {     // ~2 s, re-writing as it goes
+            led.set_all(0xFFFFFF);
+            led.update();
+            pros::delay(50);
+          }
+        }
+      }
+    }, nullptr, "LED Port Sweep");
+  } else if (LED_RAW_TEST) {
     static pros::Task raw([](void*) {
       pros::delay(1000);   // let PROS finish bringing the ADI ports up
       pros::adi::Led raw_a(LED_A_PORT, LED_A_COUNT);

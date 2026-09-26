@@ -99,6 +99,10 @@ void cascade_set(int power);
 extern const bool LED_PICKER_ON;
 const char* led_picker_text();
 
+// While the ADI port sweep is running, which port it is currently driving.
+extern const bool LED_PORT_SWEEP_ON;
+const char* led_sweep_text();
+
 void release_all_pistons();
 
 // Which cascade motor holds: 0 = l_motor_a, 1 = l_motor_b.  Only one holds at
