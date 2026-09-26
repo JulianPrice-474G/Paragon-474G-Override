@@ -105,122 +105,6 @@ pros::Motor upper_roller(UPPER_ROLLER_PORT);
 pros::Motor fin_2(FIN_2_PORT); 
 
 /////
-// LEDS - CHANGE THESE
-/////
-// WS2812B addressable strip on an ADI port, driven by HitLib.
-// The port is a NUMBER here, not a letter: A=1, B=2 ... H=8.
-// A, B, E and F are taken by the solenoids, so 3 (C), 4 (D), 7 (G) and 8 (H)
-// are free.
-constexpr uint8_t LED_A_PORT  = 3;   // ADI C
-constexpr uint8_t LED_A_COUNT = 21;
-constexpr uint8_t LED_B_PORT  = 4;   // ADI D
-constexpr uint8_t LED_B_COUNT = 24;
-
-// Gold, as HUE only - see LED_BRIGHTNESS below for how bright it actually is.
-// No blue at all: any blue washes it out to pale yellow on a WS2812.
-//   more green (toward 0xFF)  -> brighter, more yellow
-//   less green (toward 0x90)  -> deeper, more amber/orange gold
-constexpr uint32_t LED_GOLD = 0xFCB000;   // rgba(255, 191, 0, 0.92)
-
-// Overall brightness, 0-100.  At 100 the colour below is sent to the strips
-// exactly as written, so tune the look with LED_GOLD alone.
-constexpr int LED_BRIGHTNESS = 100;
-
-// Scale a 0xRRGGBB colour by LED_BRIGHTNESS, keeping the hue.
-constexpr uint32_t led_dim(uint32_t c) {
-  return ((((c >> 16) & 0xFF) * LED_BRIGHTNESS / 100) << 16) |
-         ((((c >>  8) & 0xFF) * LED_BRIGHTNESS / 100) <<  8) |
-         ((( c        & 0xFF) * LED_BRIGHTNESS / 100));
-}
-
-// ── Gold gradient ───────────────────────────────────────────────────────────
-// Paints the strip in blocks, each block a different shade of gold, running
-// from deep amber at one end to bright yellow-gold at the other.  Red stays
-// 0xFF and blue 0x00 throughout - only green moves, which is what keeps every
-// block reading as gold rather than orange or yellow.
-//
-// Every LED gets its own shade, stepping from deep amber at one end to bright
-// yellow-gold at the other.
-constexpr bool LED_GRADIENT    = true;
-constexpr int  LED_BLOCK       = 1;     // LEDs per shade
-constexpr int  LED_GRAD_G_LOW  = 0x88;  // green at the deep-amber end
-constexpr int  LED_GRAD_G_HIGH = 0xF0;  // green at the yellow-gold end
-
-// Paint one strand as a gradient of solid blocks.
-static void led_paint_gradient(hitlib::LedStrand& strand, int count) {
-  std::vector<hitlib::LedStrand::SpliceRegion> regions;
-  const int block  = LED_BLOCK;
-  const int blocks = (count + block - 1) / block;
-
-  for (int i = 0; i < blocks; i++) {
-    const int start = i * block;
-    const int width = (start + block > count) ? (count - start) : block;
-
-    // Spread green evenly across the blocks.  blocks-1 in the divisor so the
-    // last block lands exactly on LED_GRAD_G_HIGH rather than short of it.
-    const int g = (blocks < 2)
-        ? LED_GRAD_G_HIGH
-        : LED_GRAD_G_LOW + (LED_GRAD_G_HIGH - LED_GRAD_G_LOW) * i / (blocks - 1);
-
-    hitlib::LedStrand::SpliceRegion r;
-    r.start = (uint8_t)start;
-    r.width = (uint8_t)width;
-    r.kind  = hitlib::LedStrand::SpliceRegionAnimKind::SOLID;
-    r.color = led_dim(0xFF0000u | ((uint32_t)g << 8));
-    regions.push_back(r);
-  }
-  strand.spliceMaskCustom(regions);
-}
-
-// ── Gold picker ─────────────────────────────────────────────────────────────
-// Set true to sweep the strips through the gold range instead of holding one
-// colour, so you can watch and pick.  Red stays at 0xFF and blue at 0x00 - the
-// only thing that changes gold is the GREEN channel, from deep amber up to
-// bright yellow-gold.  The current value shows on the controller's bottom row
-// in driver mode; note the one you like, put it in LED_GOLD, set this back to
-// false.
-// TEST: plain white on both strips, bypassing the gradient and the picker.
-// If this does not light them, the problem is the port, the count, the wiring
-// or the power - not the animation code.  Turn off once they work.
-// RAW TEST: bypasses HitLib completely and drives the strips with plain PROS.
-// If this does not light them, no library change will - the fault is the port,
-// the wiring, the strip type or the power.
-// PORT SWEEP: lights every ADI port A-H in turn, 2 s each, white.  Whichever
-// port the strip is actually plugged into will light when its turn comes, and
-// the controller's bottom row names the port being driven.
-//
-// WARNING: this drives the SOLENOID ports too (A, B, E, F).  Only run it on a
-// test brain, or with the pneumatics disconnected.
-constexpr bool LED_PORT_SWEEP = false;
-
-const bool LED_PORT_SWEEP_ON = LED_PORT_SWEEP;
-static char _led_sweep_text[20] = "sweep --";
-const char* led_sweep_text() { return _led_sweep_text; }
-
-// How many LEDs the raw test drives.  Deliberately SMALL: if the first few
-// light but 29 do not, the strip is browning out and it is a power problem,
-// not a protocol one.
-constexpr int LED_TEST_COUNT = 5;
-
-constexpr bool LED_RAW_TEST = false;
-
-constexpr bool LED_TEST = false;
-
-constexpr bool LED_PICKER      = false;  // gradient below is on instead
-constexpr int  LED_PICK_G_LOW  = 0x88;   // deepest amber to try
-constexpr int  LED_PICK_G_HIGH = 0xFF;   // brightest yellow-gold to try
-constexpr int  LED_PICK_STEP   = 0x08;   // how coarse the sweep is
-constexpr int  LED_PICK_HOLD_MS = 2500;  // how long each shade is held
-
-const bool LED_PICKER_ON = LED_PICKER;
-static char _led_pick_text[20] = "LED --";
-const char* led_picker_text() { return _led_pick_text; }
-
-hitlib::LedStrand led_a(LED_A_PORT, LED_A_COUNT);
-hitlib::LedStrand led_b(LED_B_PORT, LED_B_COUNT);
-hitlib::LedGroup  led_group;
-
-/////
 // PNEUMATICS - ADI (3-wire) ports, letters A-H
 /////
 constexpr char HIGH_INTAKE_PORT   = 'F';
@@ -562,39 +446,6 @@ void initialize() {
   // RAW LED TEST - first thing, before anything else can get in the way.
   // Runs in initialize() rather than opcontrol() because opcontrol only runs
   // once the robot is ENABLED; this lights them as soon as the program starts.
-  if (LED_PORT_SWEEP) {
-    static pros::Task sweep([](void*) {
-      pros::delay(1000);   // let PROS bring the ADI ports up
-      while (true) {
-        for (uint8_t port = 1; port <= 8; port++) {
-          snprintf(_led_sweep_text, sizeof(_led_sweep_text),
-                   "ADI %c  n=%d", 'A' + port - 1, (int)LED_A_COUNT);
-          // Construct inside the loop: one Led at a time, so ports do not
-          // fight, and the object is destroyed before the next is made.
-          pros::adi::Led led(port, LED_A_COUNT);
-          for (int i = 0; i < 40; i++) {     // ~2 s, re-writing as it goes
-            led.set_all(0xFFFFFF);
-            led.update();
-            pros::delay(50);
-          }
-        }
-      }
-    }, nullptr, "LED Port Sweep");
-  } else if (LED_RAW_TEST) {
-    static pros::Task raw([](void*) {
-      pros::delay(1000);   // let PROS finish bringing the ADI ports up
-      pros::adi::Led raw_a(LED_A_PORT, LED_TEST_COUNT);
-      pros::adi::Led raw_b(LED_B_PORT, LED_TEST_COUNT);
-      while (true) {
-        raw_a.set_all(0xFFFFFF);  raw_a.update();
-        raw_b.set_all(0xFFFFFF);  raw_b.update();
-        pros::delay(500);
-      }
-    }, nullptr, "LED Raw Test");
-  }
-
-  pros::lcd::initialize();  // required to start LVGL - do not remove, it data aborts
-
   // Leave LLEMU's 8 objects alone.  lv_obj_clean(lv_scr_act()) here would free
   // them all while LLEMU went on holding pointers to them, and anything that
   // later called pros::lcd::set_text() would write into freed memory and data
@@ -636,14 +487,6 @@ void initialize() {
                                 pros::AivisionModeType::colors,
                                 pros::AivisionModeType::objects);
   ai_cam.set_tag_family(pros::AivisionTagFamily::tag_16H5);
-
-  // LEDs: bring the group up here, but set the colours in opcontrol().  The
-  // library's own example does it that way round, and colours set before the
-  // refresh task has ticked do not stick.
-  led_group.add(&led_a);
-  led_group.add(&led_b);
-  led_group.init();
-  led_group.start();
 
   // Put the intake pistons in the HIGH position at power-on - both extended.
   // Commanded explicitly rather than relying on the DigitalOut constructor's
@@ -821,17 +664,6 @@ void opcontrol() {
   // Only ONE cascade motor holds - see cascade_apply_hold_motor() above for why.
   // Re-applied here so it survives an auton test, which changes brake modes.
   cascade_apply_hold_motor();
-  // LEDs - applied here rather than in initialize(), and through the group
-  // rather than each strand, matching HitLib's own example.
-  if (LED_TEST) {
-    led_group.setColor(0xFFFFFF);
-  } else if (LED_GRADIENT) {
-    led_paint_gradient(led_a, LED_A_COUNT);
-    led_paint_gradient(led_b, LED_B_COUNT);
-  } else {
-    led_group.setColor(led_dim(LED_GOLD));
-  }
-
   static bool ctrl_flushed = false;
 
   while (true) {

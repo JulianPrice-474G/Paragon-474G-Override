@@ -94,15 +94,6 @@ bool spin_wait(int timeout_ms = 5000);
 void cascade_set(int power);
 
 // De-energise every solenoid so the cylinders vent.
-// While the LED gold picker is running, the colour it is currently showing,
-// as "LED FFB800".  Put the one you like in LED_GOLD and turn LED_PICKER off.
-extern const bool LED_PICKER_ON;
-const char* led_picker_text();
-
-// While the ADI port sweep is running, which port it is currently driving.
-extern const bool LED_PORT_SWEEP_ON;
-const char* led_sweep_text();
-
 void release_all_pistons();
 
 // Which cascade motor holds: 0 = l_motor_a, 1 = l_motor_b.  Only one holds at

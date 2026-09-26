@@ -48,7 +48,6 @@
 #include "subsystems.hpp"
 #include "vision.hpp"
 #include "macros.hpp"
-#include "hitlib/hitapi.h"
 
 // Defined in src/user_screen.cpp
 extern const char* battery_text();
