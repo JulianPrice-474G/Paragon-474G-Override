@@ -188,6 +188,11 @@ static void led_paint_gradient(hitlib::LedStrand& strand, int count) {
 // bright yellow-gold.  The current value shows on the controller's bottom row
 // in driver mode; note the one you like, put it in LED_GOLD, set this back to
 // false.
+// TEST: plain white on both strips, bypassing the gradient and the picker.
+// If this does not light them, the problem is the port, the count, the wiring
+// or the power - not the animation code.  Turn off once they work.
+constexpr bool LED_TEST = true;
+
 constexpr bool LED_PICKER      = false;  // gradient below is on instead
 constexpr int  LED_PICK_G_LOW  = 0x88;   // deepest amber to try
 constexpr int  LED_PICK_G_HIGH = 0xFF;   // brightest yellow-gold to try
@@ -605,7 +610,10 @@ void initialize() {
   led_group.add(&led_b);
   led_group.init();
   led_group.start();
-  if (LED_PICKER) {
+  if (LED_TEST) {
+    led_a.setColor(0xFFFFFF);
+    led_b.setColor(0xFFFFFF);
+  } else if (LED_PICKER) {
     static pros::Task picker(led_picker_task, nullptr, "LED Picker");
   } else if (LED_GRADIENT) {
     led_paint_gradient(led_a, LED_A_COUNT);
