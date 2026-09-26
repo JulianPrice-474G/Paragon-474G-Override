@@ -105,6 +105,25 @@ pros::Motor upper_roller(UPPER_ROLLER_PORT);
 pros::Motor fin_2(FIN_2_PORT); 
 
 /////
+// LEDS - CHANGE THESE
+/////
+// WS2812B addressable strip on an ADI port, driven by HitLib.
+// The port is a NUMBER here, not a letter: A=1, B=2 ... H=8.
+// A, B, E and F are taken by the solenoids, so 3 (C), 4 (D), 7 (G) and 8 (H)
+// are free.
+constexpr uint8_t LED_PORT  = 3;    // TODO: ADI C - set to your real port
+constexpr uint8_t LED_COUNT = 30;   // TODO: how many LEDs are on the strip
+
+// The goldest gold a WS2812 can manage.  Gold on an RGB LED is red plus about
+// two thirds green and NO blue - any blue at all washes it out to pale yellow.
+// 0xFFD700 is the web "gold" but reads yellow on these; pulling green down to
+// ~0xB0 gives the deeper metallic look.
+constexpr uint32_t LED_GOLD = 0xFFB000;
+
+hitlib::LedStrand led_strand(LED_PORT, LED_COUNT);
+hitlib::LedGroup  led_group;
+
+/////
 // PNEUMATICS - ADI (3-wire) ports, letters A-H
 /////
 constexpr char HIGH_INTAKE_PORT   = 'F';
@@ -486,6 +505,12 @@ void initialize() {
                                 pros::AivisionModeType::colors,
                                 pros::AivisionModeType::objects);
   ai_cam.set_tag_family(pros::AivisionTagFamily::tag_16H5);
+
+  // LEDs: start the background refresh task, then hold solid gold.
+  led_group.add(&led_strand);
+  led_group.init();
+  led_group.start();
+  led_strand.setColor(LED_GOLD);
 
   // Put the intake pistons in the HIGH position at power-on - both extended.
   // Commanded explicitly rather than relying on the DigitalOut constructor's
