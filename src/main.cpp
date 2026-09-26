@@ -120,12 +120,11 @@ constexpr uint8_t LED_B_COUNT = 24;
 // No blue at all: any blue washes it out to pale yellow on a WS2812.
 //   more green (toward 0xFF)  -> brighter, more yellow
 //   less green (toward 0x90)  -> deeper, more amber/orange gold
-constexpr uint32_t LED_GOLD = 0xFCB000;   // rgb(252, 176, 0)
+constexpr uint32_t LED_GOLD = 0xFCB000;   // rgb(212, 148, 0)
 
-// Overall brightness, 0-100.  These strips are blinding at full power, and
-// dimming also makes the colour read as gold rather than yellow - a saturated
-// hue at low brightness looks much more like metal.
-constexpr int LED_BRIGHTNESS = 45;
+// Overall brightness, 0-100.  At 100 the colour below is sent to the strips
+// exactly as written, so tune the look with LED_GOLD alone.
+constexpr int LED_BRIGHTNESS = 100;
 
 // Scale a 0xRRGGBB colour by LED_BRIGHTNESS, keeping the hue.
 constexpr uint32_t led_dim(uint32_t c) {
