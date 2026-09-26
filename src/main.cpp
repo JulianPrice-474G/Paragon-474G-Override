@@ -116,10 +116,23 @@ constexpr uint8_t LED_A_COUNT = 21;
 constexpr uint8_t LED_B_PORT  = 4;   // ADI D
 constexpr uint8_t LED_B_COUNT = 24;
 
-// Gold.  No blue at all - any blue washes it out to pale yellow on a WS2812.
-// Lower the green for a deeper, more orange gold; raise it toward 0xFF for a
-// brighter yellow-gold.
-constexpr uint32_t LED_GOLD = 0xFCC200;   // rgb(252, 194, 0)
+// Gold, as HUE only - see LED_BRIGHTNESS below for how bright it actually is.
+// No blue at all: any blue washes it out to pale yellow on a WS2812.
+//   more green (toward 0xFF)  -> brighter, more yellow
+//   less green (toward 0x90)  -> deeper, more amber/orange gold
+constexpr uint32_t LED_GOLD = 0xFCB000;   // rgb(252, 176, 0)
+
+// Overall brightness, 0-100.  These strips are blinding at full power, and
+// dimming also makes the colour read as gold rather than yellow - a saturated
+// hue at low brightness looks much more like metal.
+constexpr int LED_BRIGHTNESS = 45;
+
+// Scale a 0xRRGGBB colour by LED_BRIGHTNESS, keeping the hue.
+constexpr uint32_t led_dim(uint32_t c) {
+  return ((((c >> 16) & 0xFF) * LED_BRIGHTNESS / 100) << 16) |
+         ((((c >>  8) & 0xFF) * LED_BRIGHTNESS / 100) <<  8) |
+         ((( c        & 0xFF) * LED_BRIGHTNESS / 100));
+}
 
 hitlib::LedStrand led_a(LED_A_PORT, LED_A_COUNT);
 hitlib::LedStrand led_b(LED_B_PORT, LED_B_COUNT);
@@ -514,8 +527,8 @@ void initialize() {
   led_group.add(&led_b);
   led_group.init();
   led_group.start();
-  led_a.setColor(LED_GOLD);
-  led_b.setColor(LED_GOLD);
+  led_a.setColor(led_dim(LED_GOLD));
+  led_b.setColor(led_dim(LED_GOLD));
 
   // Put the intake pistons in the HIGH position at power-on - both extended.
   // Commanded explicitly rather than relying on the DigitalOut constructor's
