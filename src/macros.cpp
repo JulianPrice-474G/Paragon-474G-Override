@@ -281,16 +281,34 @@ static void phase2_task(void*) {
 // ONE long-lived worker rather than a task per press.  pros::Task has no
 // destructor - it is a thin wrapper around a handle - so `delete` freed the
 // wrapper while leaving the RTOS task behind, leaking one per press.
-enum _Req { REQ_NONE, REQ_PHASE1, REQ_PHASE2 };
+enum _Req { REQ_NONE, REQ_PHASE1, REQ_PHASE2, REQ_MOVE };
+static void move_task();
 static volatile _Req _req = REQ_NONE;
+
+// ── Background cascade move ───────────────────────────────────────────────
+// cascade_move_async() runs one cascade_to() on the macro's own worker, so the
+// cascade travels while the auton gets on with driving.  Sharing the worker is
+// deliberate: a move and a macro phase can never drive the cascade at once.
+static double _move_target = 0;
+static int    _move_speed  = 0;
+
+static void move_task() {
+  bool ok = cascade_to(_move_target, "moving", _move_speed);
+  cascade_stop();
+  _running = false;
+  _cancel  = false;
+  _failed  = !ok;
+  if (ok) _step = "done";
+}
 
 static void macro_worker(void*) {
   while (true) {
     _Req r = _req;
     if (r != REQ_NONE) {
       _req = REQ_NONE;
-      if (r == REQ_PHASE1) phase1_task(nullptr);
-      else                 phase2_task(nullptr);
+      if      (r == REQ_PHASE1) phase1_task(nullptr);
+      else if (r == REQ_PHASE2) phase2_task(nullptr);
+      else                      move_task();
     }
     pros::delay(ez::util::DELAY_TIME);
   }
@@ -309,4 +327,45 @@ void macro_start() {
   _failed  = false;
   _step    = "starting";
   _req     = (_phase == PH_WAITING) ? REQ_PHASE2 : REQ_PHASE1;
+}
+
+/////
+// Public: background cascade moves, for autons
+/////
+void cascade_move_async(double target, int speed) {
+  if (_running) return;          // a macro phase or another move owns it
+
+  // Created on first use and never destroyed - same worker the macro uses.
+  static pros::Task worker(macro_worker, nullptr, "Cascade Macro");
+
+  _move_target = target;
+  _move_speed  = (speed > 0) ? speed : CASCADE_MOVE_SPEED;
+  _running     = true;
+  _cancel      = false;
+  _failed      = false;
+  _step        = "moving";
+  _req         = REQ_MOVE;
+}
+
+bool cascade_move_active() { return _running; }
+
+bool cascade_move_wait(int timeout_ms) {
+  const uint32_t start = pros::millis();
+  while (_running) {
+    if ((int)(pros::millis() - start) > timeout_ms) return false;
+    pros::delay(ez::util::DELAY_TIME);
+  }
+  return !_failed;
+}
+
+// Same as a RIGHT press in driver control.
+void macro_press() { macro_start(); }
+
+bool macro_wait_done(int timeout_ms) {
+  const uint32_t start = pros::millis();
+  while (_running) {
+    if ((int)(pros::millis() - start) > timeout_ms) return false;
+    pros::delay(ez::util::DELAY_TIME);
+  }
+  return !_failed;
 }

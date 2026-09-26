@@ -135,3 +135,39 @@ bool macro_owns_intake();
 // press, so the failing step stays on the controller instead of vanishing the
 // moment the macro stops.
 bool macro_failed();
+
+/////
+// For autons
+/////
+// Raise or lower the cascade to a rotation-sensor value WITHOUT blocking, so
+// the robot can drive at the same time.  Direction is worked out from where
+// the cascade is now - a target above it raises, below it lowers.
+//
+//   cascade_move_async(CASCADE_OUT);             // starts moving, returns at once
+//   chassis.pid_drive_set(24_in, DRIVE_SPEED);   // drives while it rises
+//   chassis.pid_wait();
+//   cascade_move_wait();                         // now make sure it arrived
+//
+// speed is 0-127; leave it out for the macro's normal speed.  Does nothing if
+// a macro phase or another move is already running.  The cascade holds
+// position once it arrives.
+void cascade_move_async(double target, int speed = 0);
+
+// True while a background move or a macro phase is driving the cascade.
+bool cascade_move_active();
+
+// Block until that finishes.  Returns false on timeout, or if the move stalled
+// or timed out on its own.
+bool cascade_move_wait(int timeout_ms = 4000);
+
+// Run the collect macro from an auton, exactly as pressing RIGHT does in
+// driver control.  Two presses: the first goes up, flips and parks at collect;
+// the second grips, lifts, flips and returns to low.
+//
+//   macro_press();              // first press
+//   macro_wait_done();          // ... parks at collect
+//   intake_spin(1000, 127);     // do whatever you need here
+//   macro_press();              // second press
+//   macro_wait_done();          // ... back at low
+void macro_press();
+bool macro_wait_done(int timeout_ms = 8000);

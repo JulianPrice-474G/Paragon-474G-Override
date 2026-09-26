@@ -153,6 +153,31 @@ void sawp() {
   //   cascade_set(90);          // both cascade motors, +ve raises
   //   cascade_set(0);
   //
+  // ── CASCADE TO A HEIGHT, WHILE DRIVING ────────────────────────────────────
+  // cascade_move_async() returns straight away and the cascade travels in the
+  // background.  Direction is worked out for you - a target above where it is
+  // now raises, below it lowers.  It holds position once it arrives.
+  //
+  //   cascade_move_async(CASCADE_OUT);             // starts rising, returns now
+  //   chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
+  //   chassis.pid_wait();                          // drove while it rose
+  //   cascade_move_wait();                         // confirm it got there
+  //
+  //   cascade_move_async(300, 60);                 // any value, slower
+  //   cascade_move_active();                       // true while it is moving
+  //
+  // ── THE COLLECT MACRO ─────────────────────────────────────────────────────
+  // Same two presses as RIGHT in driver control.
+  //
+  //   macro_press();            // 1st: up, flip, park at collect
+  //   macro_wait_done();
+  //   intake_spin(1000, 127);   // whatever you need while it is parked
+  //   macro_press();            // 2nd: grip, lift, flip, back to low
+  //   macro_wait_done();
+  //
+  // macro_wait_done() returns false if a move stalled or timed out, so an
+  // auton can fall back instead of carrying on as though it worked.
+  //
   // +127 runs the intake the same way R1 does; negative for the other way.
   // The spins run in the background, so the next drive starts straight away
   // with the intake still turning.
@@ -166,8 +191,8 @@ void sawp() {
   // vision_align() stops the drive before returning either way; its tuning
   // constants are at the top of include/vision.hpp.
 
-upper_roller_spin(800,127);
-drive_arc( 90, 80, 127);
+upper_roller_spin(200,127);
+drive_arc( 90, 30, 127);
   
 }
 
