@@ -23,6 +23,12 @@ extern bool middle_intake_extended;
 extern bool claw_extended;
 extern bool c_flip_extended;
 
+// The intake pistons' position, as one value.  Set by Y and B in opcontrol and
+// re-asserted by auton_setup(); the dropdown interlock reads the two mirrors
+// this drives.
+enum IntakePos { INTAKE_HIGH, INTAKE_MIDDLE, INTAKE_LOW };
+extern IntakePos intake_pos;
+
 /////
 // Subsystem helpers - prefer these to touching the devices directly
 /////

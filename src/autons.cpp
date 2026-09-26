@@ -76,6 +76,7 @@ void auton_setup() {
 
   // Pistons to a known starting state.  Change these to whatever the robot
   // should look like on the tile at the start of a match.
+  intake_pos = INTAKE_HIGH;   // keep the selector in step with the pistons
   high_intake_set(true);
   middle_intake_set(true);
   claw_set(CLAW_ON);    // start CLOSED - CLAW_OFF here would open it

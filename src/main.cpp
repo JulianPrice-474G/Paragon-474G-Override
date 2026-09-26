@@ -136,6 +136,14 @@ bool middle_intake_extended = true;
 bool claw_extended          = true;
 bool c_flip_extended        = false;
 
+// Where the two intake pistons are, as ONE value rather than two independent
+// booleans.  The buttons set this outright, so they cannot drift into a
+// combination neither button expects.
+//   HIGH   both activated - the resting position
+//   MIDDLE middle activated, upper released
+//   LOW    both released
+IntakePos intake_pos = INTAKE_HIGH;
+
 /////
 // CASCADE POSITION SOURCE
 /////
@@ -491,6 +499,7 @@ void initialize() {
   // Put the intake pistons in the HIGH position at power-on - both extended.
   // Commanded explicitly rather than relying on the DigitalOut constructor's
   // initial state, so the solenoids actually receive it.
+  intake_pos = INTAKE_HIGH;
   high_intake_set(PISTON_EXTENDED);
   middle_intake_set(PISTON_EXTENDED);
 
@@ -693,22 +702,26 @@ void opcontrol() {
           (master.get_digital(DIGITAL_L1) || master.get_digital(DIGITAL_L2)))
         macro_cancel();
 
-      // B and Y are TOGGLES, not holds - each press flips state and it stays.
-      //  - B toggles high_intake on its own
-      //  - Y toggles BOTH together, matching what holding Y used to do
-      // Y decides from high_intake's state so the pair cannot drift apart: if B
-      // has left them disagreeing, the first Y press lines them both up.
-      if (master.get_digital_new_press(DIGITAL_B)) {
-        high_intake_extended = !high_intake_extended;
-        high_intake.set_value(high_intake_extended);
-      }
-      if (master.get_digital_new_press(DIGITAL_Y)) {
-        bool want = !high_intake_extended;
-        high_intake_extended   = want;
-        middle_intake_extended = want;
-        high_intake.set_value(want);
-        middle_intake.set_value(want);
-      }
+        // Intake pistons - a three-position selector, not two toggles.
+        //   Y  -> MIDDLE (middle activated, upper released)
+        //   B  -> LOW    (both released)
+        // Pressing whichever one you used a second time returns to HIGH, so the
+        // resting position is always one press away.
+        //
+        // Both buttons SET the position rather than flipping each piston from
+        // its own value.  That is what makes it consistent - the old version
+        // could leave the pair in a combination neither button expected.
+        IntakePos want_pos = intake_pos;
+        if (master.get_digital_new_press(DIGITAL_Y))
+          want_pos = (intake_pos == INTAKE_MIDDLE) ? INTAKE_HIGH : INTAKE_MIDDLE;
+        if (master.get_digital_new_press(DIGITAL_B))
+          want_pos = (intake_pos == INTAKE_LOW) ? INTAKE_HIGH : INTAKE_LOW;
+
+        if (want_pos != intake_pos) {
+          intake_pos = want_pos;
+          high_intake_set  (intake_pos == INTAKE_HIGH);  // upper: only in HIGH
+          middle_intake_set(intake_pos != INTAKE_LOW);   // middle: HIGH + MIDDLE
+        }
 
       // Claw on DOWN, C-flip on LEFT - both latching toggles.  Safe to read
       // these with new_press: handle_ctrl_input() only consumes LEFT/RIGHT/A/B
