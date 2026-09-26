@@ -170,5 +170,15 @@ bool cascade_move_wait(int timeout_ms = 4000);
 //   intake_spin(1000, 127);     // do whatever you need here
 //   macro_press();              // second press
 //   macro_wait_done();          // ... back at low
-void macro_press();
+// end_height is where the cascade finishes on the SECOND press, after the
+// flip.  Leave it out and it stays at the out height:
+//
+//   macro_press();          // 1st press - up, flip, park at collect
+//   macro_wait_done();
+//   macro_press(500);       // 2nd press - grip, lift, flip, then go to 500
+//   macro_wait_done();
+//
+//   macro_press(CASCADE_LOW);   // ... or back down to the bottom
+//   macro_press();              // ... or just stay at the out height
+void macro_press(double end_height = -1);
 bool macro_wait_done(int timeout_ms = 8000);

@@ -10,6 +10,10 @@ static bool        _cancel      = false;
 static const char* _step        = "idle";
 static bool        _failed      = false;  // last run ended STALLED or TIMEOUT
 
+// Where phase 2 finishes, set by macro_press().  Negative means stay at the
+// out height.
+static double      _phase2_end  = -1;
+
 bool macro_running() { return _running; }
 bool macro_failed()  { return _failed; }
 void macro_cancel()  { if (_running) _cancel = true; }
@@ -264,8 +268,11 @@ static void phase2_task(void*) {
     if (remain > 0) ok = macro_wait(remain, "6 after flip") && step_pause("6 after flip");
   }
 
-  // The sequence ENDS at the out height - it does not come back down.  Bring
-  // the cascade down with L1/L2, or cascade_move_async(CASCADE_LOW) in an auton.
+  // Finish wherever macro_press() asked for.  Negative - the default - leaves
+  // the cascade at the out height, and it is brought down with L1/L2 or a
+  // cascade_move_async() in an auton.
+  if (ok && _phase2_end >= 0)
+    ok = cascade_to(_phase2_end, "7 end") && step_pause("7 end");
 
   // Release the intake on every exit path, cancel and stall included.
   intake_run(false);
@@ -366,7 +373,12 @@ bool cascade_move_wait(int timeout_ms) {
 }
 
 // Same as a RIGHT press in driver control.
-void macro_press() { macro_start(); }
+void macro_press(double end_height) {
+  // Only the SECOND press uses it, but storing it on every press means a
+  // cancelled run cannot leave a stale target behind for the next one.
+  _phase2_end = end_height;
+  macro_start();
+}
 
 bool macro_wait_done(int timeout_ms) {
   const uint32_t start = pros::millis();
