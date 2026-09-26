@@ -195,7 +195,7 @@ void sawp() {
 upper_roller_spin(700,127);
 pros::delay(200);
 cascade_move_async(240, 127);
-drive_arc( 115, -25, -127);
+drive_arc( 90, -35, -127);
 chassis.pid_wait_quick();
 pros::delay(300);
 claw_set(false);
@@ -205,9 +205,9 @@ macro_press();
 press_y();
 intake_set(3000,127);
 drive_arc( 165,  127,  35);
-chassis.pid_wait();
-pros::delay(1000);
-chassis.pid_turn_set(245, 127);
+chassis.pid_wait_quick_chain();
+pros::delay(700);
+chassis.pid_turn_set(240, 127);
 chassis.pid_wait();
 macro_press(500);
 chassis.pid_drive_set(-10, 127);
@@ -221,10 +221,11 @@ pros::delay(300);
 claw_set(false);
 pros::delay(300);
 intake_set(6000,127);
-drive_arc(250,127, 100);
+macro_press();
+chassis.pid_drive_set(28, 127);
 chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(10,127);
-chassis.pid_wait();
+chassis.pid_turn_set(180, 127);
+
 
 
 
