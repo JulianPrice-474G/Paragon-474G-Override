@@ -590,38 +590,13 @@ void initialize() {
                                 pros::AivisionModeType::objects);
   ai_cam.set_tag_family(pros::AivisionTagFamily::tag_16H5);
 
-  // Steps the strips through the gold range, one shade at a time.
-  static auto led_picker_task = [](void*) {
-    int g = LED_PICK_G_LOW;
-    while (true) {
-      uint32_t c = 0xFF0000u | ((uint32_t)g << 8);
-      snprintf(_led_pick_text, sizeof(_led_pick_text), "LED %06X", (unsigned)c);
-      led_a.setColor(c);
-      led_b.setColor(c);
-      pros::delay(LED_PICK_HOLD_MS);
-      g += LED_PICK_STEP;
-      if (g > LED_PICK_G_HIGH) g = LED_PICK_G_LOW;
-    }
-  };
-
-  // LEDs: both strips in one group so a single background task refreshes them,
-  // then hold solid gold.
+  // LEDs: bring the group up here, but set the colours in opcontrol().  The
+  // library's own example does it that way round, and colours set before the
+  // refresh task has ticked do not stick.
   led_group.add(&led_a);
   led_group.add(&led_b);
   led_group.init();
   led_group.start();
-  if (LED_TEST) {
-    led_a.setColor(0xFFFFFF);
-    led_b.setColor(0xFFFFFF);
-  } else if (LED_PICKER) {
-    static pros::Task picker(led_picker_task, nullptr, "LED Picker");
-  } else if (LED_GRADIENT) {
-    led_paint_gradient(led_a, LED_A_COUNT);
-    led_paint_gradient(led_b, LED_B_COUNT);
-  } else {
-    led_a.setColor(led_dim(LED_GOLD));
-    led_b.setColor(led_dim(LED_GOLD));
-  }
 
   // Put the intake pistons in the HIGH position at power-on - both extended.
   // Commanded explicitly rather than relying on the DigitalOut constructor's
@@ -799,6 +774,17 @@ void opcontrol() {
   // Only ONE cascade motor holds - see cascade_apply_hold_motor() above for why.
   // Re-applied here so it survives an auton test, which changes brake modes.
   cascade_apply_hold_motor();
+  // LEDs - applied here rather than in initialize(), and through the group
+  // rather than each strand, matching HitLib's own example.
+  if (LED_TEST) {
+    led_group.setColor(0xFFFFFF);
+  } else if (LED_GRADIENT) {
+    led_paint_gradient(led_a, LED_A_COUNT);
+    led_paint_gradient(led_b, LED_B_COUNT);
+  } else {
+    led_group.setColor(led_dim(LED_GOLD));
+  }
+
   static bool ctrl_flushed = false;
 
   while (true) {
