@@ -220,9 +220,12 @@ static void phase1_task(void*) {
 }
 
 // Fired partway through phase 2's rise - see CASCADE_FLIP_DELAY_MS.
+static uint32_t _flip_fired_ms = 0;   // when the flip piston last extended
+
 static void fire_flip() {
   intake_run(true, true);   // upper roller reverses from here to the end
   flip_set(FLIP_ON);
+  _flip_fired_ms = pros::millis();
 }
 
 static void phase2_task(void*) {
@@ -242,7 +245,16 @@ static void phase2_task(void*) {
                           CASCADE_FLIP_DELAY_MS, fire_flip) &&
                step_pause("5 out");
 
-  if (ok) ok = cascade_to(CASCADE_LOW, "6 low");
+  // Hold before descending, so the flip piston has CASCADE_AFTER_FLIP_MS from
+  // the moment it fired.  Measured from the flip rather than from arriving at
+  // the top, so an early flip has already used some of it up.
+  if (ok) {
+    int elapsed = (int)(pros::millis() - _flip_fired_ms);
+    int remain  = CASCADE_AFTER_FLIP_MS - elapsed;
+    if (remain > 0) ok = macro_wait(remain, "6 after flip") && step_pause("6 after flip");
+  }
+
+  if (ok) ok = cascade_to(CASCADE_LOW, "7 low");
 
   // Release the intake on every exit path, cancel and stall included.
   intake_run(false);

@@ -14,6 +14,8 @@ extern double CASCADE_COLLECT;  // intake height
 extern double CASCADE_FLIP;     // raised above collect, where the flip piston fires
 extern double CASCADE_OUT;         // phase 2 raise height, above flip
 extern int    CASCADE_FLIP_DELAY_MS;  // ms into that rise before the piston fires
+extern int    CASCADE_AFTER_FLIP_MS;  // ms after the flip piston extends
+                                      //   before the cascade moves again
 extern int    CASCADE_FLIP_BACK_MS;   // ms into the first-click rise before
                                       //   the flip piston flips back
 extern int    CASCADE_FLIP_RELEASE_MS;// ms to wait after releasing the flip
