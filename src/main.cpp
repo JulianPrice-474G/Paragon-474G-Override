@@ -464,9 +464,8 @@ ez::Drive chassis(
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
-  // RAW LED TEST - first thing, before anything else can get in the way.
-  // Runs in initialize() rather than opcontrol() because opcontrol only runs
-  // once the robot is ENABLED; this lights them as soon as the program starts.
+  pros::lcd::initialize();  // required to start LVGL - do not remove, it data aborts
+
   // Leave LLEMU's 8 objects alone.  lv_obj_clean(lv_scr_act()) here would free
   // them all while LLEMU went on holding pointers to them, and anything that
   // later called pros::lcd::set_text() would write into freed memory and data
