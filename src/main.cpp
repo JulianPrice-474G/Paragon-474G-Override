@@ -200,7 +200,7 @@ static void led_paint_gradient(hitlib::LedStrand& strand, int count) {
 //
 // WARNING: this drives the SOLENOID ports too (A, B, E, F).  Only run it on a
 // test brain, or with the pneumatics disconnected.
-constexpr bool LED_PORT_SWEEP = false;  // ports already proven by the old strips
+constexpr bool LED_PORT_SWEEP = false;
 
 const bool LED_PORT_SWEEP_ON = LED_PORT_SWEEP;
 static char _led_sweep_text[20] = "sweep --";
@@ -211,9 +211,9 @@ const char* led_sweep_text() { return _led_sweep_text; }
 // not a protocol one.
 constexpr int LED_TEST_COUNT = 5;
 
-constexpr bool LED_RAW_TEST = true;
+constexpr bool LED_RAW_TEST = false;
 
-constexpr bool LED_TEST = true;
+constexpr bool LED_TEST = true;   // HitLib solid white
 
 constexpr bool LED_PICKER      = false;  // gradient below is on instead
 constexpr int  LED_PICK_G_LOW  = 0x88;   // deepest amber to try
