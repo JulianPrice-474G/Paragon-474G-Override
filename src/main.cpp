@@ -551,6 +551,22 @@ ez::Drive chassis(
  * to keep execution time for this mode under a few seconds.
  */
 void initialize() {
+  // RAW LED TEST - first thing, before anything else can get in the way.
+  // Runs in initialize() rather than opcontrol() because opcontrol only runs
+  // once the robot is ENABLED; this lights them as soon as the program starts.
+  if (LED_RAW_TEST) {
+    static pros::Task raw([](void*) {
+      pros::delay(1000);   // let PROS finish bringing the ADI ports up
+      pros::adi::Led raw_a(LED_A_PORT, LED_A_COUNT);
+      pros::adi::Led raw_b(LED_B_PORT, LED_B_COUNT);
+      while (true) {
+        raw_a.set_all(0xFFFFFF);  raw_a.update();
+        raw_b.set_all(0xFFFFFF);  raw_b.update();
+        pros::delay(500);
+      }
+    }, nullptr, "LED Raw Test");
+  }
+
   pros::lcd::initialize();  // required to start LVGL - do not remove, it data aborts
 
   // Leave LLEMU's 8 objects alone.  lv_obj_clean(lv_scr_act()) here would free
@@ -781,19 +797,7 @@ void opcontrol() {
   cascade_apply_hold_motor();
   // LEDs - applied here rather than in initialize(), and through the group
   // rather than each strand, matching HitLib's own example.
-  if (LED_RAW_TEST) {
-    // Plain PROS, no HitLib.  Written once per second forever, so a strip that
-    // needs re-poking still shows something.
-    static pros::Task raw([](void*) {
-      pros::adi::Led raw_a(LED_A_PORT, LED_A_COUNT);
-      pros::adi::Led raw_b(LED_B_PORT, LED_B_COUNT);
-      while (true) {
-        raw_a.set_all(0xFFFFFF);  raw_a.update();
-        raw_b.set_all(0xFFFFFF);  raw_b.update();
-        pros::delay(1000);
-      }
-    }, nullptr, "LED Raw Test");
-  } else if (LED_TEST) {
+  if (LED_TEST) {
     led_group.setColor(0xFFFFFF);
   } else if (LED_GRADIENT) {
     led_paint_gradient(led_a, LED_A_COUNT);
