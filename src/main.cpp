@@ -139,22 +139,31 @@ constexpr uint32_t led_dim(uint32_t c) {
 // 0xFF and blue 0x00 throughout - only green moves, which is what keeps every
 // block reading as gold rather than orange or yellow.
 //
-// Set LED_BLOCK to however many LEDs make up the length you want each shade to
-// cover.  On a 144/m strip half an inch is about 2 LEDs; on 60/m it is closer
-// to 1.
-constexpr bool LED_GRADIENT   = true;
-constexpr int  LED_BLOCK      = 2;       // LEDs per shade
-constexpr int  LED_GRAD_G_LOW  = 0x88;   // green at the deep-amber end
-constexpr int  LED_GRAD_G_HIGH = 0xF0;   // green at the yellow-gold end
+// Block size is worked out from the strip's LENGTH and its LED count, so it
+// stays half an inch whatever the density - change a strip and only its count
+// needs updating.
+constexpr bool   LED_GRADIENT     = true;
+constexpr double LED_STRIP_INCHES = 14.5;  // physical length of each strip
+constexpr double LED_BLOCK_INCHES = 0.5;   // how long one shade should be
+constexpr int    LED_GRAD_G_LOW   = 0x88;  // green at the deep-amber end
+constexpr int    LED_GRAD_G_HIGH  = 0xF0;  // green at the yellow-gold end
+
+// LEDs per shade for a strip of this many pixels.  At least 1, or a sparse
+// strip would ask for zero-width blocks.
+constexpr int led_block_for(int count) {
+  int n = (int)(count * LED_BLOCK_INCHES / LED_STRIP_INCHES + 0.5);
+  return n < 1 ? 1 : n;
+}
 
 // Paint one strand as a gradient of solid blocks.
 static void led_paint_gradient(hitlib::LedStrand& strand, int count) {
   std::vector<hitlib::LedStrand::SpliceRegion> regions;
-  const int blocks = (count + LED_BLOCK - 1) / LED_BLOCK;
+  const int block  = led_block_for(count);
+  const int blocks = (count + block - 1) / block;
 
   for (int i = 0; i < blocks; i++) {
-    const int start = i * LED_BLOCK;
-    const int width = (start + LED_BLOCK > count) ? (count - start) : LED_BLOCK;
+    const int start = i * block;
+    const int width = (start + block > count) ? (count - start) : block;
 
     // Spread green evenly across the blocks.  blocks-1 in the divisor so the
     // last block lands exactly on LED_GRAD_G_HIGH rather than short of it.
