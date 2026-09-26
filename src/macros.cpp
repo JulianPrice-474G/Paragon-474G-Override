@@ -184,6 +184,9 @@ bool cascade_at_collect() {
 /////
 // The two halves
 /////
+// Fired partway through phase 1's rise - see CASCADE_FLIP_BACK_MS.
+static void release_flip() { flip_set(FLIP_OFF); }
+
 static void phase1_task(void*) {
   // Preflight: put the pistons into a known state before anything moves, so
   // the sequence behaves the same however they were left.
@@ -191,17 +194,18 @@ static void phase1_task(void*) {
   claw_set(CLAW_OFF);
 
   bool ok = macro_wait(MACRO_PISTON_SETTLE, "0 preflight") &&
-            step_pause("0 preflight") &&
-            cascade_to(CASCADE_FLIP, "1 flip") &&
-            step_pause("1 flip");
+            step_pause("0 preflight");
 
-  // At flip height, release the flip piston, then hold still for
-  // CASCADE_FLIP_RELEASE_MS so it can finish moving before the cascade starts
-  // back down.
-  if (ok) {
-    flip_set(FLIP_OFF);
-    ok = macro_wait(CASCADE_FLIP_RELEASE_MS, "2 release") && step_pause("2 release");
-  }
+  // Rise to flip height, with the flip piston flipping back partway UP -
+  // CASCADE_FLIP_BACK_MS into the move.
+  if (ok) ok = cascade_to(CASCADE_FLIP, "1 flip", CASCADE_MOVE_SPEED,
+                          CASCADE_FLIP_BACK_MS, release_flip) &&
+               step_pause("1 flip");
+
+  // Then hold still for CASCADE_FLIP_RELEASE_MS, so the piston can finish
+  // moving before the cascade starts back down.
+  if (ok) ok = macro_wait(CASCADE_FLIP_RELEASE_MS, "2 release") &&
+               step_pause("2 release");
 
   if (ok) ok = cascade_to(CASCADE_COLLECT, "3 collect") && step_pause("3 collect");
 

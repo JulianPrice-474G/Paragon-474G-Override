@@ -60,6 +60,11 @@ int CASCADE_FLIP_DELAY_MS = 300;
 // First click: how long to wait at flip height AFTER the flip piston releases,
 // before the cascade starts down to collect.  Gives the piston time to finish
 // moving while the cascade is still still.
+// First click: how long after the cascade STARTS rising before the flip piston
+// flips back.  0 releases it the moment the cascade begins moving; set it
+// longer than the rise takes and it releases on arrival at flip height.
+int CASCADE_FLIP_BACK_MS = 0;
+
 int CASCADE_FLIP_RELEASE_MS = 500;
 double CASCADE_MAX     = 1000;  // L1 stops raising here
 
