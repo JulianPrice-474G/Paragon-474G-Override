@@ -194,21 +194,40 @@ void sawp() {
 
 upper_roller_spin(700,127);
 pros::delay(200);
-cascade_move_async(250, 127);
-drive_arc( 100, -40, -127);
-chassis.pid_wait();
+cascade_move_async(240, 127);
+drive_arc( 115, -25, -127);
+chassis.pid_wait_quick();
+pros::delay(300);
 claw_set(false);
-pros::delay(700);
+pros::delay(300);
+cascade_move_wait();   // make sure the move to 240 is done, or this press would cancel it
 macro_press();
-middle_intake_set(true);
+press_y();
 intake_set(3000,127);
-drive_arc( 145,  127,  50);
+drive_arc( 165,  127,  35);
 chassis.pid_wait();
-pros::delay(2000);
-chassis.pid_turn_set(210, 127);
+pros::delay(1000);
+chassis.pid_turn_set(245, 127);
 chassis.pid_wait();
-macro_press();
-chassis.pid_drive_set(-24, 127);
+macro_press(500);
+chassis.pid_drive_set(-10, 127);
+chassis.pid_wait_quick_chain();
+macro_wait_done();     // default 8 s - 400 ms gave up before the macro finished
+chassis.pid_drive_set(-17, 127);
+chassis.pid_wait();
+cascade_move_async(300, 127);
+pros::delay(300);
+claw_set(false);
+pros::delay(300);
+intake_set(6000,127);
+drive_arc(250,127, 100);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(10,127);
+chassis.pid_wait();
+
+
+
+
 
 
 
