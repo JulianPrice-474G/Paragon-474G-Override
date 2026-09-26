@@ -112,9 +112,9 @@ pros::Motor fin_2(FIN_2_PORT);
 // A, B, E and F are taken by the solenoids, so 3 (C), 4 (D), 7 (G) and 8 (H)
 // are free.
 constexpr uint8_t LED_A_PORT  = 3;   // ADI C
-constexpr uint8_t LED_A_COUNT = 5;
+constexpr uint8_t LED_A_COUNT = 21;
 constexpr uint8_t LED_B_PORT  = 4;   // ADI D
-constexpr uint8_t LED_B_COUNT = 5;
+constexpr uint8_t LED_B_COUNT = 24;
 
 // Gold, as HUE only - see LED_BRIGHTNESS below for how bright it actually is.
 // No blue at all: any blue washes it out to pale yellow on a WS2812.
@@ -139,26 +139,17 @@ constexpr uint32_t led_dim(uint32_t c) {
 // 0xFF and blue 0x00 throughout - only green moves, which is what keeps every
 // block reading as gold rather than orange or yellow.
 //
-// Block size is worked out from the strip's LENGTH and its LED count, so it
-// stays half an inch whatever the density - change a strip and only its count
-// needs updating.
-constexpr bool   LED_GRADIENT     = true;
-constexpr double LED_STRIP_INCHES = 14.5;  // physical length of each strip
-constexpr double LED_BLOCK_INCHES = 0.5;   // how long one shade should be
-constexpr int    LED_GRAD_G_LOW   = 0x88;  // green at the deep-amber end
-constexpr int    LED_GRAD_G_HIGH  = 0xF0;  // green at the yellow-gold end
-
-// LEDs per shade for a strip of this many pixels.  At least 1, or a sparse
-// strip would ask for zero-width blocks.
-constexpr int led_block_for(int count) {
-  int n = (int)(count * LED_BLOCK_INCHES / LED_STRIP_INCHES + 0.5);
-  return n < 1 ? 1 : n;
-}
+// Every LED gets its own shade, stepping from deep amber at one end to bright
+// yellow-gold at the other.
+constexpr bool LED_GRADIENT    = true;
+constexpr int  LED_BLOCK       = 1;     // LEDs per shade
+constexpr int  LED_GRAD_G_LOW  = 0x88;  // green at the deep-amber end
+constexpr int  LED_GRAD_G_HIGH = 0xF0;  // green at the yellow-gold end
 
 // Paint one strand as a gradient of solid blocks.
 static void led_paint_gradient(hitlib::LedStrand& strand, int count) {
   std::vector<hitlib::LedStrand::SpliceRegion> regions;
-  const int block  = led_block_for(count);
+  const int block  = LED_BLOCK;
   const int blocks = (count + block - 1) / block;
 
   for (int i = 0; i < blocks; i++) {
@@ -213,7 +204,7 @@ constexpr int LED_TEST_COUNT = 5;
 
 constexpr bool LED_RAW_TEST = false;
 
-constexpr bool LED_TEST = true;   // HitLib solid white
+constexpr bool LED_TEST = false;
 
 constexpr bool LED_PICKER      = false;  // gradient below is on instead
 constexpr int  LED_PICK_G_LOW  = 0x88;   // deepest amber to try
