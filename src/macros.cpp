@@ -63,14 +63,20 @@ static bool cascade_to(double target, const char* step_name,
       // the instant it touched the target so it never pulled the overshoot back.
       cascade_hold();
       const uint32_t settle_start = pros::millis();
+      uint32_t       steady_since = pros::millis();
       while (pros::millis() - settle_start < (uint32_t)CASCADE_SETTLE_MS) {
         if (_cancel) { cascade_stop(); return false; }
         double e = target - cascade_position();
         if (fabs(e) > CASCADE_MOVE_TOL) {
           int p = (e > 0) ? CASCADE_SETTLE_POWER : -CASCADE_SETTLE_POWER;
           cascade_drive(p * CASCADE_RAISE_SIGN);
+          steady_since = pros::millis();   // drifted out - start the clock again
         } else {
           cascade_hold();
+          // Steady inside tolerance for long enough: stop waiting.  A move that
+          // lands cleanly should not cost the full CASCADE_SETTLE_MS.
+          if (pros::millis() - steady_since >= (uint32_t)CASCADE_SETTLE_STABLE_MS)
+            break;
         }
         pros::delay(ez::util::DELAY_TIME);
       }

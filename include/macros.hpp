@@ -41,7 +41,12 @@ constexpr int    CASCADE_MOVE_TIMEOUT = 3000; // ms before a move gives up
 // and driven back if momentum has carried it outside CASCADE_MOVE_TOL.  Without
 // this a move ends the moment it touches the target and never looks again, so
 // a heavy cascade coasts well past - 60 degrees past 375, measured.
-constexpr int    CASCADE_SETTLE_MS    = 400;  // ms
+constexpr int    CASCADE_SETTLE_MS    = 400;  // ms - MAXIMUM time to spend
+                                              //   settling; it leaves as soon
+                                              //   as it is steady
+// How long the cascade must stay inside tolerance before the move is called
+// done.  This is what a clean move actually costs, not CASCADE_SETTLE_MS.
+constexpr int    CASCADE_SETTLE_STABLE_MS = 80;
 constexpr int    CASCADE_SETTLE_POWER = 30;   // gentle correction power
 
 // If the cascade has not moved CASCADE_STALL_DEG in CASCADE_STALL_MS, something
