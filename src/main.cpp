@@ -19,7 +19,7 @@ void handle_ctrl_input();
 constexpr int8_t L_MOTOR_A_PORT = 13;
 constexpr int8_t L_MOTOR_B_PORT = 6;
 
-// ── R1 / R2 group - four motors, three one way and the fourth the other ─────
+// ── R1 / R2 group - four  motors, three one way and the fourth the other ─────
 // TODO: set your real ports.  R_MOTOR_D is the odd one out - it always runs
 // opposite to the other three.
 constexpr int8_t FIN_1_PORT = 1;
@@ -47,9 +47,9 @@ constexpr double ARC_TOL_DEG = 2;
 // Drive the cascade where you want it, read p off the controller, put the
 // number here.  The macro and the L1 travel limit both use these.
 double CASCADE_LOW     = 190;   // bottom / travel
-double CASCADE_COLLECT = 290;   // intake height, where the macro parks
+double CASCADE_COLLECT = 300;   // intake height, where the macro parks
 double CASCADE_FLIP    = 340;   // above collect, where the flip piston fires
-double CASCADE_OUT     = 400;   // phase 2 raises to here on the second click
+double CASCADE_OUT     = 430;   // phase 2 raises to here on the second click
 
 // How long after the cascade STARTS its second-click rise the flip piston
 // extends.  0 fires it the instant the cascade begins moving; raise it to let
