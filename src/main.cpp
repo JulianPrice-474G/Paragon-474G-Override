@@ -133,6 +133,45 @@ constexpr uint32_t led_dim(uint32_t c) {
          ((( c        & 0xFF) * LED_BRIGHTNESS / 100));
 }
 
+// ── Gold gradient ───────────────────────────────────────────────────────────
+// Paints the strip in blocks, each block a different shade of gold, running
+// from deep amber at one end to bright yellow-gold at the other.  Red stays
+// 0xFF and blue 0x00 throughout - only green moves, which is what keeps every
+// block reading as gold rather than orange or yellow.
+//
+// Set LED_BLOCK to however many LEDs make up the length you want each shade to
+// cover.  On a 144/m strip half an inch is about 2 LEDs; on 60/m it is closer
+// to 1.
+constexpr bool LED_GRADIENT   = true;
+constexpr int  LED_BLOCK      = 2;       // LEDs per shade
+constexpr int  LED_GRAD_G_LOW  = 0x88;   // green at the deep-amber end
+constexpr int  LED_GRAD_G_HIGH = 0xF0;   // green at the yellow-gold end
+
+// Paint one strand as a gradient of solid blocks.
+static void led_paint_gradient(hitlib::LedStrand& strand, int count) {
+  std::vector<hitlib::LedStrand::SpliceRegion> regions;
+  const int blocks = (count + LED_BLOCK - 1) / LED_BLOCK;
+
+  for (int i = 0; i < blocks; i++) {
+    const int start = i * LED_BLOCK;
+    const int width = (start + LED_BLOCK > count) ? (count - start) : LED_BLOCK;
+
+    // Spread green evenly across the blocks.  blocks-1 in the divisor so the
+    // last block lands exactly on LED_GRAD_G_HIGH rather than short of it.
+    const int g = (blocks < 2)
+        ? LED_GRAD_G_HIGH
+        : LED_GRAD_G_LOW + (LED_GRAD_G_HIGH - LED_GRAD_G_LOW) * i / (blocks - 1);
+
+    hitlib::LedStrand::SpliceRegion r;
+    r.start = (uint8_t)start;
+    r.width = (uint8_t)width;
+    r.kind  = hitlib::LedStrand::SpliceRegionAnimKind::SOLID;
+    r.color = led_dim(0xFF0000u | ((uint32_t)g << 8));
+    regions.push_back(r);
+  }
+  strand.spliceMaskCustom(regions);
+}
+
 // ── Gold picker ─────────────────────────────────────────────────────────────
 // Set true to sweep the strips through the gold range instead of holding one
 // colour, so you can watch and pick.  Red stays at 0xFF and blue at 0x00 - the
@@ -140,7 +179,7 @@ constexpr uint32_t led_dim(uint32_t c) {
 // bright yellow-gold.  The current value shows on the controller's bottom row
 // in driver mode; note the one you like, put it in LED_GOLD, set this back to
 // false.
-constexpr bool LED_PICKER      = true;
+constexpr bool LED_PICKER      = false;  // gradient below is on instead
 constexpr int  LED_PICK_G_LOW  = 0x88;   // deepest amber to try
 constexpr int  LED_PICK_G_HIGH = 0xFF;   // brightest yellow-gold to try
 constexpr int  LED_PICK_STEP   = 0x08;   // how coarse the sweep is
@@ -559,6 +598,9 @@ void initialize() {
   led_group.start();
   if (LED_PICKER) {
     static pros::Task picker(led_picker_task, nullptr, "LED Picker");
+  } else if (LED_GRADIENT) {
+    led_paint_gradient(led_a, LED_A_COUNT);
+    led_paint_gradient(led_b, LED_B_COUNT);
   } else {
     led_a.setColor(led_dim(LED_GOLD));
     led_b.setColor(led_dim(LED_GOLD));
