@@ -193,10 +193,16 @@ void sawp() {
 
 upper_roller_spin(700,127);
 pros::delay(200);
-cascade_move_async(300, 127);
-drive_arc( 110, -40, -127);
+cascade_move_async(250, 127);
+drive_arc( 135, -40, -127);
 chassis.pid_wait();
-pros::delay(500);
+claw_set(false);
+macro_press();
+middle_intake_set(true);
+drive_arc( 145,  127,  115);
+chassis.pid_wait();
+
+
 
 
   
