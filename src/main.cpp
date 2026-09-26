@@ -55,6 +55,11 @@ double CASCADE_OUT     = 400;   // phase 2 raises to here on the second click
 // extends.  0 fires it the instant the cascade begins moving; raise it to let
 // the cascade get further up first.  If it is longer than the move takes, the
 // piston fires as the move finishes.
+// How hard the cascade drives when it is going DOWN.  Separate from the
+// upward speed because gravity and the holding brake make the two feel
+// different.  80% of full power.
+int CASCADE_DOWN_SPEED = 127 * 80 / 100;   // = 101
+
 int CASCADE_FLIP_DELAY_MS = 300;
 
 // First click: how long to wait at flip height AFTER the flip piston releases,

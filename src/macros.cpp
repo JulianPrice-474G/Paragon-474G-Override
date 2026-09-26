@@ -44,6 +44,10 @@ static bool cascade_to(double target, const char* step_name,
   double         last_pos      = cascade_position();
   bool           action_fired  = false;
 
+  // Downward moves get their own speed - gravity and the holding brake make a
+  // descent behave differently from a lift at the same power.
+  if (target < last_pos) max_speed = CASCADE_DOWN_SPEED;
+
   while (pros::millis() - start < (uint32_t)CASCADE_MOVE_TIMEOUT) {
     if (_cancel) { cascade_stop(); return false; }
 
