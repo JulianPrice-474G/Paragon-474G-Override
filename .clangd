@@ -18,3 +18,15 @@
 Diagnostics:
   UnusedIncludes: None
   MissingIncludes: None
+
+---
+# notebook/ holds excerpts of the robot code for the engineering notebook.
+# They use names declared elsewhere (running, phase, ...) and are never
+# compiled, so the editor would otherwise mark them full of errors.  Keep the
+# syntax colouring, drop the error checking.
+If:
+  PathMatch: notebook/.*
+Diagnostics:
+  Suppress: "*"
+  UnusedIncludes: None
+  MissingIncludes: None
