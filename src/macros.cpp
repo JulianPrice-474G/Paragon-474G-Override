@@ -264,17 +264,20 @@ static void phase2_task(void*) {
     if (remain > 0) ok = macro_wait(remain, "6 after flip") && step_pause("6 after flip");
   }
 
-  if (ok) ok = cascade_to(CASCADE_LOW, "7 low");
+  // The sequence ENDS at the out height - it does not come back down.  Bring
+  // the cascade down with L1/L2, or cascade_move_async(CASCADE_LOW) in an auton.
 
   // Release the intake on every exit path, cancel and stall included.
   intake_run(false);
   _intake_owned = false;
 
-  // Hand the holding job to the other motor after each completed return to low,
-  // so the heat of carrying the cascade is shared between them.
+  // Hand the holding job to the other motor after each completed run, so the
+  // heat of carrying a raised cascade is shared between them.
   if (ok) cascade_swap_hold_motor();
 
-  cascade_stop();
+  // Hold rather than coast: the cascade is left raised, so letting it free-wheel
+  // would drop it.  cascade_stop() would only zero the voltage.
+  cascade_hold();
   _running = false;
   _phase   = PH_IDLE;
   _cancel  = false;
