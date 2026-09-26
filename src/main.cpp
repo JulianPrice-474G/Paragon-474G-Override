@@ -200,11 +200,16 @@ static void led_paint_gradient(hitlib::LedStrand& strand, int count) {
 //
 // WARNING: this drives the SOLENOID ports too (A, B, E, F).  Only run it on a
 // test brain, or with the pneumatics disconnected.
-constexpr bool LED_PORT_SWEEP = true;
+constexpr bool LED_PORT_SWEEP = false;  // ports already proven by the old strips
 
 const bool LED_PORT_SWEEP_ON = LED_PORT_SWEEP;
 static char _led_sweep_text[20] = "sweep --";
 const char* led_sweep_text() { return _led_sweep_text; }
+
+// How many LEDs the raw test drives.  Deliberately SMALL: if the first few
+// light but 29 do not, the strip is browning out and it is a power problem,
+// not a protocol one.
+constexpr int LED_TEST_COUNT = 5;
 
 constexpr bool LED_RAW_TEST = true;
 
@@ -587,8 +592,8 @@ void initialize() {
   } else if (LED_RAW_TEST) {
     static pros::Task raw([](void*) {
       pros::delay(1000);   // let PROS finish bringing the ADI ports up
-      pros::adi::Led raw_a(LED_A_PORT, LED_A_COUNT);
-      pros::adi::Led raw_b(LED_B_PORT, LED_B_COUNT);
+      pros::adi::Led raw_a(LED_A_PORT, LED_TEST_COUNT);
+      pros::adi::Led raw_b(LED_B_PORT, LED_TEST_COUNT);
       while (true) {
         raw_a.set_all(0xFFFFFF);  raw_a.update();
         raw_b.set_all(0xFFFFFF);  raw_b.update();
