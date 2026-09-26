@@ -78,8 +78,8 @@ void auton_setup() {
   // should look like on the tile at the start of a match.
   high_intake_set(true);
   middle_intake_set(true);
-  claw_set(false);
-  flip_set(false);
+  claw_set(CLAW_ON);    // start CLOSED - CLAW_OFF here would open it
+  flip_set(FLIP_ON);
 
   // Cascade position reference.  The rotation sensor counts from wherever it
   // powered up, so absolute heights (CASCADE_LOW, CASCADE_COLLECT ...) only
@@ -191,8 +191,14 @@ void sawp() {
   // vision_align() stops the drive before returning either way; its tuning
   // constants are at the top of include/vision.hpp.
 
-upper_roller_spin(200,127);
-drive_arc( 90, 30, 127);
+upper_roller_spin(700,127);
+pros::delay(200);
+cascade_move_async(300, 127);
+drive_arc( 110, -40, -127);
+chassis.pid_wait();
+pros::delay(500);
+
+
   
 }
 
