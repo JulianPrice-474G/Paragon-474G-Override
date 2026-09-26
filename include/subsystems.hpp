@@ -85,6 +85,11 @@ void intake_spin(int ms, int speed);
 void intake_spin_stop();
 bool intake_spin_active();
 
+// Block until every running spin has finished - use when you want a timed spin
+// to complete before the next line runs.  Returns false on timeout, which only
+// happens if something was started with ms < 0 (run until stopped).
+bool spin_wait(int timeout_ms = 5000);
+
 // Cascade pair, -127 to 127.  The two motors always run opposite each other.
 void cascade_set(int power);
 

@@ -353,6 +353,25 @@ void intake_spin(int ms, int speed) {
 }
 void intake_spin_stop() { intake_spin(0, 0); }
 
+// Block until every running spin has finished.  The spins are non-blocking by
+// design - that is the point of them - so this is for when you want one to
+// finish before the next line runs:
+//
+//   upper_roller_spin(800, 127);
+//   spin_wait();                 // waits out the 800 ms
+//   claw_set(CLAW_ON);           // only now
+//
+// Returns false if timeout_ms passed with something still running, which only
+// happens if a spin was started with ms < 0 (run until stopped).
+bool spin_wait(int timeout_ms) {
+  const uint32_t start = pros::millis();
+  while (intake_spin_active()) {
+    if ((int)(pros::millis() - start) > timeout_ms) return false;
+    pros::delay(ez::util::DELAY_TIME);
+  }
+  return true;
+}
+
 // Cascade pair: -127 to 127.  The two motors always run opposite each other.
 void cascade_set(int power) {
   l_motor_a.move(power);
