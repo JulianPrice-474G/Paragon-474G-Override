@@ -14,6 +14,7 @@ everything else ourselves.
 | `3-driver-control.cpp` | What each controller button does during a match |
 | `4-cascade-macro.cpp` | The two-press sequence that collects a game object and flips it out |
 | `5-autonomous.cpp` | PID tuning values, auton setup, and our SAWP route |
+| `CHANGELOG.md` | How the code has changed over the season, with before and after code |
 
 A few things differ from the files on the robot, all to make the pages easier
 to read:
