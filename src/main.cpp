@@ -48,7 +48,7 @@ constexpr double ARC_TOL_DEG = 2;
 // number here.  The macro and the L1 travel limit both use these.
 double CASCADE_LOW     = 190;   // bottom / travel
 double CASCADE_COLLECT = 290;   // intake height, where the macro parks
-double CASCADE_FLIP    = 320;   // above collect, where the flip piston fires
+double CASCADE_FLIP    = 340;   // above collect, where the flip piston fires
 double CASCADE_OUT     = 400;   // phase 2 raises to here on the second click
 
 // How long after the cascade STARTS its second-click rise the flip piston
@@ -74,7 +74,7 @@ int CASCADE_FLIP_BACK_MS = 100;
 // allowed to move again (the descent to low).  Measured from the flip itself,
 // so if the piston fires early in the rise this may already have elapsed by
 // the time the cascade gets to the top, and it will not wait at all.
-int CASCADE_AFTER_FLIP_MS = 0;
+int CASCADE_AFTER_FLIP_MS = 200;
 
 int CASCADE_FLIP_RELEASE_MS = 0;
 double CASCADE_MAX     = 1000;  // L1 stops raising here

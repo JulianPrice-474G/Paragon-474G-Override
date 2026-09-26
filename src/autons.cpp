@@ -196,7 +196,7 @@ upper_roller_spin(700,127);
 pros::delay(200);
 cascade_move_async(240, 127);
 drive_arc( 90, -35, -127);
-chassis.pid_wait_quick();
+chassis.pid_wait();
 pros::delay(300);
 claw_set(false);
 pros::delay(300);
@@ -204,12 +204,12 @@ cascade_move_wait();   // make sure the move to 240 is done, or this press would
 macro_press();
 press_y();
 intake_set(3000,127);
-drive_arc( 165,  127,  35);
+drive_arc( 165,  95,  37);
 chassis.pid_wait_quick_chain();
-pros::delay(700);
+pros::delay(7000);
 chassis.pid_turn_set(240, 127);
 chassis.pid_wait();
-macro_press(500);
+macro_press(400);
 chassis.pid_drive_set(-10, 127);
 chassis.pid_wait_quick_chain();
 pros::delay(400);      // macro keeps running in the background
@@ -222,7 +222,7 @@ claw_set(false);
 pros::delay(300);
 intake_set(6000,127);
 macro_press();
-chassis.pid_drive_set(28, 127);
+chassis.pid_drive_set(34, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(180, 127);
 
