@@ -114,11 +114,10 @@ pros::Motor fin_2(FIN_2_PORT);
 constexpr uint8_t LED_PORT  = 3;    // TODO: ADI C - set to your real port
 constexpr uint8_t LED_COUNT = 30;   // TODO: how many LEDs are on the strip
 
-// The goldest gold a WS2812 can manage.  Gold on an RGB LED is red plus about
-// two thirds green and NO blue - any blue at all washes it out to pale yellow.
-// 0xFFD700 is the web "gold" but reads yellow on these; pulling green down to
-// ~0xB0 gives the deeper metallic look.
-constexpr uint32_t LED_GOLD = 0xFFB000;
+// Gold.  No blue at all - any blue washes it out to pale yellow on a WS2812.
+// Lower the green for a deeper, more orange gold; raise it toward 0xFF for a
+// brighter yellow-gold.
+constexpr uint32_t LED_GOLD = 0xFCC200;   // rgb(252, 194, 0)
 
 hitlib::LedStrand led_strand(LED_PORT, LED_COUNT);
 hitlib::LedGroup  led_group;
