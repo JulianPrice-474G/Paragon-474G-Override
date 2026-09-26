@@ -179,3 +179,72 @@ void vision_draw_view(lv_obj_t* canvas) {
 
   if (_view_center) lv_obj_move_foreground(_view_center);
 }
+
+/////
+// Drive a distance, steering toward the pin
+/////
+// Distance comes from EZ-Template's odometry, which runs all the time off the
+// drive encoders and the IMU.  Measuring straight-line distance from the start
+// point means a path that bends toward the pin still stops at the right place.
+bool vision_drive(double inches, int speed, double sensitivity, int timeout_ms) {
+  const uint32_t start = pros::millis();
+  const double   x0    = chassis.odom_x_get();
+  const double   y0    = chassis.odom_y_get();
+  const double   dist  = fabs(inches);
+  const int      dir   = (inches >= 0) ? 1 : -1;
+
+  // Heading to keep while the pin is out of view.  Updated every time we do
+  // see it, so losing it mid-drive carries on in the direction it was going.
+  double hold = chassis.drive_imu_get();
+
+  // Stop, and tell EZ-Template which way we now face - same reason as
+  // drive_arc: otherwise the next pid_drive_set steers back to the heading
+  // from before this drive.
+  auto finish = [&]() {
+    chassis.drive_set(0, 0);
+    chassis.drive_angle_set(chassis.drive_imu_get());
+  };
+
+  while (pros::millis() - start < (uint32_t)timeout_ms) {
+    double traveled  = hypot(chassis.odom_x_get() - x0, chassis.odom_y_get() - y0);
+    double remaining = dist - traveled;
+    if (remaining <= VISION_DRIVE_TOL) { finish(); return true; }
+
+    // Full speed until VISION_DRIVE_SLOW inches out, then ease off.
+    double scale = remaining / VISION_DRIVE_SLOW;
+    if (scale > 1.0) scale = 1.0;
+    int base = (int)(speed * scale);
+    if (base < VISION_DRIVE_MIN) base = VISION_DRIVE_MIN;
+    base *= dir;
+
+    // Steering.  Positive = turn right, whichever way we're driving.
+    double steer;
+    VisionTarget t = (dir > 0) ? vision_largest() : VisionTarget{};
+    if (t.found) {
+      steer = t.offset * VISION_DRIVE_KP * sensitivity;
+      hold  = chassis.drive_imu_get();
+    } else {
+      double e = hold - chassis.drive_imu_get();
+      while (e >  180) e -= 360;
+      while (e < -180) e += 360;
+      steer = e * VISION_HOLD_KP;
+    }
+
+    // The cap is what keeps it generally straight.
+    if (steer >  VISION_DRIVE_MAX_STEER) steer =  VISION_DRIVE_MAX_STEER;
+    if (steer < -VISION_DRIVE_MAX_STEER) steer = -VISION_DRIVE_MAX_STEER;
+
+    int left  = base + (int)steer;
+    int right = base - (int)steer;
+    if (left  >  127) left  =  127;
+    if (left  < -127) left  = -127;
+    if (right >  127) right =  127;
+    if (right < -127) right = -127;
+
+    chassis.drive_set(left, right);
+    pros::delay(ez::util::DELAY_TIME);
+  }
+
+  finish();
+  return false;
+}
