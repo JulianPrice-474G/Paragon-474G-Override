@@ -202,6 +202,10 @@ bool cascade_at_collect() {
 static void release_flip() { flip_set(FLIP_OFF); }
 
 static void phase1_task(void*) {
+  // An end height only means anything on the SECOND press.  Clear whatever the
+  // first press passed, so it cannot leak into a later phase 2.
+  _phase2_end = -1;
+
   // Preflight: put the pistons into a known state before anything moves, so
   // the sequence behaves the same however they were left.
   flip_set(FLIP_ON);
@@ -273,6 +277,10 @@ static void phase2_task(void*) {
   // cascade_move_async() in an auton.
   if (ok && _phase2_end >= 0)
     ok = cascade_to(_phase2_end, "7 end") && step_pause("7 end");
+
+  // Used once.  Clearing it means a later RIGHT press in driver control - which
+  // passes no height - goes back to staying at the out height.
+  _phase2_end = -1;
 
   // Release the intake on every exit path, cancel and stall included.
   intake_run(false);

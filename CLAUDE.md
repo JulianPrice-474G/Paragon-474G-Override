@@ -86,7 +86,7 @@ Outside it the UI owns LEFT/RIGHT/A/B for menu navigation.
 |---|---|
 | L1 / L2 | cascade up (stops at `CASCADE_MAX`) / down at 50% |
 | R1 / R2 | intake, both directions |
-| B / Y | toggle high intake / toggle both intake pistons |
+| Y / B | intake pistons to MIDDLE / LOW; the same button again returns to HIGH |
 | DOWN / LEFT | toggle claw / toggle C-flip |
 | RIGHT | cascade macro |
 | LEFT+B held 1 s | run selected auton — only outside driver mode, off a comp switch |
@@ -99,7 +99,7 @@ states `C F H M`.
 
 - **Only one motor holds.** Two motors in `BRAKE_HOLD` on one shaft each run a
   position PID on their own encoder and fight forever (measured 0.9 A at rest).
-  One holds, the other coasts; the macro swaps which after each return to low.
+  One holds, the other coasts; the macro swaps which after each completed run.
 - A shared PD hold (one reading driving both) was tried and reverted — it
   misbehaved on the robot. Its constants remain in `main.cpp`, unused.
 - Heights are rotation-sensor readings (the `p` value), set at the top of
@@ -108,16 +108,27 @@ states `C F H M`.
 
 ## The macro (RIGHT)
 
-- **Press 1:** preflight (flip on, claw off) → raise to FLIP → release flip →
-  lower to COLLECT → park. While parked, L1/L2 are locked and the upper roller
-  is armed.
-- **Press 2:** intake on → claw on → raise to OUT → 500 ms settle → upper roller
-  reverses → flip on → lower to LOW → intake off, swap holding motor.
-- Pressing RIGHT or touching L1/L2 mid-move cancels. One long-lived worker task.
-- Moves brake and settle at the target (a heavy cascade coasted 60° past).
-  Easing and the stall guard trade off against each other: too little floor
-  power stalls, too much overshoots.
-- Claw and C-flip use **inverted** sense: `PISTON_ON = false`.
+- **Press 1:** preflight (flip on, claw off) → raise to FLIP, with the flip
+  piston released `CASCADE_FLIP_BACK_MS` into the rise → hold
+  `CASCADE_FLIP_RELEASE_MS` → lower to COLLECT → park. While parked, L1/L2 are
+  locked and the upper roller is armed.
+- **Press 2:** intake on → claw on → raise to OUT, with the flip piston extended
+  and the upper roller reversed `CASCADE_FLIP_DELAY_MS` into the rise → hold
+  until `CASCADE_AFTER_FLIP_MS` after the flip → **stays at OUT** by default →
+  intake off, swap holding motor, hold position.
+- In an auton, `macro_press(h)` on the second press sends the cascade on to
+  height `h` after the flip. The value is ignored on the first press, and it is
+  cleared after use, so a later RIGHT press in driver control stays at OUT.
+- Pressing RIGHT or touching L1/L2 mid-move cancels. One long-lived worker task,
+  shared with `cascade_move_async()` so the two never drive the cascade at once.
+- All the timings and heights are at the top of `main.cpp`.
+- Moves brake and settle at the target (a heavy cascade coasted 60° past), then
+  leave as soon as they are steady. Downward moves use `CASCADE_DOWN_SPEED`.
+  Easing and the stall guard trade off: too little floor power stalls, too much
+  overshoots.
+- Claw and flip piston have **separate** sense constants in `macros.hpp`:
+  `CLAW_ON`/`CLAW_OFF` and `FLIP_ON`/`FLIP_OFF`. Both have been flipped more
+  than once; confirm on the robot before assuming.
 
 ## Autons
 
@@ -157,8 +168,8 @@ before pushing to the template repo.
 
 ## Open items
 
-- The claw and C-flip piston sense (`PISTON_ON` / `PISTON_OFF`) is inverted and
-  was changed several times — confirm on the robot before assuming it.
+- The claw and flip piston sense (`CLAW_ON` / `FLIP_ON` in `macros.hpp`) was
+  changed several times — confirm on the robot before assuming it.
 - The rotation sensor's zero is not anchored; absolute heights may drift across
   reboots.
 - A startup data abort was seen once and resolved without an identified cause.
