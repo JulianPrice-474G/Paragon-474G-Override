@@ -336,13 +336,19 @@ static void macro_worker(void*) {
   }
 }
 
+// Start the ONE worker.  macro_start() and cascade_move_async() both go
+// through this - if each had its own `static pros::Task`, they would be two
+// separate objects, and a run that used both would end up with two workers
+// racing for the same request and running a phase twice at once.
+static void ensure_worker() {
+  static pros::Task worker(macro_worker, nullptr, "Cascade Macro");
+}
+
 void macro_start() {
   // Pressing mid-move cancels rather than queueing anything.
   if (_running) { _cancel = true; return; }
 
-  // Created on first use and never destroyed.  `static` inside the function so
-  // it cannot run before the motors and sensors are constructed.
-  static pros::Task worker(macro_worker, nullptr, "Cascade Macro");
+  ensure_worker();
 
   _running = true;
   _cancel  = false;
@@ -357,8 +363,7 @@ void macro_start() {
 void cascade_move_async(double target, int speed) {
   if (_running) return;          // a macro phase or another move owns it
 
-  // Created on first use and never destroyed - same worker the macro uses.
-  static pros::Task worker(macro_worker, nullptr, "Cascade Macro");
+  ensure_worker();
 
   _move_target = target;
   _move_speed  = (speed > 0) ? speed : CASCADE_MOVE_SPEED;
