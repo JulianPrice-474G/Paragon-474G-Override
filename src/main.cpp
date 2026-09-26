@@ -109,7 +109,7 @@ pros::adi::DigitalOut middle_intake(MIDDLE_INTAKE_PORT, PISTON_EXTENDED);
 
 // Claw and C-flip also start EXTENDED.  The second constructor argument is the
 // power-on state, so they are out before the match starts.
-pros::adi::DigitalOut claw(CLAW_PORT,     PISTON_RETRACTED);
+pros::adi::DigitalOut claw(CLAW_PORT,     PISTON_EXTENDED);
 pros::adi::DigitalOut c_flip(C_FLIP_PORT, PISTON_RETRACTED);
 
 // Software mirror of what each solenoid was last told to do.  A DigitalOut
@@ -117,7 +117,7 @@ pros::adi::DigitalOut c_flip(C_FLIP_PORT, PISTON_RETRACTED);
 // dropdown interlock below depends on it.
 bool high_intake_extended   = true;
 bool middle_intake_extended = true;
-bool claw_extended          = false;
+bool claw_extended          = true;
 bool c_flip_extended        = false;
 
 /////

@@ -187,8 +187,8 @@ bool cascade_at_collect() {
 static void phase1_task(void*) {
   // Preflight: put the pistons into a known state before anything moves, so
   // the sequence behaves the same however they were left.
-  flip_set(PISTON_ON);
-  claw_set(PISTON_OFF);
+  flip_set(FLIP_ON);
+  claw_set(CLAW_OFF);
 
   bool ok = macro_wait(MACRO_PISTON_SETTLE, "0 preflight") &&
             step_pause("0 preflight") &&
@@ -199,7 +199,7 @@ static void phase1_task(void*) {
   // CASCADE_FLIP_RELEASE_MS so it can finish moving before the cascade starts
   // back down.
   if (ok) {
-    flip_set(PISTON_OFF);
+    flip_set(FLIP_OFF);
     ok = macro_wait(CASCADE_FLIP_RELEASE_MS, "2 release") && step_pause("2 release");
   }
 
@@ -218,7 +218,7 @@ static void phase1_task(void*) {
 // Fired partway through phase 2's rise - see CASCADE_FLIP_DELAY_MS.
 static void fire_flip() {
   intake_run(true, true);   // upper roller reverses from here to the end
-  flip_set(PISTON_ON);
+  flip_set(FLIP_ON);
 }
 
 static void phase2_task(void*) {
@@ -228,7 +228,7 @@ static void phase2_task(void*) {
   intake_run(true);
 
   // Grip first, then lift.
-  claw_set(PISTON_ON);
+  claw_set(CLAW_ON);
   bool ok = macro_wait(MACRO_PISTON_SETTLE, "4 claw") && step_pause("4 claw");
 
   // Rise to the out height, with the flip piston firing partway UP rather than
