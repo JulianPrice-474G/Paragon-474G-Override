@@ -212,9 +212,10 @@ chassis.pid_wait();
 macro_press(500);
 chassis.pid_drive_set(-10, 127);
 chassis.pid_wait_quick_chain();
-macro_wait_done();     // default 8 s - 400 ms gave up before the macro finished
+pros::delay(400);      // macro keeps running in the background
 chassis.pid_drive_set(-17, 127);
 chassis.pid_wait();
+macro_wait_done();     // the macro must be finished, or the move below is ignored
 cascade_move_async(300, 127);
 pros::delay(300);
 claw_set(false);
