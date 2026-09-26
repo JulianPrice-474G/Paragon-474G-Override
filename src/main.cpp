@@ -120,7 +120,7 @@ constexpr uint8_t LED_B_COUNT = 24;
 // No blue at all: any blue washes it out to pale yellow on a WS2812.
 //   more green (toward 0xFF)  -> brighter, more yellow
 //   less green (toward 0x90)  -> deeper, more amber/orange gold
-constexpr uint32_t LED_GOLD = 0xFCB000;   // rgb(212, 148, 0)
+constexpr uint32_t LED_GOLD = 0xFCB000;   // rgba(255, 191, 0, 0.92)
 
 // Overall brightness, 0-100.  At 100 the colour below is sent to the strips
 // exactly as written, so tune the look with LED_GOLD alone.
@@ -132,6 +132,23 @@ constexpr uint32_t led_dim(uint32_t c) {
          ((((c >>  8) & 0xFF) * LED_BRIGHTNESS / 100) <<  8) |
          ((( c        & 0xFF) * LED_BRIGHTNESS / 100));
 }
+
+// ── Gold picker ─────────────────────────────────────────────────────────────
+// Set true to sweep the strips through the gold range instead of holding one
+// colour, so you can watch and pick.  Red stays at 0xFF and blue at 0x00 - the
+// only thing that changes gold is the GREEN channel, from deep amber up to
+// bright yellow-gold.  The current value shows on the controller's bottom row
+// in driver mode; note the one you like, put it in LED_GOLD, set this back to
+// false.
+constexpr bool LED_PICKER      = true;
+constexpr int  LED_PICK_G_LOW  = 0x88;   // deepest amber to try
+constexpr int  LED_PICK_G_HIGH = 0xFF;   // brightest yellow-gold to try
+constexpr int  LED_PICK_STEP   = 0x08;   // how coarse the sweep is
+constexpr int  LED_PICK_HOLD_MS = 2500;  // how long each shade is held
+
+const bool LED_PICKER_ON = LED_PICKER;
+static char _led_pick_text[20] = "LED --";
+const char* led_picker_text() { return _led_pick_text; }
 
 hitlib::LedStrand led_a(LED_A_PORT, LED_A_COUNT);
 hitlib::LedStrand led_b(LED_B_PORT, LED_B_COUNT);
@@ -520,14 +537,32 @@ void initialize() {
                                 pros::AivisionModeType::objects);
   ai_cam.set_tag_family(pros::AivisionTagFamily::tag_16H5);
 
+  // Steps the strips through the gold range, one shade at a time.
+  static auto led_picker_task = [](void*) {
+    int g = LED_PICK_G_LOW;
+    while (true) {
+      uint32_t c = 0xFF0000u | ((uint32_t)g << 8);
+      snprintf(_led_pick_text, sizeof(_led_pick_text), "LED %06X", (unsigned)c);
+      led_a.setColor(c);
+      led_b.setColor(c);
+      pros::delay(LED_PICK_HOLD_MS);
+      g += LED_PICK_STEP;
+      if (g > LED_PICK_G_HIGH) g = LED_PICK_G_LOW;
+    }
+  };
+
   // LEDs: both strips in one group so a single background task refreshes them,
   // then hold solid gold.
   led_group.add(&led_a);
   led_group.add(&led_b);
   led_group.init();
   led_group.start();
-  led_a.setColor(led_dim(LED_GOLD));
-  led_b.setColor(led_dim(LED_GOLD));
+  if (LED_PICKER) {
+    static pros::Task picker(led_picker_task, nullptr, "LED Picker");
+  } else {
+    led_a.setColor(led_dim(LED_GOLD));
+    led_b.setColor(led_dim(LED_GOLD));
+  }
 
   // Put the intake pistons in the HIGH position at power-on - both extended.
   // Commanded explicitly rather than relying on the DigitalOut constructor's

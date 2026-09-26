@@ -329,6 +329,11 @@ static bool _driver_mode_combo_fired() {
 //   C = claw   F = C-flip   H = high intake   M = middle intake
 static const char* ctrl_pistons_text() {
   static char buf[20];
+
+  // While the LED gold picker is sweeping, show the colour it is on instead -
+  // that is the whole point of the picker, and this row is the only free one.
+  if (LED_PICKER_ON) return led_picker_text();
+
   snprintf(buf, sizeof(buf), "C%d F%d H%d M%d",
            claw_extended     ? 1 : 0,
            c_flip_extended   ? 1 : 0,
