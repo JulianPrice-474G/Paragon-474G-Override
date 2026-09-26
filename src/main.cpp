@@ -240,6 +240,20 @@ void intake_set(int power, bool roller) {
 bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_ms) {
   const uint32_t start = pros::millis();
 
+  // Stop, and tell EZ-Template which way the robot now faces.  A normal
+  // pid_drive_set() holds the heading EZ last set as its target, and only EZ's
+  // own turns and swings update that.  Without this, the first drive after an
+  // arc steers back to the angle from BEFORE the arc.
+  //
+  // The target is the heading we actually ended at, not target_deg: we stop a
+  // degree or two past it, and aiming at target_deg would make the next drive
+  // wiggle to correct that.  drive_angle_set() also resets the IMU, but to the
+  // value it already reads, so the heading itself does not change.
+  auto arc_stop = [&]() {
+    chassis.drive_set(0, 0);
+    chassis.drive_angle_set(chassis.drive_imu_get());
+  };
+
   // Shortest way round, so 350 -> 10 turns 20 degrees rather than 340.
   auto error_to_target = [&]() {
     double e = target_deg - chassis.drive_imu_get();
@@ -249,7 +263,7 @@ bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_m
   };
 
   double first = error_to_target();
-  if (fabs(first) < 1) { chassis.drive_set(0, 0); return true; }
+  if (fabs(first) < 1) { arc_stop(); return true; }
 
   while (pros::millis() - start < (uint32_t)timeout_ms) {
     double e = error_to_target();
@@ -257,7 +271,7 @@ bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_m
     // Stop on arrival, or the moment we cross the target - with fixed speeds
     // there is nothing to slow us down, so the crossing is what catches it.
     if (fabs(e) <= ARC_TOL_DEG || (e > 0) != (first > 0)) {
-      chassis.drive_set(0, 0);
+      arc_stop();
       return true;
     }
 
@@ -265,7 +279,7 @@ bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_m
     pros::delay(ez::util::DELAY_TIME);
   }
 
-  chassis.drive_set(0, 0);
+  arc_stop();
   return false;
 }
 
