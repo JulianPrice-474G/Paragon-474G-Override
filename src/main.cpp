@@ -111,15 +111,18 @@ pros::Motor fin_2(FIN_2_PORT);
 // The port is a NUMBER here, not a letter: A=1, B=2 ... H=8.
 // A, B, E and F are taken by the solenoids, so 3 (C), 4 (D), 7 (G) and 8 (H)
 // are free.
-constexpr uint8_t LED_PORT  = 3;    // TODO: ADI C - set to your real port
-constexpr uint8_t LED_COUNT = 30;   // TODO: how many LEDs are on the strip
+constexpr uint8_t LED_A_PORT  = 3;   // ADI C
+constexpr uint8_t LED_A_COUNT = 21;
+constexpr uint8_t LED_B_PORT  = 4;   // ADI D
+constexpr uint8_t LED_B_COUNT = 24;
 
 // Gold.  No blue at all - any blue washes it out to pale yellow on a WS2812.
 // Lower the green for a deeper, more orange gold; raise it toward 0xFF for a
 // brighter yellow-gold.
 constexpr uint32_t LED_GOLD = 0xFCC200;   // rgb(252, 194, 0)
 
-hitlib::LedStrand led_strand(LED_PORT, LED_COUNT);
+hitlib::LedStrand led_a(LED_A_PORT, LED_A_COUNT);
+hitlib::LedStrand led_b(LED_B_PORT, LED_B_COUNT);
 hitlib::LedGroup  led_group;
 
 /////
@@ -505,11 +508,14 @@ void initialize() {
                                 pros::AivisionModeType::objects);
   ai_cam.set_tag_family(pros::AivisionTagFamily::tag_16H5);
 
-  // LEDs: start the background refresh task, then hold solid gold.
-  led_group.add(&led_strand);
+  // LEDs: both strips in one group so a single background task refreshes them,
+  // then hold solid gold.
+  led_group.add(&led_a);
+  led_group.add(&led_b);
   led_group.init();
   led_group.start();
-  led_strand.setColor(LED_GOLD);
+  led_a.setColor(LED_GOLD);
+  led_b.setColor(LED_GOLD);
 
   // Put the intake pistons in the HIGH position at power-on - both extended.
   // Commanded explicitly rather than relying on the DigitalOut constructor's
