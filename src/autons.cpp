@@ -195,8 +195,10 @@ void sawp() {
 upper_roller_spin(700,127);
 pros::delay(200);
 cascade_move_async(240, 127);
-drive_arc( 90, -35, -127);
+chassis.pid_drive_set(-12_in, 127);
+//drive_arc( 90, -35, -127);
 chassis.pid_wait();
+drive_arc(135, 60, -127);
 pros::delay(450);
 claw_set(false);
 pros::delay(300);
@@ -204,7 +206,7 @@ cascade_move_wait();   // make sure the move to 240 is done, or this press would
 macro_press();
 press_y();
 intake_set(3000,127);
-drive_arc( 165,  127,  65);
+drive_arc( 165,  127,  57);
 chassis.pid_wait_quick_chain();
 pros::delay(500);
 chassis.pid_turn_set(240, 127);
