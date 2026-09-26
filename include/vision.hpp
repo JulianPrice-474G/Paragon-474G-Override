@@ -79,15 +79,22 @@ bool vision_align(int timeout_ms = 2000);
 // never wanders off.  Blocks until it has gone the distance, like
 // pid_drive_set + pid_wait together - no pid_wait() afterwards.
 //
-//   vision_drive(24, 90);          // 24 in at power 90, normal sensitivity
-//   vision_drive(24, 90, 1.5);     // steer 50% harder toward the pin
-//   vision_drive(24, 90, 0.5);     // steer half as hard
+//   vision_drive(24, 90);            // 24 in at power 90, steering the whole way
+//   vision_drive(24, 90, 1.5);       // steer 50% harder toward the pin
+//   vision_drive(24, 90, 1.0, 50);   // steer for the first 50% of the distance,
+//                                    //   then drive straight for the rest
 //
-// sensitivity multiplies VISION_DRIVE_KP for just this call.  Negative inches
-// drives backwards on heading hold only - the camera faces forward, so it
-// can't see a pin behind the robot.  Returns false on timeout.
+// sensitivity multiplies VISION_DRIVE_KP for just this call.
+//
+// vision_percent is how much of the distance, from the start, the sensor is
+// allowed to steer.  After that it locks the heading it had at that point and
+// drives straight to the end - so it lines up early, then commits.  100 steers
+// the whole way.
+//
+// Negative inches drives backwards on heading hold only - the camera faces
+// forward, so it can't see a pin behind the robot.  Returns false on timeout.
 bool vision_drive(double inches, int speed, double sensitivity = 1.0,
-                  int timeout_ms = 4000);
+                  double vision_percent = 100, int timeout_ms = 4000);
 
 /////
 // Live detection view (see the popup on the Status page)

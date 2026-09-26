@@ -186,7 +186,8 @@ void vision_draw_view(lv_obj_t* canvas) {
 // Distance comes from EZ-Template's odometry, which runs all the time off the
 // drive encoders and the IMU.  Measuring straight-line distance from the start
 // point means a path that bends toward the pin still stops at the right place.
-bool vision_drive(double inches, int speed, double sensitivity, int timeout_ms) {
+bool vision_drive(double inches, int speed, double sensitivity,
+                  double vision_percent, int timeout_ms) {
   const uint32_t start = pros::millis();
   const double   x0    = chassis.odom_x_get();
   const double   y0    = chassis.odom_y_get();
@@ -218,8 +219,13 @@ bool vision_drive(double inches, int speed, double sensitivity, int timeout_ms) 
     base *= dir;
 
     // Steering.  Positive = turn right, whichever way we're driving.
+    //
+    // The sensor only steers for the first vision_percent of the distance.
+    // After that `hold` stops updating, so the robot locks the heading it had
+    // at that moment and drives straight on it to the end.
+    bool vision_on = (dir > 0) && (traveled < dist * vision_percent / 100.0);
     double steer;
-    VisionTarget t = (dir > 0) ? vision_largest() : VisionTarget{};
+    VisionTarget t = vision_on ? vision_largest() : VisionTarget{};
     if (t.found) {
       steer = t.offset * VISION_DRIVE_KP * sensitivity;
       hold  = chassis.drive_imu_get();
