@@ -112,9 +112,9 @@ pros::Motor fin_2(FIN_2_PORT);
 // A, B, E and F are taken by the solenoids, so 3 (C), 4 (D), 7 (G) and 8 (H)
 // are free.
 constexpr uint8_t LED_A_PORT  = 3;   // ADI C
-constexpr uint8_t LED_A_COUNT = 21;
+constexpr uint8_t LED_A_COUNT = 29;
 constexpr uint8_t LED_B_PORT  = 4;   // ADI D
-constexpr uint8_t LED_B_COUNT = 24;
+constexpr uint8_t LED_B_COUNT = 29;
 
 // Gold, as HUE only - see LED_BRIGHTNESS below for how bright it actually is.
 // No blue at all: any blue washes it out to pale yellow on a WS2812.
