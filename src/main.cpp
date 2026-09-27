@@ -50,13 +50,8 @@ double CASCADE_LOW     = 190;   // bottom / travel
 double CASCADE_COLLECT = 300;   // where the macro parks, waiting for press 2
 double CASCADE_FLIP    = 360;   // press 1 rises to here first
 double CASCADE_OUT     = 430;   // press 2 rises to here
+int CASCADE_DROP_DELAY_MS = 100;  // press 1: ms after claw+flip drop before lowering to collect
 double CASCADE_MAX     = 1000;  // L1 won't raise past this
-
-// ---- Press 1 ----
-// Rises to CASCADE_FLIP, then opens the claw and drops the flip piston at the
-// same time.  This is how long it waits after that before lowering to
-// CASCADE_COLLECT - time for the claw and flip to finish moving.
-int CASCADE_DROP_DELAY_MS = 300;
 
 // ---- Press 2 ----
 // How far into the rise to CASCADE_OUT the flip piston fires.  0 fires it as
