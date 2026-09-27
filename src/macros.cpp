@@ -74,14 +74,32 @@ static bool cascade_to(double target, const char* step_name,
       if (due) { action_fired = true; action(); }
     }
 
-    if (fabs(err) <= CASCADE_MOVE_TOL) {
+    // Progress tracking, used both for "close enough" and the stall guard.
+    if (fabs(pos - last_pos) >= CASCADE_STALL_DEG) {
+      last_pos      = pos;
+      last_progress = pros::millis();
+    }
+    const uint32_t still_for = pros::millis() - last_progress;
+
+    // Arrived: inside tolerance, or stopped moving close enough to it.  Going
+    // up, the eased-off power near the top can leave the cascade a few degrees
+    // short; without this it sat there until the timeout and the macro failed
+    // before its next step.
+    bool close_and_stuck = fabs(err) <= CASCADE_CLOSE_ENOUGH &&
+                           still_for > (uint32_t)CASCADE_CLOSE_STALL_MS;
+
+    if (fabs(err) <= CASCADE_MOVE_TOL || close_and_stuck) {
       // Brake rather than coast, then keep watching: a heavy cascade carries a
       // long way past the target on momentum, and the old code stopped looking
       // the instant it touched the target so it never pulled the overshoot back.
       cascade_hold();
       const uint32_t settle_start = pros::millis();
       uint32_t       steady_since = pros::millis();
-      while (pros::millis() - settle_start < (uint32_t)CASCADE_SETTLE_MS) {
+      // Arrived by stalling close?  Then it has already shown it can't make
+      // the last few degrees - skip the settle, which would only push weakly
+      // at the same spot and delay the next step.
+      while (!close_and_stuck &&
+             pros::millis() - settle_start < (uint32_t)CASCADE_SETTLE_MS) {
         if (_cancel) { cascade_stop(); return false; }
         double e = target - cascade_position();
         if (fabs(e) > CASCADE_MOVE_TOL) {
@@ -106,11 +124,7 @@ static bool cascade_to(double target, const char* step_name,
 
     // Stall guard.  Without this, an inverted CASCADE_RAISE_SIGN drives into a
     // hard stop at full power for the whole timeout.
-    if (fabs(pos - last_pos) >= CASCADE_STALL_DEG) {
-      last_pos      = pos;
-      last_progress = pros::millis();
-    } else if (fabs(err) > CASCADE_MOVE_SLOW &&
-               pros::millis() - last_progress > (uint32_t)CASCADE_STALL_MS) {
+    if (fabs(err) > CASCADE_MOVE_SLOW && still_for > (uint32_t)CASCADE_STALL_MS) {
       // Only call it a stall while still driving hard.  Inside the easing zone
       // the cascade legitimately creeps, and treating that as a jam aborts a
       // move that was about to finish.
@@ -124,7 +138,8 @@ static bool cascade_to(double target, const char* step_name,
     double scale = fabs(err) / CASCADE_MOVE_SLOW;
     if (scale > 1.0) scale = 1.0;
     int power = (int)(max_speed * scale);
-    if (power < CASCADE_MOVE_MIN) power = CASCADE_MOVE_MIN;
+    const int floor_power = (err > 0) ? CASCADE_MOVE_MIN_UP : CASCADE_MOVE_MIN;
+    if (power < floor_power) power = floor_power;
     if (err < 0) power = -power;
 
     cascade_drive(power * CASCADE_RAISE_SIGN);

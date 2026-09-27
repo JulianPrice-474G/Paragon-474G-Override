@@ -35,6 +35,16 @@ constexpr int    CASCADE_MOVE_MIN     = 35;   // floor power - MUST be enough to
                                               // halt and the stall guard fires
 constexpr int    CASCADE_MOVE_TIMEOUT = 3000; // ms before a move gives up
 
+// Going UP the cascade is lifting its own weight, so the eased-off power near
+// the target needs a higher floor.  At CASCADE_MOVE_MIN it stalled a few
+// degrees short of the flip height and never arrived.
+constexpr int    CASCADE_MOVE_MIN_UP  = 55;
+
+// If the cascade stops moving this close to the target, count it as arrived
+// rather than waiting out the whole timeout for the last few degrees.
+constexpr double CASCADE_CLOSE_ENOUGH   = 12;   // degrees
+constexpr int    CASCADE_CLOSE_STALL_MS = 250;  // stopped this long = arrived
+
 // After reaching the target the cascade is braked and watched for this long,
 // and driven back if momentum has carried it outside CASCADE_MOVE_TOL.  Without
 // this a move ends the moment it touches the target and never looks again, so
