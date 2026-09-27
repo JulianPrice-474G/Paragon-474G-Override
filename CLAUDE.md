@@ -117,7 +117,10 @@ states `C F H M`.
   and the upper roller reversed `CASCADE_FLIP_DELAY_MS` into the rise → hold
   until `CASCADE_AFTER_FLIP_MS` after the flip → **stays at OUT** by default →
   intake off, swap holding motor, hold position.
-- In an auton, `macro_press(h)` on the second press sends the cascade on to
+- In an auton, `macro_press()` **takes over the cascade**: if a
+  `cascade_move_async()` or an unfinished macro step is running, it cancels it
+  and starts the macro at once. (RIGHT in driver control still only cancels.)
+- `macro_press(h)` on the second press sends the cascade on to
   height `h` after the flip. The value is ignored on the first press, and it is
   cleared after use, so a later RIGHT press in driver control stays at OUT.
 - Pressing RIGHT or touching L1/L2 mid-move cancels. One long-lived worker task,

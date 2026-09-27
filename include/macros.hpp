@@ -187,5 +187,8 @@ bool cascade_move_wait(int timeout_ms = 4000);
 //
 //   macro_press(CASCADE_LOW);   // ... or back down to the bottom
 //   macro_press();              // ... or just stay at the out height
+// If anything is already driving the cascade - a cascade_move_async(), or a
+// macro step that hasn't finished - macro_press() cancels it and starts the
+// macro immediately.  (RIGHT in driver control still just cancels.)
 void macro_press(double end_height = -1);
 bool macro_wait_done(int timeout_ms = 8000);

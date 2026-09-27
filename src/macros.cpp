@@ -402,8 +402,20 @@ bool cascade_move_wait(int timeout_ms) {
   return !_failed;
 }
 
-// Same as a RIGHT press in driver control.
+// For autons.  Unlike RIGHT in driver control - where a press mid-move just
+// cancels - this TAKES OVER: whatever is driving the cascade (a
+// cascade_move_async() or an unfinished macro step) is cancelled and the macro
+// starts straight away.  So a route can fire off a background move and press
+// the macro later without first checking the move has finished.
 void macro_press(double end_height) {
+  if (_running) {
+    _cancel = true;
+    // Every loop that drives the cascade checks _cancel each tick, so this is
+    // one or two ticks.  The cap is only a backstop.
+    const uint32_t start = pros::millis();
+    while (_running && pros::millis() - start < 500) pros::delay(ez::util::DELAY_TIME);
+  }
+
   // Only the SECOND press uses it, but storing it on every press means a
   // cancelled run cannot leave a stale target behind for the next one.
   _phase2_end = end_height;
