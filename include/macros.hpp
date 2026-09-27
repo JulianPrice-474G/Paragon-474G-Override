@@ -17,14 +17,11 @@ extern int    CASCADE_DOWN_SPEED;     // power for downward moves
 extern int    CASCADE_FLIP_DELAY_MS;  // ms into that rise before the piston fires
 extern int    CASCADE_AFTER_FLIP_MS;  // ms after the flip piston extends
                                       //   before the cascade moves again
-extern double CASCADE_CLAW_DROP;      // first-click height where the claw
-                                      //   opens and the flip lets go together
-extern int    CASCADE_FLIP_RELEASE_MS;// ms to wait after releasing the flip
-                                      //   piston before lowering to collect
 
 // Upper travel limit.  L1 stops raising once the rotation sensor reads this,
 // so the cascade cannot be driven into its top stop.  Manual control only -
 // the macro's targets are all below it.
+extern int    CASCADE_DROP_DELAY_MS;  // press 1: wait after the claw/flip drop
 extern double CASCADE_MAX;      // L1 stops raising here
 
 /////

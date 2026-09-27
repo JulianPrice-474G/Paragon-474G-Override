@@ -47,37 +47,28 @@ constexpr double ARC_TOL_DEG = 2;
 // Drive the cascade where you want it, read p off the controller, put the
 // number here.  The macro and the L1 travel limit both use these.
 double CASCADE_LOW     = 190;   // bottom / travel
-double CASCADE_COLLECT = 300;   // intake height, where the macro parks
-double CASCADE_FLIP    = 340;   // above collect, where the flip piston fires
-double CASCADE_OUT     = 430;   // phase 2 raises to here on the second click
+double CASCADE_COLLECT = 300;   // where the macro parks, waiting for press 2
+double CASCADE_FLIP    = 360;   // press 1 rises to here first
+double CASCADE_OUT     = 430;   // press 2 rises to here
+double CASCADE_MAX     = 1000;  // L1 won't raise past this
 
-// How long after the cascade STARTS its second-click rise the flip piston
-// extends.  0 fires it the instant the cascade begins moving; raise it to let
-// the cascade get further up first.  If it is longer than the move takes, the
-// piston fires as the move finishes.
-// How hard the cascade drives when it is going DOWN.  Separate from the
-// upward speed because gravity and the holding brake make the two feel
-// different.  80% of full power.
-int CASCADE_DOWN_SPEED = 127 * 80 / 100;   // = 101
+// ---- Press 1 ----
+// Rises to CASCADE_FLIP, then opens the claw and drops the flip piston at the
+// same time.  This is how long it waits after that before lowering to
+// CASCADE_COLLECT - time for the claw and flip to finish moving.
+int CASCADE_DROP_DELAY_MS = 300;
 
+// ---- Press 2 ----
+// How far into the rise to CASCADE_OUT the flip piston fires.  0 fires it as
+// the cascade starts moving; longer than the rise and it fires on arrival.
 int CASCADE_FLIP_DELAY_MS = 300;
-
-// First click: how long to wait at flip height AFTER the flip piston releases,
-// before the cascade starts down to collect.  Gives the piston time to finish
-// moving while the cascade is still still.
-// First click: the height where the claw opens and the flip piston lets go,
-// both at once, on the way up to CASCADE_FLIP.  Keep it BELOW CASCADE_FLIP so
-// they fire before the top; at or above it they fire on arrival.
-double CASCADE_CLAW_DROP = 340;
-
-// Second click: how long after the flip piston extends before the cascade is
-// allowed to move again (the descent to low).  Measured from the flip itself,
-// so if the piston fires early in the rise this may already have elapsed by
-// the time the cascade gets to the top, and it will not wait at all.
+// How long after the flip fires before the cascade may move again.  Counted
+// from the flip, so time spent still rising is already used up.
 int CASCADE_AFTER_FLIP_MS = 200;
 
-int CASCADE_FLIP_RELEASE_MS = 0;
-double CASCADE_MAX     = 1000;  // L1 stops raising here
+// Power for downward macro moves.  At the same power the cascade was slower
+// going down than up, so down moves get their own number.  80% of full.
+int CASCADE_DOWN_SPEED = 127 * 80 / 100;
 
 /////
 // CASCADE HOLD (currently unused - kept for the macro work)

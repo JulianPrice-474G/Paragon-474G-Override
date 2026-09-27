@@ -207,36 +207,25 @@ bool cascade_at_collect() {
 /////
 // The two halves
 /////
-// Fired on phase 1's rise when the cascade reaches CASCADE_CLAW_DROP: the
-// claw opens and the flip piston lets go at the same moment.
-static void drop_claw() {
-  claw_set(CLAW_OFF);
-  flip_set(FLIP_OFF);
-}
-
 static void phase1_task(void*) {
   // An end height only means anything on the SECOND press.  Clear whatever the
   // first press passed, so it cannot leak into a later phase 2.
   _phase2_end = -1;
 
-  // Preflight: the flip piston to a known state before anything moves.  The
-  // claw is left alone - it opens at the drop height below, together with the
-  // flip, and opening an already-open claw does nothing.
+  // Preflight: flip piston to a known state before anything moves.
   flip_set(FLIP_ON);
-
   bool ok = macro_wait(MACRO_PISTON_SETTLE, "0 preflight") &&
             step_pause("0 preflight");
 
-  // Rise to flip height.  On the way up, at CASCADE_CLAW_DROP, the claw opens
-  // and the flip piston lets go together.
-  if (ok) ok = cascade_to(CASCADE_FLIP, "1 flip", CASCADE_MOVE_SPEED,
-                          -1, drop_claw, CASCADE_CLAW_DROP) &&
-               step_pause("1 flip");
+  // Up to the high point first, and only act once it has ARRIVED.
+  if (ok) ok = cascade_to(CASCADE_FLIP, "1 up") && step_pause("1 up");
 
-  // Then hold still for CASCADE_FLIP_RELEASE_MS, so the piston can finish
-  // moving before the cascade starts back down.
-  if (ok) ok = macro_wait(CASCADE_FLIP_RELEASE_MS, "2 release") &&
-               step_pause("2 release");
+  // At the top: open the claw and drop the flip piston together.
+  if (ok) {
+    claw_set(CLAW_OFF);
+    flip_set(FLIP_OFF);
+    ok = macro_wait(CASCADE_DROP_DELAY_MS, "2 drop") && step_pause("2 drop");
+  }
 
   if (ok) ok = cascade_to(CASCADE_COLLECT, "3 collect") && step_pause("3 collect");
 

@@ -108,11 +108,11 @@ states `C F H M`.
 
 ## The macro (RIGHT)
 
-- **Press 1:** preflight (flip on) → raise to FLIP; on the way up, at
-  `CASCADE_CLAW_DROP`, the claw opens and the flip piston lets go **together**
-  (height-triggered, not timed) → hold `CASCADE_FLIP_RELEASE_MS` → lower to
+- **Press 1:** preflight (flip on) → rise to FLIP and **arrive** → open the claw
+  and drop the flip piston together → wait `CASCADE_DROP_DELAY_MS` → lower to
   COLLECT → park. While parked, L1/L2 are locked and the upper roller is armed.
-  `CASCADE_CLAW_DROP` must sit below `CASCADE_FLIP` to fire before the top.
+  (A height-triggered version that fired mid-rise was glitchy on the robot and
+  was replaced by this.)
 - **Press 2:** intake on → claw on → raise to OUT, with the flip piston extended
   and the upper roller reversed `CASCADE_FLIP_DELAY_MS` into the rise → hold
   until `CASCADE_AFTER_FLIP_MS` after the flip → **stays at OUT** by default →
