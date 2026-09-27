@@ -267,6 +267,14 @@ static void phase2_task(void*) {
   // Intake runs for the whole of phase 2, from this press until it is back at
   // low.  _intake_owned stops opcontrol writing zero over the top of it.
   _intake_owned = true;
+
+  // Take the intake over from any timed spin an auton left running
+  // (intake_spin(-1, ...) in particular).  Otherwise the spin's background task
+  // keeps writing the motors every tick and overrides the upper roller reversing
+  // for the flip.  The short wait lets that task make its final zeroing pass
+  // BEFORE we switch the intake on, not after.
+  intake_spin_stop();
+  pros::delay(20);
   intake_run(true);
 
   // Grip first, then lift.
