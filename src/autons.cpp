@@ -195,19 +195,17 @@ void sawp() {
 upper_roller_spin(700,127);
 pros::delay(200);
 cascade_move_async(250, 127);
-chassis.pid_drive_set(-8_in, 127);
-chassis.pid_wait();
-drive_arc(120, -18, -127);
-chassis.pid_wait();
-chassis.pid_drive_set(-10_in, 127);
-chassis.pid_wait();
+chassis.pid_drive_set(-7_in, 127);
+chassis.pid_wait_quick_chain();
+drive_arc(115, -13, -127);
+chassis.pid_wait_quick_chain();
 pros::delay(200);
 claw_set(false);
 pros::delay(300);
 cascade_move_wait();   // make sure the move to 240 is done, or this press would cancel it
 macro_press();
 press_y();
-intake_set(3000,127);
+intake_spin(3000,127);
 chassis.pid_drive_set(5,127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(142,127);
@@ -230,7 +228,7 @@ pros::delay(150);
 claw_set(false);
 pros::delay(300);
 macro_press();
-intake_set(7000,127);
+intake_spin(7000,127);
 chassis.pid_drive_set(5, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(255, 127);
@@ -238,18 +236,22 @@ chassis.pid_wait_quick_chain();
 chassis.pid_drive_set(15, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_drive_set(20, 70);
-chassis.pid_wait();
+chassis.pid_wait_quick_chain();
 pros::delay(500);
-chassis.pid_turn_set(137.5, 127);
+chassis.pid_turn_set(132, 127);
 chassis.pid_wait();
-chassis.pid_drive_set(-15, 127);
+chassis.pid_drive_set(-18, 127);
 chassis.pid_wait();
-drive_arc(270,  -0,  -127);
+drive_arc(280,  -0,  -127);
 chassis.pid_wait();
 cascade_move_async(350,127);
 pros::delay(200);
 claw_set(false);
 pros::delay(300);
+intake_spin(3000,127);
+chassis.pid_drive_set(20, 127);
+chassis.pid_wait_quick_chain();
+
 
 
 
