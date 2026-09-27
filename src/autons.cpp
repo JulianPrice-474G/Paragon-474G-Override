@@ -229,30 +229,27 @@ cascade_move_async(385, 127);
 pros::delay(150);
 claw_set(false);
 pros::delay(300);
-intake_set(7000,127);
 macro_press();
+intake_set(7000,127);
 chassis.pid_drive_set(5, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(255, 127);
 chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(38, 127);
+chassis.pid_drive_set(15, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(20, 70);
 chassis.pid_wait();
 pros::delay(500);
-chassis.pid_turn_set(180, 127);
+chassis.pid_turn_set(137.5, 127);
 chassis.pid_wait();
-macro_press(400);
-chassis.pid_drive_set(-10, 127);
-drive_arc(270,  15,  127);
+chassis.pid_drive_set(-15, 127);
+chassis.pid_wait();
+drive_arc(270,  -0,  -127);
 chassis.pid_wait();
 cascade_move_async(350,127);
 pros::delay(200);
 claw_set(false);
 pros::delay(300);
-
-
-
-
-
 
 
 
@@ -265,12 +262,7 @@ pros::delay(300);
 ///
 void skills() {
   auton_setup();
-  chassis.pid_drive_set(5,127);
-  chassis.pid_wait_quick_chain();
-  chassis.pid_turn_set(10,127);
-  chassis.pid_wait_quick_chain();
-  chassis.pid_drive_set(24,127);
-  chassis.pid_wait_quick_chain();
+  
 
 
   // Your code here.
