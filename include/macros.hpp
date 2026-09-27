@@ -17,8 +17,8 @@ extern int    CASCADE_DOWN_SPEED;     // power for downward moves
 extern int    CASCADE_FLIP_DELAY_MS;  // ms into that rise before the piston fires
 extern int    CASCADE_AFTER_FLIP_MS;  // ms after the flip piston extends
                                       //   before the cascade moves again
-extern int    CASCADE_FLIP_BACK_MS;   // ms into the first-click rise before
-                                      //   the flip piston flips back
+extern double CASCADE_CLAW_DROP;      // first-click height where the claw
+                                      //   opens and the flip lets go together
 extern int    CASCADE_FLIP_RELEASE_MS;// ms to wait after releasing the flip
                                       //   piston before lowering to collect
 

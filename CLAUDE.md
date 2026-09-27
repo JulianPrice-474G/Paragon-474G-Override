@@ -108,10 +108,11 @@ states `C F H M`.
 
 ## The macro (RIGHT)
 
-- **Press 1:** preflight (flip on, claw off) → raise to FLIP, with the flip
-  piston released `CASCADE_FLIP_BACK_MS` into the rise → hold
-  `CASCADE_FLIP_RELEASE_MS` → lower to COLLECT → park. While parked, L1/L2 are
-  locked and the upper roller is armed.
+- **Press 1:** preflight (flip on) → raise to FLIP; on the way up, at
+  `CASCADE_CLAW_DROP`, the claw opens and the flip piston lets go **together**
+  (height-triggered, not timed) → hold `CASCADE_FLIP_RELEASE_MS` → lower to
+  COLLECT → park. While parked, L1/L2 are locked and the upper roller is armed.
+  `CASCADE_CLAW_DROP` must sit below `CASCADE_FLIP` to fire before the top.
 - **Press 2:** intake on → claw on → raise to OUT, with the flip piston extended
   and the upper roller reversed `CASCADE_FLIP_DELAY_MS` into the rise → hold
   until `CASCADE_AFTER_FLIP_MS` after the flip → **stays at OUT** by default →

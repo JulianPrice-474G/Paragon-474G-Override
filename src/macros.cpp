@@ -36,11 +36,15 @@ static void cascade_drive(int power)  { cascade_set(power); }
 /////
 // Returns false if it was cancelled, timed out, or stalled.  Always leaves the
 // cascade stopped, so a failure cannot leave a motor driving.
-// action, if given, is called once, action_delay_ms after the move starts - so
-// something can happen DURING the movement rather than before or after it.
+// action, if given, is called once DURING the move rather than before or after
+// it.  Two ways to say when:
+//   action_height >= 0  fire when the cascade reaches that height on the way
+//   otherwise           fire action_delay_ms after the move starts
+// Either way it fires on arrival at the latest, so it is never lost.
 static bool cascade_to(double target, const char* step_name,
                        int max_speed = CASCADE_MOVE_SPEED,
-                       int action_delay_ms = -1, void (*action)() = nullptr) {
+                       int action_delay_ms = -1, void (*action)() = nullptr,
+                       double action_height = -1) {
   _step = step_name;
 
   const uint32_t start        = pros::millis();
@@ -50,20 +54,25 @@ static bool cascade_to(double target, const char* step_name,
 
   // Downward moves get their own speed - gravity and the holding brake make a
   // descent behave differently from a lift at the same power.
-  if (target < last_pos) max_speed = CASCADE_DOWN_SPEED;
+  const bool going_up = (target >= last_pos);
+  if (!going_up) max_speed = CASCADE_DOWN_SPEED;
 
   while (pros::millis() - start < (uint32_t)CASCADE_MOVE_TIMEOUT) {
     if (_cancel) { cascade_stop(); return false; }
 
-    // Fire the timed action once, however far into the move it falls.
-    if (action && !action_fired &&
-        (int)(pros::millis() - start) >= action_delay_ms) {
-      action_fired = true;
-      action();
-    }
-
     double pos = cascade_position();
     double err = target - pos;
+
+    // Fire the action once, at its height or its time.
+    if (action && !action_fired) {
+      bool due;
+      if (action_height >= 0)
+        due = going_up ? (pos >= action_height) : (pos <= action_height);
+      else
+        due = action_delay_ms >= 0 &&
+              (int)(pros::millis() - start) >= action_delay_ms;
+      if (due) { action_fired = true; action(); }
+    }
 
     if (fabs(err) <= CASCADE_MOVE_TOL) {
       // Brake rather than coast, then keep watching: a heavy cascade carries a
@@ -198,26 +207,30 @@ bool cascade_at_collect() {
 /////
 // The two halves
 /////
-// Fired partway through phase 1's rise - see CASCADE_FLIP_BACK_MS.
-static void release_flip() { flip_set(FLIP_OFF); }
+// Fired on phase 1's rise when the cascade reaches CASCADE_CLAW_DROP: the
+// claw opens and the flip piston lets go at the same moment.
+static void drop_claw() {
+  claw_set(CLAW_OFF);
+  flip_set(FLIP_OFF);
+}
 
 static void phase1_task(void*) {
   // An end height only means anything on the SECOND press.  Clear whatever the
   // first press passed, so it cannot leak into a later phase 2.
   _phase2_end = -1;
 
-  // Preflight: put the pistons into a known state before anything moves, so
-  // the sequence behaves the same however they were left.
+  // Preflight: the flip piston to a known state before anything moves.  The
+  // claw is left alone - it opens at the drop height below, together with the
+  // flip, and opening an already-open claw does nothing.
   flip_set(FLIP_ON);
-  claw_set(CLAW_OFF);
 
   bool ok = macro_wait(MACRO_PISTON_SETTLE, "0 preflight") &&
             step_pause("0 preflight");
 
-  // Rise to flip height, with the flip piston flipping back partway UP -
-  // CASCADE_FLIP_BACK_MS into the move.
+  // Rise to flip height.  On the way up, at CASCADE_CLAW_DROP, the claw opens
+  // and the flip piston lets go together.
   if (ok) ok = cascade_to(CASCADE_FLIP, "1 flip", CASCADE_MOVE_SPEED,
-                          CASCADE_FLIP_BACK_MS, release_flip) &&
+                          -1, drop_claw, CASCADE_CLAW_DROP) &&
                step_pause("1 flip");
 
   // Then hold still for CASCADE_FLIP_RELEASE_MS, so the piston can finish
