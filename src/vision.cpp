@@ -56,6 +56,7 @@ VisionTarget vision_largest() {
 // measured in pixels and it moves, so there is no fixed heading to hand a PID.
 // Every iteration re-reads the sensor and steers at whatever it sees now.
 bool vision_align(int timeout_ms) {
+  drive_for_time_stop();   // cancel a push still running - see drive_for_time()
   const uint32_t start = pros::millis();
   int lost_frames = 0;
 
@@ -188,6 +189,7 @@ void vision_draw_view(lv_obj_t* canvas) {
 // point means a path that bends toward the pin still stops at the right place.
 bool vision_drive(double inches, int speed, double sensitivity,
                   double vision_percent, int timeout_ms) {
+  drive_for_time_stop();   // cancel a push still running - see drive_for_time()
   const uint32_t start = pros::millis();
   const double   x0    = chassis.odom_x_get();
   const double   y0    = chassis.odom_y_get();

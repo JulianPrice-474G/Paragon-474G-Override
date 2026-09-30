@@ -86,6 +86,31 @@ void intake_set(int power, bool roller = true);
 // Returns false on timeout.
 bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_ms = 3000);
 
+// Drive for a set time WITHOUT blocking - for pushing into a wall or goal and
+// staying square while you score.  Returns at once; pistons, intakes and the
+// cascade can all run while the robot keeps pushing:
+//
+//   drive_for_time(1500);            // back into the goal for 1.5 s
+//   pros::delay(200);
+//   claw_set(CLAW_OFF);              // score while still pushed in
+//   upper_roller_spin(800, 127);
+//   drive_for_time_wait();           // let the push finish
+//   chassis.pid_drive_set(10_in, DRIVE_SPEED);
+//
+// speed is -127 to 127, negative = backwards.  Leave it out for a medium
+// backwards push (-60) - raise it if the robot gets shoved off the wall, lower
+// it if the wheels slip.  Calling it again replaces
+// the push in progress.
+//
+// The next drive command cancels the push automatically - pid_drive_set,
+// turns, swings, odom moves, drive_arc, vision_drive and vision_align all take
+// the wheels straight back, and the robot drives off in the direction the wall
+// squared it to.  Only call drive_for_time_wait() if you want the FULL time.
+void drive_for_time(int ms, int speed = -60);
+void drive_for_time_stop();          // end the push early
+bool drive_for_time_active();        // true while pushing
+bool drive_for_time_wait(int timeout_ms = 5000);  // block until the push ends
+
 // Drive one part of the intake directly - it keeps running until you set it
 // again.  Positive runs them the way R1 does; fin_2 is commanded opposite
 // automatically, and dropdown_set keeps the piston interlock.

@@ -224,6 +224,7 @@ void intake_set(int power, bool roller) {
 //
 // Returns false if it ran out of time instead of reaching the heading.
 bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_ms) {
+  drive_for_time_stop();   // cancel a push still running - see drive_for_time()
   const uint32_t start = pros::millis();
 
   // Stop, and tell EZ-Template which way the robot now faces.  A normal
@@ -267,6 +268,85 @@ bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_m
 
   arc_stop();
   return false;
+}
+
+// Timed push: drive at a fixed power for a set time, in the background, so
+// pistons, intakes and the cascade can run while the robot holds itself
+// against a wall or goal.  One long-lived worker, like the intake spins -
+// pros::Task has no destructor, so a task per call would leak.
+//
+// The push CANCELS ITSELF the moment the next drive command starts:
+//  - pid_drive_set / turn / swing / odom moves take EZ-Template out of DISABLE
+//    mode, and the worker sees that and steps aside.
+//  - drive_arc, vision_drive and vision_align call drive_for_time_stop()
+//    first, because they drive in DISABLE mode too and the worker cannot tell
+//    them apart from the push.
+static volatile bool _push_active = false;
+static volatile int  _push_until  = 0;
+
+// Write the drive motors directly, NOT through chassis.drive_set().  drive_set()
+// forces EZ-Template into DISABLE mode, so if a pid_drive_set() landed between
+// the worker's mode check and its write, drive_set() would switch that PID
+// motion straight back off.  A direct write can only clobber one tick, and the
+// PID task overwrites it on the next.
+static void push_motors(int power) {
+  for (auto& m : chassis.left_motors)  m.move(power);
+  for (auto& m : chassis.right_motors) m.move(power);
+}
+
+static void push_task(void*) {
+  while (true) {
+    if (_push_active) {
+      if (chassis.drive_mode_get() != ez::DISABLE) {
+        // A PID motion owns the wheels now.  Step aside without touching them.
+        _push_active = false;
+      } else if ((int)pros::millis() >= _push_until) {
+        push_motors(0);
+        _push_active = false;
+      } else {
+        // Keep EZ-Template's heading target on wherever the wall has squared
+        // us to, every tick - same reason as drive_arc().  Doing it throughout
+        // rather than only at the end means a pid_drive_set() that cuts the
+        // push short still drives off in the aligned direction, instead of
+        // steering back to the heading from before the push.
+        chassis.drive_angle_set(chassis.drive_imu_get());
+      }
+    }
+    pros::delay(ez::util::DELAY_TIME);
+  }
+}
+
+void drive_for_time(int ms, int speed) {
+  static pros::Task worker(push_task, nullptr, "Drive Push");
+
+  if (ms <= 0 || speed == 0) {
+    drive_for_time_stop();
+    return;
+  }
+  // drive_set() once, here, to put EZ-Template in DISABLE mode - its task does
+  // not write the motors in that mode, so they hold this power by themselves
+  // and the worker only has to watch the clock.
+  chassis.drive_set(speed, speed);
+  _push_until  = (int)pros::millis() + ms;
+  _push_active = true;
+}
+
+void drive_for_time_stop() {
+  if (!_push_active) return;
+  _push_active = false;
+  push_motors(0);
+  chassis.drive_angle_set(chassis.drive_imu_get());
+}
+
+bool drive_for_time_active() { return _push_active; }
+
+bool drive_for_time_wait(int timeout_ms) {
+  const uint32_t start = pros::millis();
+  while (_push_active) {
+    if ((int)(pros::millis() - start) > timeout_ms) return false;
+    pros::delay(ez::util::DELAY_TIME);
+  }
+  return true;
 }
 
 // Single intake motors, for when you want one on its own.  Same sign

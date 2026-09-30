@@ -195,9 +195,9 @@ void sawp() {
 upper_roller_spin(700,127);
 pros::delay(200);
 cascade_move_async(250, 127);
-chassis.pid_drive_set(-7_in, 127);
+chassis.pid_drive_set(-4_in, 127);
 chassis.pid_wait_quick_chain();
-drive_arc(115, -13, -127);
+drive_arc(120, -25, -127);
 chassis.pid_wait_quick_chain();
 pros::delay(200);
 claw_set(false);
@@ -235,28 +235,58 @@ chassis.pid_turn_set(255, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_drive_set(15, 127);
 chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(20, 70);
+chassis.pid_drive_set(20.5, 70);
 chassis.pid_wait_quick_chain();
-pros::delay(500);
-chassis.pid_turn_set(132, 127);
-chassis.pid_wait();
-chassis.pid_drive_set(-18, 127);
-chassis.pid_wait();
-drive_arc(280,  -0,  -127);
-chassis.pid_wait();
-cascade_move_async(350,127);
-pros::delay(200);
+pros::delay(700);
+macro_press(350);
+chassis.pid_turn_set(181, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(-23, 70);
+macro_wait_done(); 
+cascade_move_async(300, 127);
+pros::delay(150);
 claw_set(false);
 pros::delay(300);
-intake_spin(3000,127);
-chassis.pid_drive_set(20, 127);
+macro_press();
+chassis.pid_drive_set(12, 127);
 chassis.pid_wait_quick_chain();
+intake_spin(7000,127);
+chassis.pid_turn_set(320, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(25, 127);
+chassis.pid_wait_quick_chain();
+pros::delay(500);
+chassis.pid_drive_set(-25, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(30, 127);
+chassis.pid_wait_quick_chain();
+macro_press(500);
+chassis.pid_drive_set(-50, 85);
+chassis.pid_wait_quick_chain();
+cascade_move_async(300, 127);
+pros::delay(150);
+claw_set(false);
+pros::delay(300);
+macro_press();
+intake_spin(7000,127);
+chassis.pid_drive_set(7, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(65, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(15, 127);
+chassis.pid_wait_quick_chain();
+drive_arc(45, -127, -45);
+chassis.pid_drive_set(-15, 127);
+
+pros::delay(500);
 
 
 
 
 
-  
+
+
+
 }
 
 ///
@@ -286,6 +316,27 @@ void auto_4() {
   auton_setup();
 
   // Your code here.
+  chassis.pid_turn_set(140, 127);
+chassis.pid_wait();
+macro_press(350);                                      
+chassis.pid_drive_set(-16, 127);
+chassis.pid_wait();
+drive_arc(270,  -2,  -127);
+chassis.pid_wait_quick_chain();
+drive_for_time(1000, -127);
+chassis.pid_wait_quick_chain();
+cascade_move_async(350,127);
+pros::delay(200);
+claw_set(false);
+pros::delay(300);
+macro_press();
+intake_spin(3000,127);
+chassis.pid_drive_set(5, 127);
+chassis.pid_wait();
+pros::delay(300);
+macro_press(350);
+chassis.pid_drive_set(-5, 127);
+chassis.pid_wait_quick_chain();
 }
 
 ///
