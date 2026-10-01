@@ -316,17 +316,20 @@ static void push_task(void*) {
   }
 }
 
-void drive_for_time(int ms, int speed) {
+void drive_for_time(int ms, int speed) { drive_for_time(ms, speed, speed); }
+
+// Timed arc: the same push, but each side at its own speed.
+void drive_for_time(int ms, int left_speed, int right_speed) {
   static pros::Task worker(push_task, nullptr, "Drive Push");
 
-  if (ms <= 0 || speed == 0) {
+  if (ms <= 0 || (left_speed == 0 && right_speed == 0)) {
     drive_for_time_stop();
     return;
   }
   // drive_set() once, here, to put EZ-Template in DISABLE mode - its task does
   // not write the motors in that mode, so they hold this power by themselves
   // and the worker only has to watch the clock.
-  chassis.drive_set(speed, speed);
+  chassis.drive_set(left_speed, right_speed);
   _push_until  = (int)pros::millis() + ms;
   _push_active = true;
 }

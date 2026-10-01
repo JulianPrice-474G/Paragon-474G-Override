@@ -107,6 +107,14 @@ bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_m
 // the wheels straight back, and the robot drives off in the direction the wall
 // squared it to.  Only call drive_for_time_wait() if you want the FULL time.
 void drive_for_time(int ms, int speed = -60);
+
+// Timed arc: each side at its own speed for a set time.  Same background
+// worker as above - non-blocking, cancelled by the next drive command, and
+// drive_for_time_wait() / _stop() work on it the same way.
+//
+//   drive_for_time(800, 100, 40);    // curve right for 0.8 s
+//   drive_for_time_wait();           // block until it finishes
+void drive_for_time(int ms, int left_speed, int right_speed);
 void drive_for_time_stop();          // end the push early
 bool drive_for_time_active();        // true while pushing
 bool drive_for_time_wait(int timeout_ms = 5000);  // block until the push ends
