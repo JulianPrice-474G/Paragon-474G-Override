@@ -206,18 +206,18 @@ cascade_move_wait();   // make sure the move to 240 is done, or this press would
 macro_press();
 press_y();
 intake_spin(3000,127);
+//drive_arc(119,75, 100);
+//chassis.pid_wait_quick_chain();
 chassis.pid_drive_set(5,127);
-chassis.pid_wait_quick_chain();
+chassis.pid_wait_until(2_in);
 chassis.pid_turn_set(142,127);
+chassis.pid_drive_set(24,127);
 chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(24,60);
-chassis.pid_wait_quick_chain();
-chassis.pid_wait();
-pros::delay(500);
-chassis.pid_turn_set(212, 127);
-chassis.pid_wait();
-macro_press(500); 
 pros::delay(1000);
+chassis.pid_turn_set(212, 127);
+chassis.pid_wait_quick_chain();
+macro_press(500); 
+pros::delay(300);
 chassis.pid_drive_set(-10, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_drive_set(-20, 127);
@@ -276,8 +276,7 @@ chassis.pid_wait_quick_chain();
 chassis.pid_drive_set(15, 127);
 chassis.pid_wait_quick_chain();
 drive_arc(45, -127, -45);
-chassis.pid_drive_set(-15, 127);
-
+chassis.pid_drive_set(-25, 127);
 pros::delay(500);
 
 
