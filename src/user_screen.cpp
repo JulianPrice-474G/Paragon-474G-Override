@@ -338,27 +338,30 @@ static const char* ctrl_pistons_text() {
   return buf;
 }
 
-// Controller middle row while in driver mode: cascade position, then the
-// cascade motor temperatures and their combined current draw.
+// Controller middle row while in driver mode: cascade position, the cascade
+// motor temperatures, then the IMU heading.  The IMU is zeroed when driver
+// mode turns on; the heading is wrapped to -180..180 so it fits the row.
 //
-//   p300 50/50C 1.8A
+//   p300 50/50C -12.5
 static const char* ctrl_sensors_text() {
-  static char buf[20];
+  static char buf[24];
   int pos = (int)cascade_position();
+
+  double hdg = fmod(chassis.drive_imu_get(), 360.0);
+  if (hdg > 180.0)   hdg -= 360.0;
+  if (hdg <= -180.0) hdg += 360.0;
 
   double ta = l_motor_a.get_temperature();
   double tb = l_motor_b.get_temperature();
-  int    ca = l_motor_a.get_current_draw();   // mA
-  int    cb = l_motor_b.get_current_draw();
 
   // get_temperature() returns PROS_ERR_F - a NaN - when the motor is missing,
   // and every comparison against NaN is false, so test for a GOOD value.
-  if (!((ta > 0) && (tb > 0) && (ca >= 0) && (cb >= 0))) {
-    snprintf(buf, sizeof(buf), "p%-4d no motor", pos);
+  if (!((ta > 0) && (tb > 0))) {
+    snprintf(buf, sizeof(buf), "p%-4d no mtr %.1f", pos, hdg);
     return buf;
   }
-  snprintf(buf, sizeof(buf), "p%-4d %d/%dC %.1fA",
-           pos, (int)ta, (int)tb, (ca + cb) / 1000.0);
+  snprintf(buf, sizeof(buf), "p%-4d %d/%dC %.1f",
+           pos, (int)ta, (int)tb, hdg);
   return buf;
 }
 
@@ -522,8 +525,9 @@ void handle_ctrl_input() {
     EngineDriverMode(driver_mode);  // locks or unlocks brain screen touch input
     CtrlRumble(driver_mode ? "-" : ".");
     if (driver_mode) {
+      chassis.drive_imu_reset();        // heading readout starts at 0 each time
       CtrlLabel(0, "* DRIVER MODE *");  // confirm to driver that mode is active
-      CtrlLive(1, ctrl_sensors_text, 500);  // cascade temps, current and position
+      CtrlLive(1, ctrl_sensors_text, 500);  // cascade position, temps and heading
       CtrlLive(2, ctrl_pistons_text, 200);  // piston states (exit is still UP+X)
     } else {
       ctrl_state = CTRL_HOME;  // always return to home when exiting driver mode

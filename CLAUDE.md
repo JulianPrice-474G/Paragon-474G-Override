@@ -92,7 +92,7 @@ Outside it the UI owns LEFT/RIGHT/A/B for menu navigation.
 | LEFT+B held 1 s | run selected auton — only outside driver mode, off a comp switch |
 | A | unused |
 
-Controller in driver mode: row 1 `p### temps amps`, row 2 commanded piston
+Controller in driver mode: row 1 `p### temps heading` (IMU zeroed on entering driver mode), row 2 commanded piston
 states `C F H M`.
 
 ## Cascade
