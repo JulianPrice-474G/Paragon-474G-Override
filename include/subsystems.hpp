@@ -13,29 +13,24 @@ extern pros::Motor dropdown;
 extern pros::Motor upper_roller;
 extern pros::Motor fin_2;  // always opposite a, b, c
 
-// Pneumatics - single-acting solenoids, both default to extended
-extern pros::adi::DigitalOut high_intake;
-extern pros::adi::DigitalOut middle_intake;
+// Pneumatics - single-acting solenoids
+extern pros::adi::DigitalOut intake_piston;  // 25 mm, intake UP <-> MIDDLE
 extern pros::adi::DigitalOut claw;    // port C - toggled by RIGHT
 extern pros::adi::DigitalOut c_flip;  // port D - toggled by DOWN
-extern bool high_intake_extended;
-extern bool middle_intake_extended;
+extern bool intake_piston_extended;
 extern bool claw_extended;
 extern bool c_flip_extended;
 
-// The intake pistons' position, as one value.  Set by Y and B in opcontrol and
-// re-asserted by auton_setup(); the dropdown interlock reads the two mirrors
-// this drives.
-enum IntakePos { INTAKE_HIGH, INTAKE_MIDDLE, INTAKE_LOW };
+// The intake position.  Set by Y in opcontrol and re-asserted by auton_setup().
+// One piston: extended = HIGH, retracted = MIDDLE.
+enum IntakePos { INTAKE_HIGH, INTAKE_MIDDLE };
 extern IntakePos intake_pos;
 
-// Simulate the Y and B buttons - use these in autons.  Same code driver control
-// runs, so they behave identically, including the toggle back to HIGH.
+// Simulate the Y button - use this in autons.  Same code driver control runs,
+// so it behaves identically.
 //   press_y()  -> MIDDLE, or HIGH if already MIDDLE
-//   press_b()  -> LOW,    or HIGH if already LOW
 // intake_pos_set() jumps straight to a position without the toggle.
 void press_y();
-void press_b();
 void intake_pos_set(IntakePos pos);
 
 /////
@@ -43,16 +38,14 @@ void intake_pos_set(IntakePos pos);
 /////
 // Set a piston and its state mirror together.  Never call .set_value() on a
 // solenoid directly: the mirrors are the only record of piston state, and the
-// dropdown interlock and the DOWN/LEFT toggles both read them.
+// DOWN/LEFT toggles and the controller readout read them.
 void claw_set(bool on);
 void flip_set(bool on);
-void high_intake_set(bool on);
-void middle_intake_set(bool on);
+void intake_piston_set(bool on);   // prefer intake_pos_set() - keeps intake_pos in step
 
 // Whole intake group, -127 to 127.  Positive runs it the same way the R1
 // button does.  fin_2 is commanded opposite the others because it is mounted
-// that way, and the dropdown keeps its piston interlock - stopped only while
-// BOTH intake pistons are extended.
+// that way.
 //
 // roller = false holds the upper roller at zero, which is what driver control
 // does outside the collect height.  Autons and intake_spin() leave it true, so
@@ -121,7 +114,7 @@ bool drive_for_time_wait(int timeout_ms = 5000);  // block until the push ends
 
 // Drive one part of the intake directly - it keeps running until you set it
 // again.  Positive runs them the way R1 does; fin_2 is commanded opposite
-// automatically, and dropdown_set keeps the piston interlock.
+// automatically.
 void fins_set(int power);      // fin_1 + fin_2
 void upper_roller_set(int power);    // port 19, the upper roller
 void dropdown_set(int power);  // port 4

@@ -23,7 +23,7 @@ constexpr int8_t L_MOTOR_B_PORT = 6;
 // TODO: set your real ports.  R_MOTOR_D is the odd one out - it always runs
 // opposite to the other three.
 constexpr int8_t FIN_1_PORT = 1;
-constexpr int8_t DROPDOWN_PORT = 4;   // drop-down intake - cut by the piston interlock
+constexpr int8_t DROPDOWN_PORT = 4;   // drop-down intake
 constexpr int8_t UPPER_ROLLER_PORT = 19;
 constexpr int8_t FIN_2_PORT = 11;  // the one that spins opposite the other two
 
@@ -93,8 +93,7 @@ pros::Motor fin_2(FIN_2_PORT);
 /////
 // PNEUMATICS - ADI (3-wire) ports, letters A-H
 /////
-constexpr char HIGH_INTAKE_PORT   = 'F';
-constexpr char MIDDLE_INTAKE_PORT = 'E';
+constexpr char INTAKE_PISTON_PORT = 'F';  // 25 mm, UP <-> MIDDLE - toggled by Y
 constexpr char CLAW_PORT          = 'B';  // toggled by DOWN
 constexpr char C_FLIP_PORT        = 'A';  // toggled by LEFT
 
@@ -104,10 +103,9 @@ constexpr char C_FLIP_PORT        = 'A';  // toggled by LEFT
 constexpr bool PISTON_EXTENDED  = true;
 constexpr bool PISTON_RETRACTED = false;
 
-// Both start EXTENDED.  The second constructor argument is the power-on state,
-// so they are already up before opcontrol runs.
-pros::adi::DigitalOut high_intake(HIGH_INTAKE_PORT,   PISTON_EXTENDED);
-pros::adi::DigitalOut middle_intake(MIDDLE_INTAKE_PORT, PISTON_EXTENDED);
+// Starts EXTENDED (intake UP).  The second constructor argument is the
+// power-on state, so it is already up before opcontrol runs.
+pros::adi::DigitalOut intake_piston(INTAKE_PISTON_PORT, PISTON_EXTENDED);
 
 // Claw and C-flip also start EXTENDED.  The second constructor argument is the
 // power-on state, so they are out before the match starts.
@@ -115,19 +113,14 @@ pros::adi::DigitalOut claw(CLAW_PORT,     PISTON_EXTENDED);
 pros::adi::DigitalOut c_flip(C_FLIP_PORT, PISTON_RETRACTED);
 
 // Software mirror of what each solenoid was last told to do.  A DigitalOut
-// cannot be read back, so this is the only record of piston state - and the
-// dropdown interlock below depends on it.
-bool high_intake_extended   = true;
-bool middle_intake_extended = true;
+// cannot be read back, so this is the only record of piston state.
+bool intake_piston_extended = true;
 bool claw_extended          = true;
 bool c_flip_extended        = false;
 
-// Where the two intake pistons are, as ONE value rather than two independent
-// booleans.  The buttons set this outright, so they cannot drift into a
-// combination neither button expects.
-//   HIGH   both activated - the resting position
-//   MIDDLE middle activated, upper released
-//   LOW    both released
+// Where the intake is.  One 25 mm piston moves it between the two positions.
+//   HIGH   piston extended - the resting position
+//   MIDDLE piston retracted
 IntakePos intake_pos = INTAKE_HIGH;
 
 /////
@@ -182,25 +175,20 @@ void cascade_hold() {
 /////
 // Each piston helper sets the solenoid AND its software mirror together.  A
 // DigitalOut cannot be read back, so those mirrors are the only record of
-// piston state - the dropdown interlock and the DOWN/LEFT toggles both read
-// them, and they go wrong silently if a set_value() is done without one.
+// piston state - the DOWN/LEFT toggles and the controller readout read them,
+// and they go wrong silently if a set_value() is done without one.
 void claw_set(bool on)          { claw_extended          = on; claw.set_value(on); }
 void flip_set(bool on)          { c_flip_extended        = on; c_flip.set_value(on); }
-void high_intake_set(bool on)   { high_intake_extended   = on; high_intake.set_value(on); }
-void middle_intake_set(bool on) { middle_intake_extended = on; middle_intake.set_value(on); }
+void intake_piston_set(bool on) { intake_piston_extended = on; intake_piston.set_value(on); }
 
 // Whole intake group in one call: -127 to 127, positive runs it the same way
 // the R1 button does.  roller = false holds the upper roller at zero, which is
 // what driver control does outside the collect height; everything else leaves
 // it true so all FOUR motors turn.
 void intake_set(int power, bool roller) {
-  // Dropdown interlock: port 4 stays stopped while BOTH intake pistons are
-  // extended, and runs in every other position.  Same rule as R1/R2.
-  bool dropdown_enabled = !(high_intake_extended && middle_intake_extended);
-
   fin_1.move(-power);
   fin_2.move(power);                                  // mounted opposite
-  dropdown.move(dropdown_enabled ? -power : 0);
+  dropdown.move(-power);
   upper_roller.move(roller ? -power : 0);
 }
 
@@ -356,12 +344,7 @@ bool drive_for_time_wait(int timeout_ms) {
 // convention as intake_set: positive runs it the way R1 does.
 void upper_roller_set(int power) { upper_roller.move(-power); }
 
-// The dropdown keeps its interlock even when driven on its own - it must not
-// run while both intake pistons are extended.
-void dropdown_set(int power) {
-  bool enabled = !(high_intake_extended && middle_intake_extended);
-  dropdown.move(enabled ? -power : 0);
-}
+void dropdown_set(int power) { dropdown.move(-power); }
 
 // Just the two fins.  fin_2 is mounted opposite, so it is always commanded the
 // other way round - positive runs them the same way R1 does.  The dropdown and
@@ -476,22 +459,18 @@ void cascade_set(int power) {
 
 // De-energise every solenoid, so the cylinders vent and the robot is not left
 // holding pressure.  Called from disabled().
-// The intake selector, exactly as the Y and B buttons drive it.  Driver
-// control and autons both call these, so a simulated press in an auton does
-// the same thing a real one does.
+// The intake position, exactly as the Y button drives it.  Driver control and
+// autons both call these, so a simulated press in an auton does the same thing
+// a real one does.
 //   Y  -> MIDDLE, or back to HIGH if already MIDDLE
-//   B  -> LOW,    or back to HIGH if already LOW
 void intake_pos_set(IntakePos pos) {
   intake_pos = pos;
-  high_intake_set  (pos == INTAKE_HIGH);   // upper: only in HIGH
-  middle_intake_set(pos != INTAKE_LOW);    // middle: HIGH and MIDDLE
+  intake_piston_set(pos == INTAKE_HIGH);   // extended = HIGH
 }
 void press_y() { intake_pos_set(intake_pos == INTAKE_MIDDLE ? INTAKE_HIGH : INTAKE_MIDDLE); }
-void press_b() { intake_pos_set(intake_pos == INTAKE_LOW    ? INTAKE_HIGH : INTAKE_LOW); }
 
 void release_all_pistons() {
-  high_intake_set(false);
-  middle_intake_set(false);
+  intake_piston_set(false);
   claw_set(false);
   flip_set(false);
 }
@@ -591,12 +570,10 @@ void initialize() {
                                 pros::AivisionModeType::objects);
   ai_cam.set_tag_family(pros::AivisionTagFamily::tag_16H5);
 
-  // Put the intake pistons in the HIGH position at power-on - both extended.
+  // Put the intake in the HIGH position at power-on - piston extended.
   // Commanded explicitly rather than relying on the DigitalOut constructor's
-  // initial state, so the solenoids actually receive it.
-  intake_pos = INTAKE_HIGH;
-  high_intake_set(PISTON_EXTENDED);
-  middle_intake_set(PISTON_EXTENDED);
+  // initial state, so the solenoid actually receives it.
+  intake_pos_set(INTAKE_HIGH);
 
   EngineInit();
   build_screens();  // sets up brain screen + initial controller display
@@ -797,17 +774,8 @@ void opcontrol() {
           (master.get_digital(DIGITAL_L1) || master.get_digital(DIGITAL_L2)))
         macro_cancel();
 
-        // Intake pistons - a three-position selector, not two toggles.
-        //   Y  -> MIDDLE (middle activated, upper released)
-        //   B  -> LOW    (both released)
-        // Pressing whichever one you used a second time returns to HIGH, so the
-        // resting position is always one press away.
-        //
-        // Both buttons SET the position rather than flipping each piston from
-        // its own value.  That is what makes it consistent - the old version
-        // could leave the pair in a combination neither button expected.
+        // Intake piston - Y toggles between HIGH and MIDDLE.
         if (master.get_digital_new_press(DIGITAL_Y)) press_y();
-        if (master.get_digital_new_press(DIGITAL_B)) press_b();
 
       // Claw on DOWN, C-flip on LEFT - both latching toggles.  Safe to read
       // these with new_press: handle_ctrl_input() only consumes LEFT/RIGHT/A/B
@@ -824,14 +792,8 @@ void opcontrol() {
       // Intake - four motors, R2 runs them in, R1 reverses all of them.
       //   port 1  (fin_1) fin      - always runs
       //   port 11 (fin_2) fin      - always runs, mounted opposite the rest
-      //   port 4  (dropdown) dropdown - runs unless BOTH intake pistons are out
+      //   port 4  (dropdown) dropdown - always runs
       //   port 19 (upper_roller) upper roller - runs ONLY at the collect height
-      //
-      // Dropdown interlock, from the two intake piston toggles (B and Y):
-      //        both extended   (high state)   -> stopped
-      //        high retracted  (middle state) -> runs with the group
-      //        both retracted  (low state)    -> runs with the group
-      bool dropdown_enabled = !(high_intake_extended && middle_intake_extended);
 
       // The upper roller (port 19) only turns while the cascade is AT the
       // collect height.  Anywhere else the fins (ports 1 and 11) and the

@@ -76,9 +76,7 @@ void auton_setup() {
 
   // Pistons to a known starting state.  Change these to whatever the robot
   // should look like on the tile at the start of a match.
-  intake_pos = INTAKE_HIGH;   // keep the selector in step with the pistons
-  high_intake_set(true);
-  middle_intake_set(true);
+  intake_pos_set(INTAKE_HIGH);   // intake UP
   claw_set(CLAW_ON);    // start CLOSED - CLAW_OFF here would open it
   flip_set(FLIP_ON);
 
@@ -136,8 +134,8 @@ void sawp() {
   //
   //   claw_set(true);           // pistons: true = activated
   //   flip_set(false);
-  //   high_intake_set(true);
-  //   middle_intake_set(false);
+  //   press_y();                // intake HIGH <-> MIDDLE, like the Y button
+  //   intake_pos_set(INTAKE_MIDDLE);  // straight to a position
   //
   //   intake_spin(3000, 127);   // all four, 3 s then stops itself
   //   intake_spin(-1, 127);     // -1 = run until stopped

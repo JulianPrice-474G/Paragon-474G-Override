@@ -60,10 +60,12 @@ soft-float archives and breaks the link. Check any `.a` with
 
 Never call `.set_value()` on a solenoid or `.move()` on intake/cascade motors
 directly. A `DigitalOut` cannot be read back, so software mirrors
-(`claw_extended`, `high_intake_extended`, …) are the only record of piston
-state — and the dropdown interlock and the DOWN/LEFT toggles read them.
+(`claw_extended`, `intake_piston_extended`, …) are the only record of piston
+state — and the DOWN/LEFT toggles and the controller readout read them.
 
-- Pistons: `claw_set()`, `flip_set()`, `high_intake_set()`, `middle_intake_set()`
+- Pistons: `claw_set()`, `flip_set()`. The intake is one 25 mm piston on port F
+  (extended = HIGH, retracted = MIDDLE): use `intake_pos_set()` / `press_y()`,
+  which keep `intake_pos` in step. The dropdown motor always runs with the intake.
 - Intake: `intake_spin(ms, speed)` — non-blocking; `ms = -1` runs until
   `intake_spin_stop()`. `fins_spin()` / `fins_set()` drive only the two fins.
   `intake_spin` and `fins_spin` share one worker, so starting one replaces the
@@ -86,14 +88,14 @@ Outside it the UI owns LEFT/RIGHT/A/B for menu navigation.
 |---|---|
 | L1 / L2 | cascade up (stops at `CASCADE_MAX`) / down at 50% |
 | R1 / R2 | intake, both directions |
-| Y / B | intake pistons to MIDDLE / LOW; the same button again returns to HIGH |
+| Y | intake piston HIGH ↔ MIDDLE |
 | DOWN / LEFT | toggle claw / toggle C-flip |
 | RIGHT | cascade macro |
 | LEFT+B held 1 s | run selected auton — only outside driver mode, off a comp switch |
-| A | unused |
+| A / B | unused (B is still half of the LEFT+B auton combo) |
 
 Controller in driver mode: row 1 `p### temps heading` (IMU zeroed on entering driver mode), row 2 commanded piston
-states `C F H M`.
+states `C F I`.
 
 ## Cascade
 
