@@ -27,18 +27,18 @@ extern double CASCADE_MAX;      // L1 stops raising here
 /////
 // CASCADE MOVEMENT - CHANGE THESE
 /////
-constexpr int    CASCADE_MOVE_SPEED   = 90;   // 0-127, how hard it drives to a height
-constexpr double CASCADE_MOVE_TOL     = 5;    // degrees; close enough to call it arrived
-constexpr double CASCADE_MOVE_SLOW    = 50;   // degrees out, start easing off
+constexpr int    CASCADE_MOVE_SPEED   = 127;   // 0-127, how hard it drives to a height
+constexpr double CASCADE_MOVE_TOL     = 3;    // degrees; close enough to call it arrived
+constexpr double CASCADE_MOVE_SLOW    = 127;   // degrees out, start easing off
 constexpr int    CASCADE_MOVE_MIN     = 35;   // floor power - MUST be enough to move a
                                               // loaded cascade, or the approach creeps to a
                                               // halt and the stall guard fires
-constexpr int    CASCADE_MOVE_TIMEOUT = 3000; // ms before a move gives up
+constexpr int    CASCADE_MOVE_TIMEOUT = 10000; // ms before a move gives up
 
 // Going UP the cascade is lifting its own weight, so the eased-off power near
 // the target needs a higher floor.  At CASCADE_MOVE_MIN it stalled a few
 // degrees short of the flip height and never arrived.
-constexpr int    CASCADE_MOVE_MIN_UP  = 55;
+constexpr int    CASCADE_MOVE_MIN_UP  = 127;
 
 // If the cascade stops moving this close to the target, count it as arrived
 // rather than waiting out the whole timeout for the last few degrees.
@@ -49,7 +49,7 @@ constexpr int    CASCADE_CLOSE_STALL_MS = 250;  // stopped this long = arrived
 // and driven back if momentum has carried it outside CASCADE_MOVE_TOL.  Without
 // this a move ends the moment it touches the target and never looks again, so
 // a heavy cascade coasts well past - 60 degrees past 375, measured.
-constexpr int    CASCADE_SETTLE_MS    = 400;  // ms - MAXIMUM time to spend
+constexpr int    CASCADE_SETTLE_MS    = 200;  // ms - MAXIMUM time to spend
                                               //   settling; it leaves as soon
                                               //   as it is steady
 // How long the cascade must stay inside tolerance before the move is called
@@ -61,7 +61,7 @@ constexpr int    CASCADE_SETTLE_POWER = 30;   // gentle correction power
 // is wrong - it is jammed, or the direction constant below is inverted - so the
 // move aborts instead of driving into a hard stop until the timeout expires.
 constexpr double CASCADE_STALL_DEG = 2;
-constexpr int    CASCADE_STALL_MS  = 600;
+constexpr int    CASCADE_STALL_MS  = 2000;
 
 // Set to -1 if positive motor power LOWERS the cascade instead of raising it.
 // Symptom of getting it wrong: the macro immediately stalls and aborts.

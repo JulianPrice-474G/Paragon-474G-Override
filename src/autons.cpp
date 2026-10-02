@@ -201,15 +201,15 @@ drive_arc(120, -25, -127);
 chassis.pid_wait_quick_chain();
 pros::delay(200);
 claw_set(false);
-pros::delay(300);
-cascade_move_wait();   // make sure the move to 240 is done, or this press would cancel it
 macro_press();
+pros::delay(500);
+//cascade_move_wait();   // make sure the move to 240 is done, or this press would cancel it
 press_y();
 intake_spin(3000,127);
 chassis.headingPID.target_set(135);
-chassis.pid_drive_set(28.5_in, 127);
-chassis.pid_wait_until(10_in);
-chassis.pid_speed_max_set(65);
+chassis.pid_drive_set(18_in, 127);
+chassis.pid_wait_until(5_in);
+chassis.pid_speed_max_set(40);
 chassis.pid_wait_quick_chain();
 
 //drive_arc(119,75, 100);
@@ -223,31 +223,33 @@ chassis.pid_wait_until(10_in);                    // halfway
 chassis.pid_speed_max_set(60);   
 chassis.pid_wait_quick_chain();
 chassis.pid_speed_max_set(127);   */
-pros::delay(1000);
-chassis.pid_turn_set(212, 127);
-chassis.pid_wait_quick_chain();
+pros::delay(500);
 macro_press(500); 
-pros::delay(300);
-chassis.pid_drive_set(-10, 127);
+chassis.pid_turn_set(240, 127); 
 chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(-20, 127);
-chassis.pid_wait();
-macro_wait_done();     // the macro must be finished, or the move below is ignored
+chassis.pid_drive_set(-30, 127);
+chassis.pid_wait_quick_chain();
+//macro_wait_done();     // the macro must be finished, or the move below is ignored
 cascade_move_async(385, 127);
 pros::delay(150);
 claw_set(false);
 pros::delay(300);
 macro_press();
 intake_spin(7000,127);
-chassis.pid_drive_set(5, 127);
+chassis.headingPID.target_set(250);
+chassis.pid_drive_set(45, 127);
+chassis.pid_wait_until(35_in);
+chassis.pid_speed_max_set(40);
+chassis.pid_wait_quick_chain();
+/*chassis.pid_drive_set(5, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(255, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_drive_set(15, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_drive_set(20.5, 70);
-chassis.pid_wait_quick_chain();
-pros::delay(700);
+chassis.pid_wait_quick_chain();*/
+pros::delay(500);
 macro_press(350);
 chassis.pid_turn_set(181, 127);
 chassis.pid_wait_quick_chain();
