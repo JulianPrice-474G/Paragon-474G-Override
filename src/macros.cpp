@@ -14,9 +14,15 @@ static bool        _failed      = false;  // last run ended STALLED or TIMEOUT
 // out height.
 static double      _phase2_end  = -1;
 
+// A macro_press() with a delay_time, waiting to fire.  See macro_press().
+static volatile bool     _pend       = false;
+static volatile double   _pend_end   = -1;
+static volatile uint32_t _pend_at    = 0;
+
 bool macro_running() { return _running; }
 bool macro_failed()  { return _failed; }
-void macro_cancel()  { if (_running) _cancel = true; }
+void macro_press_pending_clear() { _pend = false; }
+void macro_cancel()  { _pend = false; if (_running) _cancel = true; }
 
 const char* macro_status_text() {
   static char buf[20];
@@ -409,7 +415,7 @@ bool cascade_move_wait(int timeout_ms) {
 // cascade_move_async() or an unfinished macro step) is cancelled and the macro
 // starts straight away.  So a route can fire off a background move and press
 // the macro later without first checking the move has finished.
-void macro_press(double end_height) {
+static void macro_press_now(double end_height) {
   if (_running) {
     _cancel = true;
     // Every loop that drives the cascade checks _cancel each tick, so this is
@@ -424,9 +430,35 @@ void macro_press(double end_height) {
   macro_start();
 }
 
+// Fires a delayed press when its time comes.  Its own long-lived task, so the
+// takeover wait in macro_press_now() never holds up the auton.
+static void macro_delay_task(void*) {
+  while (true) {
+    if (_pend && pros::millis() >= _pend_at) {
+      _pend = false;
+      macro_press_now(_pend_end);
+    }
+    pros::delay(ez::util::DELAY_TIME);
+  }
+}
+
+void macro_press(double end_height, int delay_time) {
+  _pend = false;   // a new press replaces one still waiting
+
+  if (delay_time <= 0) {
+    macro_press_now(end_height);
+    return;
+  }
+
+  static pros::Task worker(macro_delay_task, nullptr, "Macro Delay");
+  _pend_end = end_height;
+  _pend_at  = pros::millis() + delay_time;
+  _pend     = true;
+}
+
 bool macro_wait_done(int timeout_ms) {
   const uint32_t start = pros::millis();
-  while (_running) {
+  while (_running || _pend) {
     if ((int)(pros::millis() - start) > timeout_ms) return false;
     pros::delay(ez::util::DELAY_TIME);
   }

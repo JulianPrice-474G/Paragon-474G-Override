@@ -595,6 +595,7 @@ void disabled() {
   // Vent everything the moment the robot is disabled, so it is not left with
   // pistons held out between matches.
   release_all_pistons();
+  macro_press_pending_clear();
 }
 
 /**
@@ -742,6 +743,7 @@ void ez_template_extras() {
 
 void opcontrol() {
   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
+  macro_press_pending_clear();   // a delayed press left over from the auton
 
   // Only ONE cascade motor holds - see cascade_apply_hold_motor() above for why.
   // Re-applied here so it survives an auton test, which changes brake modes.

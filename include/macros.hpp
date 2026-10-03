@@ -190,5 +190,20 @@ bool cascade_move_wait(int timeout_ms = 4000);
 // If anything is already driving the cascade - a cascade_move_async(), or a
 // macro step that hasn't finished - macro_press() cancels it and starts the
 // macro immediately.  (RIGHT in driver control still just cancels.)
-void macro_press(double end_height = -1);
+//
+// delay_time (ms) presses the macro that long from now, WITHOUT blocking - the
+// auton carries straight on, and drives, intakes and pistons are not held up:
+//
+//   macro_press(-1, 300);       // press in 300 ms, stay at the out height
+//   macro_press(500, 300);      // press in 300 ms, finish at 500
+//   chassis.pid_drive_set(24_in, DRIVE_SPEED);   // drives meanwhile
+//
+// The takeover above happens when the delay ends, not when you call it.
+// macro_wait_done() also waits out the delay.  Another macro_press() before it
+// fires replaces it; macro_cancel() drops it.
+void macro_press(double end_height = -1, int delay_time = 0);
 bool macro_wait_done(int timeout_ms = 8000);
+
+// Drops a delayed press that has not fired yet.  Called from disabled() and
+// at the start of opcontrol(), so one left over from an auton never fires.
+void macro_press_pending_clear();
