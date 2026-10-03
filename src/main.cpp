@@ -107,16 +107,16 @@ constexpr bool PISTON_RETRACTED = false;
 // power-on state, so it is already up before opcontrol runs.
 pros::adi::DigitalOut intake_piston(INTAKE_PISTON_PORT, PISTON_EXTENDED);
 
-// Claw and C-flip also start EXTENDED.  The second constructor argument is the
-// power-on state, so they are out before the match starts.
+// Claw starts EXTENDED and the C-flip starts FLIP_ON.  The second constructor
+// argument is the power-on state, so they are set before the match starts.
 pros::adi::DigitalOut claw(CLAW_PORT,     PISTON_EXTENDED);
-pros::adi::DigitalOut c_flip(C_FLIP_PORT, PISTON_RETRACTED);
+pros::adi::DigitalOut c_flip(C_FLIP_PORT, FLIP_ON);
 
 // Software mirror of what each solenoid was last told to do.  A DigitalOut
 // cannot be read back, so this is the only record of piston state.
 bool intake_piston_extended = true;
 bool claw_extended          = true;
-bool c_flip_extended        = false;
+bool c_flip_extended        = FLIP_ON;
 
 // Where the intake is.  One 25 mm piston moves it between the two positions.
 //   HIGH   piston extended - the resting position
