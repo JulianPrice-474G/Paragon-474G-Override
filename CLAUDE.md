@@ -70,6 +70,10 @@ state — and the DOWN/LEFT toggles and the controller readout read them.
   `intake_spin_stop()`. `fins_spin()` / `fins_set()` drive only the two fins.
   `intake_spin` and `fins_spin` share one worker, so starting one replaces the
   other. `intake_set(power, roller)` is the primitive underneath.
+- Fins: only the "Fin Sync" task writes `fin_1`/`fin_2`. `fins_set()` records a
+  power; the task slows whichever fin is ahead of the positions taken by
+  `fins_sync_zero()` (start of every auton, and power-on). `FIN_SYNC_KP/MAX`
+  in `main.cpp`.
 - Cascade: `cascade_set(power)`; read position with `cascade_position()`
   (rotation sensor, converted to degrees, falls back to the motor encoder).
 - `drive_arc(deg, left, right)` — open-loop curve to an absolute heading. Safe to

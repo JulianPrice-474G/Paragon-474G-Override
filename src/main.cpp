@@ -6,6 +6,9 @@
 #include "main.h"
 #include "ui_engine.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 // Forward declarations — defined in src/user_screen.cpp
 void build_screens();
 int  get_selected_auton();
@@ -39,6 +42,11 @@ constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can as
 
 // How close to the target heading drive_arc() calls it arrived.
 constexpr double ARC_TOL_DEG = 2;
+
+// Fin sync - keeps the two fins at the same relative position while they spin.
+// The fin that gets ahead is slowed by KP power per degree, up to MAX.
+constexpr double FIN_SYNC_KP  = 1.0;
+constexpr int    FIN_SYNC_MAX = 40;
 
 /////
 // CASCADE HEIGHTS - CHANGE THESE
@@ -187,8 +195,7 @@ void intake_piston_set(bool on) { intake_piston_extended = on; intake_piston.set
 // what driver control does outside the collect height; everything else leaves
 // it true so all FOUR motors turn.
 void intake_set(int power, bool roller) {
-  fin_1.move(-power);
-  fin_2.move(power);                                  // mounted opposite
+  fins_set(power);
   dropdown.move(-power);
   upper_roller.move(roller ? -power : 0);
 }
@@ -347,12 +354,54 @@ void upper_roller_set(int power) { upper_roller.move(-power); }
 
 void dropdown_set(int power) { dropdown.move(-power); }
 
-// Just the two fins.  fin_2 is mounted opposite, so it is always commanded the
-// other way round - positive runs them the same way R1 does.  The dropdown and
-// the upper roller are left alone.
+// Just the two fins, kept in step.  fin_2 is mounted opposite, so it is always
+// commanded the other way round - positive runs them the same way R1 does.  The
+// dropdown and the upper roller are left alone.
+//
+// fins_set() only records the power.  One long-lived task writes both motors
+// every tick, slowing whichever fin has got ahead of the positions recorded by
+// fins_sync_zero(), so they stay at the same relative position.  Nothing else
+// may write the fin motors, or it would fight this task.
+static volatile int _fin_power = 0;
+static double _fin1_zero = 0;
+static double _fin2_zero = 0;
+
+void fins_sync_zero() {
+  _fin1_zero = fin_1.get_position();
+  _fin2_zero = fin_2.get_position();
+}
+
+static void fin_sync_task(void*) {
+  while (true) {
+    int p = _fin_power;
+    if (p == 0) {
+      fin_1.move(0);
+      fin_2.move(0);
+    } else {
+      double a = fin_1.get_position();
+      double b = fin_2.get_position();
+      double corr = 0;
+      // A missing motor reads PROS_ERR_F - test for good values, then run
+      // without correction rather than on garbage.
+      if (std::isfinite(a) && std::isfinite(b)) {
+        // Progress in the R1 direction.  fin_1 runs negative for R1.
+        double err = -(a - _fin1_zero) - (b - _fin2_zero);   // + = fin_1 ahead
+        corr = std::clamp(err * FIN_SYNC_KP, (double)-FIN_SYNC_MAX, (double)FIN_SYNC_MAX);
+      }
+      // Works in both directions: the one ahead gets less power, the one behind
+      // more (capped at 127, so near full speed the leader does the waiting).
+      int p1 = std::clamp((int)std::lround(p - corr), -127, 127);
+      int p2 = std::clamp((int)std::lround(p + corr), -127, 127);
+      fin_1.move(-p1);
+      fin_2.move(p2);
+    }
+    pros::delay(ez::util::DELAY_TIME);
+  }
+}
+
 void fins_set(int power) {
-  fin_1.move(-power);
-  fin_2.move(power);
+  static pros::Task worker(fin_sync_task, nullptr, "Fin Sync");
+  _fin_power = power;
 }
 
 // Timed, non-blocking spins.  Each call returns immediately and a background
@@ -576,6 +625,10 @@ void initialize() {
   // initial state, so the solenoid actually receives it.
   intake_pos_set(INTAKE_HIGH);
 
+  // Fin alignment reference at power-on, for driver practice without an auton.
+  // autonomous() takes it again.
+  fins_sync_zero();
+
   EngineInit();
   build_screens();  // sets up brain screen + initial controller display
   CtrlFlush();
@@ -628,6 +681,9 @@ void autonomous() {
   chassis.drive_sensor_reset();
   chassis.odom_xyt_set(0_in, 0_in, 0_deg);
   chassis.drive_brake_set(MOTOR_BRAKE_HOLD);
+
+  // The fins' positions now are the alignment they are held to while spinning.
+  fins_sync_zero();
 
   // The number in each case must match the auton_idx you gave that
   // ButtonAdd in build_screens().

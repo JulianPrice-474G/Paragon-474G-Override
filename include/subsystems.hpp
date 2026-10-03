@@ -115,7 +115,12 @@ bool drive_for_time_wait(int timeout_ms = 5000);  // block until the push ends
 // Drive one part of the intake directly - it keeps running until you set it
 // again.  Positive runs them the way R1 does; fin_2 is commanded opposite
 // automatically.
-void fins_set(int power);      // fin_1 + fin_2
+void fins_set(int power);      // fin_1 + fin_2, kept in step
+
+// Records where both fins are now as their alignment.  While they spin, the
+// one that gets ahead of this is slowed until they match.  Called at the start
+// of every auton and at power-on - align the fins by hand before then.
+void fins_sync_zero();
 void upper_roller_set(int power);    // port 19, the upper roller
 void dropdown_set(int power);  // port 4
 
