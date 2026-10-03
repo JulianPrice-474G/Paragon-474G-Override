@@ -56,10 +56,10 @@ constexpr double FIN_JAM_NM       = 0.4;   // Motor::get_torque(), in Nm
 constexpr int    FIN_JAM_MS       = 50;
 constexpr int    FIN_JAM_GRACE_MS = 300;
 
-// TESTING: true also runs the jam guard in driver control.  After a jam the
-// fins stay stopped until you release and press R1 / R2 / A again.
-// Set back to false once it is tested.
-constexpr bool   FIN_JAM_IN_DRIVER = true;
+// true also runs the jam guard in driver control, for testing it.  After a
+// jam the fins stay stopped until you release and press R1 / R2 / A again.
+// Tested and working - leave false so it only runs in autons.
+constexpr bool   FIN_JAM_IN_DRIVER = false;
 
 /////
 // CASCADE HEIGHTS - CHANGE THESE
