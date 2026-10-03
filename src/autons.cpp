@@ -222,9 +222,9 @@ pros::delay(300);
 //Second Pin
 macro_press();
 intake_spin(7000,127);
-chassis.headingPID.target_set(250);
-chassis.pid_drive_set(45, 127);
-chassis.pid_wait_until(15);
+chassis.headingPID.target_set(245);
+chassis.pid_drive_set(38, 127);
+chassis.pid_wait_until(20);
 chassis.pid_speed_max_set(90);
 chassis.pid_wait_quick_chain();
 pros::delay(500);
