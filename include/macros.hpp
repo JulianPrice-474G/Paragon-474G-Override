@@ -80,11 +80,11 @@ constexpr double CASCADE_COLLECT_TOL = 12;
 // turns out to work the other way round on your robot.
 // The claw and the flip piston are plumbed differently, so each gets its own
 // pair.  Swap a pair if that piston works the other way round on the robot.
-constexpr bool CLAW_ON   = true;    // claw gripping
-constexpr bool CLAW_OFF  = false;   // claw open
+constexpr bool CLAW_ON   = false;   // claw gripping
+constexpr bool CLAW_OFF  = true;    // claw open
 
-constexpr bool FLIP_ON   = true;    // flip piston activated
-constexpr bool FLIP_OFF  = false;   // flip piston released
+constexpr bool FLIP_ON   = false;   // flip piston activated
+constexpr bool FLIP_OFF  = true;    // flip piston released
 
 // Time given to a solenoid to finish moving before the cascade starts again.
 constexpr int MACRO_PISTON_SETTLE = 300;  // ms
