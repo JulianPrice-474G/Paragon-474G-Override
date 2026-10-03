@@ -63,7 +63,7 @@ int CASCADE_AFTER_FLIP_MS = 200;
 
 // Power for downward macro moves.  At the same power the cascade was slower
 // going down than up, so down moves get their own number.  80% of full.
-int CASCADE_DOWN_SPEED = 127 * 80 / 100;
+int CASCADE_DOWN_SPEED = 127 * 95 / 100;
 
 /////
 // CASCADE HOLD (currently unused - kept for the macro work)

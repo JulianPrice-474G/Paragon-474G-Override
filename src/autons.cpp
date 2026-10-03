@@ -197,11 +197,11 @@ chassis.pid_drive_set(-4_in, 127);
 chassis.pid_wait_quick_chain();
 drive_arc(120, -25, -127);
 chassis.pid_wait_quick_chain();
-pros::delay(200);
+pros::delay(300);
 claw_set(CLAW_OFF);
 macro_press();
-pros::delay(500);
-//cascade_move_wait();   // make sure the move to 240 is done, or this press would cancel it
+pros::delay(400);
+// First Pin
 press_y();
 intake_spin(3000,127);
 chassis.headingPID.target_set(135);
@@ -209,44 +209,24 @@ chassis.pid_drive_set(18_in, 127);
 chassis.pid_wait_until(5_in);
 chassis.pid_speed_max_set(40);
 chassis.pid_wait_quick_chain();
-
-//drive_arc(119,75, 100);
-//chassis.pid_wait_quick_chain();
-/*chassis.pid_drive_set(5,127);
-chassis.pid_wait_until(3_in);
-chassis.pid_turn_set(142,127);
-chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(24,127);
-chassis.pid_wait_until(10_in);                    // halfway
-chassis.pid_speed_max_set(60);   
-chassis.pid_wait_quick_chain();
-chassis.pid_speed_max_set(127);   */
 pros::delay(500);
-macro_press(500); 
-chassis.pid_turn_set(240, 127); 
+macro_press(500, 200); 
+chassis.pid_turn_set(237, 127); 
 chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(-30, 127);
+chassis.pid_drive_set(-26, 127);
 chassis.pid_wait_quick_chain();
-//macro_wait_done();     // the macro must be finished, or the move below is ignored
-cascade_move_async(385, 127);
+cascade_move_async(395, 127);
 pros::delay(150);
 claw_set(CLAW_OFF);
 pros::delay(300);
+//Second Pin
 macro_press();
 intake_spin(7000,127);
 chassis.headingPID.target_set(250);
 chassis.pid_drive_set(45, 127);
-chassis.pid_wait_until(35_in);
-chassis.pid_speed_max_set(40);
+chassis.pid_wait_until(15);
+chassis.pid_speed_max_set(90);
 chassis.pid_wait_quick_chain();
-/*chassis.pid_drive_set(5, 127);
-chassis.pid_wait_quick_chain();
-chassis.pid_turn_set(255, 127);
-chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(15, 127);
-chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(20.5, 70);
-chassis.pid_wait_quick_chain();*/
 pros::delay(500);
 macro_press(350);
 chassis.pid_turn_set(181, 127);
@@ -257,6 +237,7 @@ cascade_move_async(300, 127);
 pros::delay(150);
 claw_set(CLAW_OFF);
 pros::delay(300);
+//Third Pin
 macro_press();
 chassis.pid_drive_set(12, 127);
 chassis.pid_wait_quick_chain();
@@ -277,6 +258,7 @@ cascade_move_async(300, 127);
 pros::delay(150);
 claw_set(CLAW_OFF);
 pros::delay(300);
+//Fourth Pin
 macro_press();
 intake_spin(7000,127);
 chassis.pid_drive_set(7, 127);
