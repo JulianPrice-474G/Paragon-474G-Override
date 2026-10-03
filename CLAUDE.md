@@ -74,6 +74,10 @@ state — and the DOWN/LEFT toggles and the controller readout read them.
   power; the task slows whichever fin is ahead of the positions taken by
   `fins_sync_zero()` (start of every auton, and power-on). `FIN_SYNC_KP/MAX`
   in `main.cpp`.
+- Fin jam guard, **autons only** (`fins_jam_guard()`, on in `autonomous()`,
+  off in `opcontrol()`/`disabled()`): `FIN_JAM_MA` for `FIN_JAM_MS` stops the
+  fins alone until the next spin command. The spin worker writes through
+  `fins_write()`, which is not a command and so does not clear a jam.
 - Cascade: `cascade_set(power)`; read position with `cascade_position()`
   (rotation sensor, converted to degrees, falls back to the motor encoder).
 - `drive_arc(deg, left, right)` — open-loop curve to an absolute heading. Safe to

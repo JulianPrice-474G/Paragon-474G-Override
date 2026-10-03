@@ -48,6 +48,14 @@ constexpr double ARC_TOL_DEG = 2;
 constexpr double FIN_SYNC_KP  = 1.0;
 constexpr int    FIN_SYNC_MAX = 40;
 
+// Fin jam guard - AUTONS ONLY.  If either fin draws FIN_JAM_MA or more for
+// FIN_JAM_MS, both fins stop until the next intake/fins spin command.  The
+// first FIN_JAM_GRACE_MS of every spin is ignored - spinning up draws a lot.
+// Only the fins stop; the dropdown and upper roller carry on.
+constexpr int FIN_JAM_MA       = 2000;   // V5 motors top out around 2500
+constexpr int FIN_JAM_MS       = 150;
+constexpr int FIN_JAM_GRACE_MS = 300;
+
 /////
 // CASCADE HEIGHTS - CHANGE THESE
 /////
@@ -366,15 +374,49 @@ static volatile int _fin_power = 0;
 static double _fin1_zero = 0;
 static double _fin2_zero = 0;
 
+// Jam guard state.  _fin_cmd_ms is when the current spin was commanded, for
+// the grace period.  _fins_jammed holds the fins stopped until fins_command().
+static volatile bool     _fins_auto_guard = false;   // true only inside autonomous()
+static volatile bool     _fins_jammed     = false;
+static volatile uint32_t _fin_cmd_ms      = 0;
+
+// A new spin command: clears a jam and restarts the grace period.
+static void fins_command() {
+  _fins_jammed = false;
+  _fin_cmd_ms  = pros::millis();
+}
+
+// True if either fin is drawing jam-level current.  An unplugged motor reads
+// PROS_ERR, which must not count as a jam.
+static bool fins_overloaded() {
+  int32_t c1 = fin_1.get_current_draw();
+  int32_t c2 = fin_2.get_current_draw();
+  return (c1 != PROS_ERR && c1 >= FIN_JAM_MA) ||
+         (c2 != PROS_ERR && c2 >= FIN_JAM_MA);
+}
+
 void fins_sync_zero() {
   _fin1_zero = fin_1.get_position();
   _fin2_zero = fin_2.get_position();
 }
 
 static void fin_sync_task(void*) {
+  uint32_t overload_since = 0;   // 0 = not overloaded
   while (true) {
     int p = _fin_power;
-    if (p == 0) {
+
+    // Jam guard, autons only.  Watches while the fins are commanded to spin
+    // and past the grace period; trips after FIN_JAM_MS of steady overload.
+    uint32_t now = pros::millis();
+    if (_fins_auto_guard && !_fins_jammed && p != 0 &&
+        now - _fin_cmd_ms >= (uint32_t)FIN_JAM_GRACE_MS && fins_overloaded()) {
+      if (overload_since == 0) overload_since = now;
+      if (now - overload_since >= (uint32_t)FIN_JAM_MS) _fins_jammed = true;
+    } else {
+      overload_since = 0;
+    }
+
+    if (p == 0 || _fins_jammed) {
       fin_1.move(0);
       fin_2.move(0);
     } else {
@@ -399,10 +441,24 @@ static void fin_sync_task(void*) {
   }
 }
 
-void fins_set(int power) {
+// Per-tick write from the spin worker.  Not a new command, so it does not
+// clear a jam - but a change of power restarts the grace period.
+static void fins_write(int power) {
   static pros::Task worker(fin_sync_task, nullptr, "Fin Sync");
+  if (power != _fin_power) _fin_cmd_ms = pros::millis();
   _fin_power = power;
 }
+
+void fins_set(int power) {
+  fins_command();
+  fins_write(power);
+}
+
+void fins_jam_guard(bool on) {
+  _fins_auto_guard = on;
+  if (!on) _fins_jammed = false;
+}
+bool fins_jammed() { return _fins_jammed; }
 
 // Timed, non-blocking spins.  Each call returns immediately and a background
 // task drives the motors, so the next drive or turn starts straight away:
@@ -450,7 +506,7 @@ static void intake_spin_task(void*) {
     // everything stops - so the motors are actually zeroed.  After that, stop
     // writing entirely, or this would fight opcontrol every tick.
     if (driving || was_driving) {
-      fins_set(_ch_power(_ch_fins));
+      fins_write(_ch_power(_ch_fins));
       upper_roller_set(_ch_power(_ch_roller));
       dropdown_set(_ch_power(_ch_drop));
     }
@@ -463,6 +519,8 @@ static void _ch_start(volatile _SpinCh& c, int ms, int speed) {
   // One worker, created on first use and never destroyed.  pros::Task has no
   // destructor, so spawning one per call would leak a task every time.
   static pros::Task worker(intake_spin_task, nullptr, "Intake Spin");
+
+  if (&c == &_ch_fins) fins_command();   // a new fins spin clears a jam
 
   if (ms == 0 || speed == 0) { c.active = false; return; }
   c.speed    = speed;
@@ -649,6 +707,7 @@ void disabled() {
   // pistons held out between matches.
   release_all_pistons();
   macro_press_pending_clear();
+  fins_jam_guard(false);
 }
 
 /**
@@ -684,6 +743,7 @@ void autonomous() {
 
   // The fins' positions now are the alignment they are held to while spinning.
   fins_sync_zero();
+  fins_jam_guard(true);   // fins stop on a jam - autons only
 
   // The number in each case must match the auton_idx you gave that
   // ButtonAdd in build_screens().
@@ -695,6 +755,10 @@ void autonomous() {
     case 4: auto_5();  break;
     default:                           break;   // nothing selected
   }
+
+  // Reached when a LEFT+B test run finishes.  In a match the auton task is
+  // killed instead, and opcontrol() / disabled() switch the guard off.
+  fins_jam_guard(false);
 }
 // NOTE: EZ-Template's stock main.cpp defines screen_print_tracker() and
 // ez_screen_task() here, plus the global `pros::Task ezScreenTask(ez_screen_task);`.
@@ -800,6 +864,7 @@ void ez_template_extras() {
 void opcontrol() {
   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
   macro_press_pending_clear();   // a delayed press left over from the auton
+  fins_jam_guard(false);         // jam guard is autons only
 
   // Only ONE cascade motor holds - see cascade_apply_hold_motor() above for why.
   // Re-applied here so it survives an auton test, which changes brake modes.

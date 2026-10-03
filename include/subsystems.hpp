@@ -121,6 +121,13 @@ void fins_set(int power);      // fin_1 + fin_2, kept in step
 // one that gets ahead of this is slowed until they match.  Called at the start
 // of every auton and at power-on - align the fins by hand before then.
 void fins_sync_zero();
+
+// Fin jam guard - AUTONS ONLY.  autonomous() turns it on and opcontrol() /
+// disabled() turn it off.  If a fin feels a big load (FIN_JAM_MA in main.cpp)
+// the fins stop - only the fins - until the next intake_spin(), fins_spin(),
+// fins_set() or intake_set().  fins_jammed() is true while they are stopped.
+void fins_jam_guard(bool on);
+bool fins_jammed();
 void upper_roller_set(int power);    // port 19, the upper roller
 void dropdown_set(int power);  // port 4
 
