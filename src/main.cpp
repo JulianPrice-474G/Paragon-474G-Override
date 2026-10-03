@@ -56,6 +56,11 @@ constexpr double FIN_JAM_NM       = 0.4;   // Motor::get_torque(), in Nm
 constexpr int    FIN_JAM_MS       = 50;
 constexpr int    FIN_JAM_GRACE_MS = 300;
 
+// TESTING: true also runs the jam guard in driver control.  After a jam the
+// fins stay stopped until you release and press R1 / R2 / A again.
+// Set back to false once it is tested.
+constexpr bool   FIN_JAM_IN_DRIVER = true;
+
 /////
 // CASCADE HEIGHTS - CHANGE THESE
 /////
@@ -65,7 +70,7 @@ constexpr int    FIN_JAM_GRACE_MS = 300;
 double CASCADE_LOW     = 190;   // bottom / travel
 double CASCADE_COLLECT = 300;   // where the macro parks, waiting for press 2
 double CASCADE_FLIP    = 360;   // press 1 rises to here first
-double CASCADE_OUT     = 430;   // press 2 rises to here
+double CASCADE_OUT     = 450;   // press 2 rises to here
 int CASCADE_DROP_DELAY_MS = 350;  // press 1: ms after claw+flip drop before lowering to collect
 double CASCADE_MAX     = 1000;  // L1 won't raise past this
 
@@ -702,6 +707,11 @@ void initialize() {
  * the VEX Competition Switch, following either autonomous or opcontrol. When
  * the robot is enabled, this task will exit.
  */
+// Last intake command the R1/R2/A block in opcontrol() sent - see there.
+// INT32_MIN = nothing sent yet, so the next tick sends.
+static int  drv_intake_power  = INT32_MIN;
+static bool drv_intake_roller = false;
+
 void disabled() {
   // Vent everything the moment the robot is disabled, so it is not left with
   // pistons held out between matches.
@@ -758,7 +768,7 @@ void autonomous() {
 
   // Reached when a LEFT+B test run finishes.  In a match the auton task is
   // killed instead, and opcontrol() / disabled() switch the guard off.
-  fins_jam_guard(false);
+  fins_jam_guard(FIN_JAM_IN_DRIVER);
 }
 // NOTE: EZ-Template's stock main.cpp defines screen_print_tracker() and
 // ez_screen_task() here, plus the global `pros::Task ezScreenTask(ez_screen_task);`.
@@ -834,6 +844,7 @@ void ez_template_extras() {
       pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
       autonomous();
       chassis.drive_brake_set(preference);
+      drv_intake_power = INT32_MIN;   // the auton drove the intake - resend from the buttons
     }
 
     // Allow PID Tuner to iterate
@@ -864,7 +875,7 @@ void ez_template_extras() {
 void opcontrol() {
   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
   macro_press_pending_clear();   // a delayed press left over from the auton
-  fins_jam_guard(false);         // jam guard is autons only
+  fins_jam_guard(FIN_JAM_IN_DRIVER);   // autons only, unless testing
 
   // Only ONE cascade motor holds - see cascade_apply_hold_motor() above for why.
   // Re-applied here so it survives an auton test, which changes brake modes.
@@ -928,16 +939,24 @@ void opcontrol() {
       // Skipped while the macro drives the intake itself - otherwise the else
       // branch below writes zero to these motors every tick and the macro's
       // intake never actually spins.
+      // intake_set() is only called when what the buttons ask for CHANGES.
+      // Each call is a new command to the fin jam guard and clears a jam, so
+      // calling it every tick would undo a jam the moment it tripped.  The
+      // motors keep their last command in between.
       if (macro_owns_intake() || intake_spin_active()) {
         // the macro or a timed intake_spin() owns the intake
-      } else if (master.get_digital(DIGITAL_R2)) {
-        intake_set(-R_SPEED, roller_enabled);
-      } else if (master.get_digital(DIGITAL_R1)) {
-        intake_set(R_SPEED, roller_enabled);
-      } else if (master.get_digital(DIGITAL_A)) {
-        intake_set(-R_SPEED, true);   // all four, roller too, any cascade height
+        drv_intake_power = INT32_MIN;   // resend once it hands the intake back
       } else {
-        intake_set(0);
+        int  power  = 0;
+        bool roller = true;
+        if      (master.get_digital(DIGITAL_R2)) { power = -R_SPEED; roller = roller_enabled; }
+        else if (master.get_digital(DIGITAL_R1)) { power =  R_SPEED; roller = roller_enabled; }
+        else if (master.get_digital(DIGITAL_A))  { power = -R_SPEED; }   // all four, any height
+        if (power != drv_intake_power || roller != drv_intake_roller) {
+          intake_set(power, roller);
+          drv_intake_power  = power;
+          drv_intake_roller = roller;
+        }
       }
 
       // L1 / L2 pair - two motors, always opposite each other
