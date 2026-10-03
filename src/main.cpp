@@ -48,13 +48,13 @@ constexpr double ARC_TOL_DEG = 2;
 constexpr double FIN_SYNC_KP  = 1.0;
 constexpr int    FIN_SYNC_MAX = 40;
 
-// Fin jam guard - AUTONS ONLY.  If either fin draws FIN_JAM_MA or more for
-// FIN_JAM_MS, both fins stop until the next intake/fins spin command.  The
-// first FIN_JAM_GRACE_MS of every spin is ignored - spinning up draws a lot.
-// Only the fins stop; the dropdown and upper roller carry on.
-constexpr int FIN_JAM_MA       = 2000;   // V5 motors top out around 2500
-constexpr int FIN_JAM_MS       = 150;
-constexpr int FIN_JAM_GRACE_MS = 300;
+// Fin jam guard - AUTONS ONLY.  If either fin feels FIN_JAM_NM of torque or
+// more for FIN_JAM_MS, both fins stop until the next intake/fins spin command.
+// The first FIN_JAM_GRACE_MS of every spin is ignored - spinning up loads the
+// motors.  Only the fins stop; the dropdown and upper roller carry on.
+constexpr double FIN_JAM_NM       = 0.4;   // Motor::get_torque(), in Nm
+constexpr int    FIN_JAM_MS       = 150;
+constexpr int    FIN_JAM_GRACE_MS = 300;
 
 /////
 // CASCADE HEIGHTS - CHANGE THESE
@@ -386,13 +386,13 @@ static void fins_command() {
   _fin_cmd_ms  = pros::millis();
 }
 
-// True if either fin is drawing jam-level current.  An unplugged motor reads
-// PROS_ERR, which must not count as a jam.
+// True if either fin feels jam-level torque.  An unplugged motor reads
+// PROS_ERR_F, which must not count as a jam - test for a good value.
 static bool fins_overloaded() {
-  int32_t c1 = fin_1.get_current_draw();
-  int32_t c2 = fin_2.get_current_draw();
-  return (c1 != PROS_ERR && c1 >= FIN_JAM_MA) ||
-         (c2 != PROS_ERR && c2 >= FIN_JAM_MA);
+  double t1 = fin_1.get_torque();
+  double t2 = fin_2.get_torque();
+  return (std::isfinite(t1) && std::fabs(t1) >= FIN_JAM_NM) ||
+         (std::isfinite(t2) && std::fabs(t2) >= FIN_JAM_NM);
 }
 
 void fins_sync_zero() {
