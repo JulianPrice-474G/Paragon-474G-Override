@@ -853,6 +853,7 @@ void opcontrol() {
       //   port 11 (fin_2) fin      - always runs, mounted opposite the rest
       //   port 4  (dropdown) dropdown - always runs
       //   port 19 (upper_roller) upper roller - runs ONLY at the collect height
+      // A runs all four the R2 way, upper roller included, at any height.
 
       // The upper roller (port 19) only turns while the cascade is AT the
       // collect height.  Anywhere else the fins (ports 1 and 11) and the
@@ -868,6 +869,8 @@ void opcontrol() {
         intake_set(-R_SPEED, roller_enabled);
       } else if (master.get_digital(DIGITAL_R1)) {
         intake_set(R_SPEED, roller_enabled);
+      } else if (master.get_digital(DIGITAL_A)) {
+        intake_set(-R_SPEED, true);   // all four, roller too, any cascade height
       } else {
         intake_set(0);
       }
