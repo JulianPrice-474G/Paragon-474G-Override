@@ -53,7 +53,7 @@ constexpr int    FIN_SYNC_MAX = 40;
 // The first FIN_JAM_GRACE_MS of every spin is ignored - spinning up loads the
 // motors.  Only the fins stop; the dropdown and upper roller carry on.
 constexpr double FIN_JAM_NM       = 0.4;   // Motor::get_torque(), in Nm
-constexpr int    FIN_JAM_MS       = 150;
+constexpr int    FIN_JAM_MS       = 50;
 constexpr int    FIN_JAM_GRACE_MS = 300;
 
 /////
