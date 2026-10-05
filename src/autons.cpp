@@ -204,7 +204,7 @@ pros::delay(500);
 // First Pin
 press_y();
 intake_spin(3000,127);
-chassis.headingPID.target_set(132.5);
+  // intake_spin(3000,127);
 chassis.pid_drive_set(16.5_in, 127);
 chassis.pid_wait_until(5_in);
 chassis.pid_speed_max_set(30);
