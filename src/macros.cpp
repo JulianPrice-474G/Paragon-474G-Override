@@ -178,10 +178,9 @@ bool macro_owns_intake() { return _intake_owned; }
 // carry on in the normal direction.
 static void intake_run(bool on, bool roller_back = false) {
   int p = on ? MACRO_INTAKE_SPEED : 0;
-  fin_1.move(-p);
+  fins_set(p);
   dropdown.move(-p);
   upper_roller.move(roller_back ? p : -p);
-  fin_2.move(p);
 }
 
 

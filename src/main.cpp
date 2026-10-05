@@ -6,6 +6,9 @@
 #include "main.h"
 #include "ui_engine.hpp"
 
+#include <algorithm>
+#include <cmath>
+
 // Forward declarations — defined in src/user_screen.cpp
 void build_screens();
 int  get_selected_auton();
@@ -39,6 +42,24 @@ constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can as
 
 // How close to the target heading drive_arc() calls it arrived.
 constexpr double ARC_TOL_DEG = 2;
+
+// Fin sync - keeps the two fins at the same relative position while they spin.
+// The fin that gets ahead is slowed by KP power per degree, up to MAX.
+constexpr double FIN_SYNC_KP  = 1.0;
+constexpr int    FIN_SYNC_MAX = 40;
+
+// Fin jam guard - AUTONS ONLY.  If either fin feels FIN_JAM_NM of torque or
+// more for FIN_JAM_MS, both fins stop until the next intake/fins spin command.
+// The first FIN_JAM_GRACE_MS of every spin is ignored - spinning up loads the
+// motors.  Only the fins stop; the dropdown and upper roller carry on.
+constexpr double FIN_JAM_NM       = 0.4;   // Motor::get_torque(), in Nm
+constexpr int    FIN_JAM_MS       = 50;
+constexpr int    FIN_JAM_GRACE_MS = 300;
+
+// true also runs the jam guard in driver control, for testing it.  After a
+// jam the fins stay stopped until you release and press R1 / R2 / A again.
+// Tested and working - leave false so it only runs in autons.
+constexpr bool   FIN_JAM_IN_DRIVER = false;
 
 /////
 // CASCADE HEIGHTS - CHANGE THESE
@@ -187,8 +208,7 @@ void intake_piston_set(bool on) { intake_piston_extended = on; intake_piston.set
 // what driver control does outside the collect height; everything else leaves
 // it true so all FOUR motors turn.
 void intake_set(int power, bool roller) {
-  fin_1.move(-power);
-  fin_2.move(power);                                  // mounted opposite
+  fins_set(power);
   dropdown.move(-power);
   upper_roller.move(roller ? -power : 0);
 }
@@ -347,13 +367,103 @@ void upper_roller_set(int power) { upper_roller.move(-power); }
 
 void dropdown_set(int power) { dropdown.move(-power); }
 
-// Just the two fins.  fin_2 is mounted opposite, so it is always commanded the
-// other way round - positive runs them the same way R1 does.  The dropdown and
-// the upper roller are left alone.
-void fins_set(int power) {
-  fin_1.move(-power);
-  fin_2.move(power);
+// Just the two fins, kept in step.  fin_2 is mounted opposite, so it is always
+// commanded the other way round - positive runs them the same way R1 does.  The
+// dropdown and the upper roller are left alone.
+//
+// fins_set() only records the power.  One long-lived task writes both motors
+// every tick, slowing whichever fin has got ahead of the positions recorded by
+// fins_sync_zero(), so they stay at the same relative position.  Nothing else
+// may write the fin motors, or it would fight this task.
+static volatile int _fin_power = 0;
+static double _fin1_zero = 0;
+static double _fin2_zero = 0;
+
+// Jam guard state.  _fin_cmd_ms is when the current spin was commanded, for
+// the grace period.  _fins_jammed holds the fins stopped until fins_command().
+static volatile bool     _fins_auto_guard = false;   // true only inside autonomous()
+static volatile bool     _fins_jammed     = false;
+static volatile uint32_t _fin_cmd_ms      = 0;
+
+// A new spin command: clears a jam and restarts the grace period.
+static void fins_command() {
+  _fins_jammed = false;
+  _fin_cmd_ms  = pros::millis();
 }
+
+// True if either fin feels jam-level torque.  An unplugged motor reads
+// PROS_ERR_F, which must not count as a jam - test for a good value.
+static bool fins_overloaded() {
+  double t1 = fin_1.get_torque();
+  double t2 = fin_2.get_torque();
+  return (std::isfinite(t1) && std::fabs(t1) >= FIN_JAM_NM) ||
+         (std::isfinite(t2) && std::fabs(t2) >= FIN_JAM_NM);
+}
+
+void fins_sync_zero() {
+  _fin1_zero = fin_1.get_position();
+  _fin2_zero = fin_2.get_position();
+}
+
+static void fin_sync_task(void*) {
+  uint32_t overload_since = 0;   // 0 = not overloaded
+  while (true) {
+    int p = _fin_power;
+
+    // Jam guard, autons only.  Watches while the fins are commanded to spin
+    // and past the grace period; trips after FIN_JAM_MS of steady overload.
+    uint32_t now = pros::millis();
+    if (_fins_auto_guard && !_fins_jammed && p != 0 &&
+        now - _fin_cmd_ms >= (uint32_t)FIN_JAM_GRACE_MS && fins_overloaded()) {
+      if (overload_since == 0) overload_since = now;
+      if (now - overload_since >= (uint32_t)FIN_JAM_MS) _fins_jammed = true;
+    } else {
+      overload_since = 0;
+    }
+
+    if (p == 0 || _fins_jammed) {
+      fin_1.move(0);
+      fin_2.move(0);
+    } else {
+      double a = fin_1.get_position();
+      double b = fin_2.get_position();
+      double corr = 0;
+      // A missing motor reads PROS_ERR_F - test for good values, then run
+      // without correction rather than on garbage.
+      if (std::isfinite(a) && std::isfinite(b)) {
+        // Progress in the R1 direction.  fin_1 runs negative for R1.
+        double err = -(a - _fin1_zero) - (b - _fin2_zero);   // + = fin_1 ahead
+        corr = std::clamp(err * FIN_SYNC_KP, (double)-FIN_SYNC_MAX, (double)FIN_SYNC_MAX);
+      }
+      // Works in both directions: the one ahead gets less power, the one behind
+      // more (capped at 127, so near full speed the leader does the waiting).
+      int p1 = std::clamp((int)std::lround(p - corr), -127, 127);
+      int p2 = std::clamp((int)std::lround(p + corr), -127, 127);
+      fin_1.move(-p1);
+      fin_2.move(p2);
+    }
+    pros::delay(ez::util::DELAY_TIME);
+  }
+}
+
+// Per-tick write from the spin worker.  Not a new command, so it does not
+// clear a jam - but a change of power restarts the grace period.
+static void fins_write(int power) {
+  static pros::Task worker(fin_sync_task, nullptr, "Fin Sync");
+  if (power != _fin_power) _fin_cmd_ms = pros::millis();
+  _fin_power = power;
+}
+
+void fins_set(int power) {
+  fins_command();
+  fins_write(power);
+}
+
+void fins_jam_guard(bool on) {
+  _fins_auto_guard = on;
+  if (!on) _fins_jammed = false;
+}
+bool fins_jammed() { return _fins_jammed; }
 
 // Timed, non-blocking spins.  Each call returns immediately and a background
 // task drives the motors, so the next drive or turn starts straight away:
@@ -401,7 +511,7 @@ static void intake_spin_task(void*) {
     // everything stops - so the motors are actually zeroed.  After that, stop
     // writing entirely, or this would fight opcontrol every tick.
     if (driving || was_driving) {
-      fins_set(_ch_power(_ch_fins));
+      fins_write(_ch_power(_ch_fins));
       upper_roller_set(_ch_power(_ch_roller));
       dropdown_set(_ch_power(_ch_drop));
     }
@@ -414,6 +524,8 @@ static void _ch_start(volatile _SpinCh& c, int ms, int speed) {
   // One worker, created on first use and never destroyed.  pros::Task has no
   // destructor, so spawning one per call would leak a task every time.
   static pros::Task worker(intake_spin_task, nullptr, "Intake Spin");
+
+  if (&c == &_ch_fins) fins_command();   // a new fins spin clears a jam
 
   if (ms == 0 || speed == 0) { c.active = false; return; }
   c.speed    = speed;
@@ -576,6 +688,10 @@ void initialize() {
   // initial state, so the solenoid actually receives it.
   intake_pos_set(INTAKE_HIGH);
 
+  // Fin alignment reference at power-on, for driver practice without an auton.
+  // autonomous() takes it again.
+  fins_sync_zero();
+
   EngineInit();
   build_screens();  // sets up brain screen + initial controller display
   CtrlFlush();
@@ -591,11 +707,17 @@ void initialize() {
  * the VEX Competition Switch, following either autonomous or opcontrol. When
  * the robot is enabled, this task will exit.
  */
+// Last intake command the R1/R2/A block in opcontrol() sent - see there.
+// INT32_MIN = nothing sent yet, so the next tick sends.
+static int  drv_intake_power  = INT32_MIN;
+static bool drv_intake_roller = false;
+
 void disabled() {
   // Vent everything the moment the robot is disabled, so it is not left with
   // pistons held out between matches.
   release_all_pistons();
   macro_press_pending_clear();
+  fins_jam_guard(false);
 }
 
 /**
@@ -629,6 +751,10 @@ void autonomous() {
   chassis.odom_xyt_set(0_in, 0_in, 0_deg);
   chassis.drive_brake_set(MOTOR_BRAKE_HOLD);
 
+  // The fins' positions now are the alignment they are held to while spinning.
+  fins_sync_zero();
+  fins_jam_guard(true);   // fins stop on a jam - autons only
+
   // The number in each case must match the auton_idx you gave that
   // ButtonAdd in build_screens().
   switch (get_selected_auton()) {
@@ -639,6 +765,10 @@ void autonomous() {
     case 4: auto_5();  break;
     default:                           break;   // nothing selected
   }
+
+  // Reached when a LEFT+B test run finishes.  In a match the auton task is
+  // killed instead, and opcontrol() / disabled() switch the guard off.
+  fins_jam_guard(FIN_JAM_IN_DRIVER);
 }
 // NOTE: EZ-Template's stock main.cpp defines screen_print_tracker() and
 // ez_screen_task() here, plus the global `pros::Task ezScreenTask(ez_screen_task);`.
@@ -714,6 +844,7 @@ void ez_template_extras() {
       pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
       autonomous();
       chassis.drive_brake_set(preference);
+      drv_intake_power = INT32_MIN;   // the auton drove the intake - resend from the buttons
     }
 
     // Allow PID Tuner to iterate
@@ -744,6 +875,7 @@ void ez_template_extras() {
 void opcontrol() {
   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
   macro_press_pending_clear();   // a delayed press left over from the auton
+  fins_jam_guard(FIN_JAM_IN_DRIVER);   // autons only, unless testing
 
   // Only ONE cascade motor holds - see cascade_apply_hold_motor() above for why.
   // Re-applied here so it survives an auton test, which changes brake modes.
@@ -797,6 +929,7 @@ void opcontrol() {
       //   port 11 (fin_2) fin      - always runs, mounted opposite the rest
       //   port 4  (dropdown) dropdown - always runs
       //   port 19 (upper_roller) upper roller - runs ONLY at the collect height
+      // A runs all four the R2 way, upper roller included, at any height.
 
       // The upper roller (port 19) only turns while the cascade is AT the
       // collect height.  Anywhere else the fins (ports 1 and 11) and the
@@ -806,14 +939,24 @@ void opcontrol() {
       // Skipped while the macro drives the intake itself - otherwise the else
       // branch below writes zero to these motors every tick and the macro's
       // intake never actually spins.
+      // intake_set() is only called when what the buttons ask for CHANGES.
+      // Each call is a new command to the fin jam guard and clears a jam, so
+      // calling it every tick would undo a jam the moment it tripped.  The
+      // motors keep their last command in between.
       if (macro_owns_intake() || intake_spin_active()) {
         // the macro or a timed intake_spin() owns the intake
-      } else if (master.get_digital(DIGITAL_R2)) {
-        intake_set(-R_SPEED, roller_enabled);
-      } else if (master.get_digital(DIGITAL_R1)) {
-        intake_set(R_SPEED, roller_enabled);
+        drv_intake_power = INT32_MIN;   // resend once it hands the intake back
       } else {
-        intake_set(0);
+        int  power  = 0;
+        bool roller = true;
+        if      (master.get_digital(DIGITAL_R2)) { power = -R_SPEED; roller = roller_enabled; }
+        else if (master.get_digital(DIGITAL_R1)) { power =  R_SPEED; roller = roller_enabled; }
+        else if (master.get_digital(DIGITAL_A))  { power = -R_SPEED; }   // all four, any height
+        if (power != drv_intake_power || roller != drv_intake_roller) {
+          intake_set(power, roller);
+          drv_intake_power  = power;
+          drv_intake_roller = roller;
+        }
       }
 
       // L1 / L2 pair - two motors, always opposite each other

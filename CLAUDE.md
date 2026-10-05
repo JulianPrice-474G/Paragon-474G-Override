@@ -70,6 +70,14 @@ state — and the DOWN/LEFT toggles and the controller readout read them.
   `intake_spin_stop()`. `fins_spin()` / `fins_set()` drive only the two fins.
   `intake_spin` and `fins_spin` share one worker, so starting one replaces the
   other. `intake_set(power, roller)` is the primitive underneath.
+- Fins: only the "Fin Sync" task writes `fin_1`/`fin_2`. `fins_set()` records a
+  power; the task slows whichever fin is ahead of the positions taken by
+  `fins_sync_zero()` (start of every auton, and power-on). `FIN_SYNC_KP/MAX`
+  in `main.cpp`.
+- Fin jam guard, **autons only** (`fins_jam_guard()`, on in `autonomous()`,
+  off in `opcontrol()`/`disabled()`): `FIN_JAM_NM` (torque) for `FIN_JAM_MS` stops the
+  fins alone until the next spin command. The spin worker writes through
+  `fins_write()`, which is not a command and so does not clear a jam.
 - Cascade: `cascade_set(power)`; read position with `cascade_position()`
   (rotation sensor, converted to degrees, falls back to the motor encoder).
 - `drive_arc(deg, left, right)` — open-loop curve to an absolute heading. Safe to
@@ -92,7 +100,8 @@ Outside it the UI owns LEFT/RIGHT/A/B for menu navigation.
 | DOWN / LEFT | toggle claw / toggle C-flip |
 | RIGHT | cascade macro |
 | LEFT+B held 1 s | run selected auton — only outside driver mode, off a comp switch |
-| A / B | unused (B is still half of the LEFT+B auton combo) |
+| A (hold) | all four intake motors the R2 way, upper roller included at any cascade height |
+| B | unused (still half of the LEFT+B auton combo) |
 
 Controller in driver mode: row 1 `p### temps heading` (IMU zeroed on entering driver mode), row 2 commanded piston
 states `C F I`.
