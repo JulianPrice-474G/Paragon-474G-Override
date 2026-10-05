@@ -48,7 +48,7 @@ constexpr double ARC_TOL_DEG = 2;
 // number here.  The macro and the L1 travel limit both use these.
 double CASCADE_LOW     = 190;   // bottom / travel
 double CASCADE_COLLECT = 300;   // where the macro parks, waiting for press 2
-double CASCADE_FLIP    = 360;   // press 1 rises to here first
+double CASCADE_FLIP    = 370;   // press 1 rises to here first
 double CASCADE_OUT     = 430;   // press 2 rises to here
 int CASCADE_DROP_DELAY_MS = 350;  // press 1: ms after claw+flip drop before lowering to collect
 double CASCADE_MAX     = 1000;  // L1 won't raise past this

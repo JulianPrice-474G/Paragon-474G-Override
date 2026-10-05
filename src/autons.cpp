@@ -200,21 +200,26 @@ chassis.pid_wait_quick_chain();
 pros::delay(300);
 claw_set(CLAW_OFF);
 macro_press();
-pros::delay(400);
+pros::delay(500);
 // First Pin
 press_y();
 intake_spin(3000,127);
-chassis.headingPID.target_set(135);
-chassis.pid_drive_set(18_in, 127);
+chassis.headingPID.target_set(132.5);
+chassis.pid_drive_set(16.5_in, 127);
 chassis.pid_wait_until(5_in);
-chassis.pid_speed_max_set(40);
+chassis.pid_speed_max_set(30);
 chassis.pid_wait_quick_chain();
 pros::delay(500);
 macro_press(500, 200); 
+pros::delay(500);
+chassis.pid_speed_max_set(127);
 chassis.pid_turn_set(237, 127); 
 chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(-26, 127);
+chassis.pid_drive_set(-28, 127);
+chassis.pid_wait_until(-23_in);
+chassis.pid_speed_max_set(90);
 chassis.pid_wait_quick_chain();
+chassis.pid_speed_max_set(127);
 cascade_move_async(395, 127);
 pros::delay(150);
 claw_set(CLAW_OFF);
@@ -223,21 +228,44 @@ pros::delay(300);
 macro_press();
 intake_spin(7000,127);
 chassis.headingPID.target_set(245);
-chassis.pid_drive_set(38, 127);
-chassis.pid_wait_until(20);
-chassis.pid_speed_max_set(90);
+chassis.pid_drive_set(43, 127);
+chassis.pid_wait_until(25);
+chassis.pid_speed_max_set(35);
 chassis.pid_wait_quick_chain();
+chassis.pid_speed_max_set(127);
 pros::delay(500);
 macro_press(350);
 chassis.pid_turn_set(181, 127);
 chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(-23, 70);
+chassis.pid_drive_set(-35, 127);
+chassis.pid_wait_until(-30_in);
+chassis.pid_speed_max_set(90);
 macro_wait_done(); 
 cascade_move_async(300, 127);
 pros::delay(150);
 claw_set(CLAW_OFF);
+chassis.pid_speed_max_set(127);
+//3rd pin
 pros::delay(300);
+macro_press();
+intake_spin(7000,127);
+chassis.pid_drive_set(30, 127);
+chassis.pid_wait_until(17);
+chassis.pid_speed_max_set(70);
+chassis.pid_wait_quick_chain();
+pros::delay(500);
+macro_press(450,100);
+chassis.pid_speed_max_set(127);
+chassis.pid_turn_set(40,127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(-40, 127);
+chassis.pid_wait_until(-35);
+chassis.pid_speed_max_set(10);
+claw_set(CLAW_OFF);
+
 //Third Pin
+//OLD SWAP END
+/*
 macro_press();
 chassis.pid_drive_set(12, 127);
 chassis.pid_wait_quick_chain();
@@ -269,7 +297,7 @@ chassis.pid_drive_set(15, 127);
 chassis.pid_wait_quick_chain();
 drive_arc(45, -127, -45);
 chassis.pid_drive_set(-25, 127);
-pros::delay(500);
+pros::delay(500);*/
 
 
 
