@@ -112,6 +112,13 @@ void drive_for_time_stop();          // end the push early
 bool drive_for_time_active();        // true while pushing
 bool drive_for_time_wait(int timeout_ms = 5000);  // block until the push ends
 
+// Auton time limit.  Call it anywhere in an auton; ms after THAT call the
+// routine is stopped where it is and the drive, intake and cascade stop.
+// Finishing early or the match ending first cancels it.
+//   auton_time_limit();         // 15 s from here
+//   auton_time_limit(14500);    // 14.5 s from here
+void auton_time_limit(int ms = 15000);
+
 // Drive one part of the intake directly - it keeps running until you set it
 // again.  Positive runs them the way R1 does; fin_2 is commanded opposite
 // automatically.

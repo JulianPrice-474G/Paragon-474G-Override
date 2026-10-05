@@ -712,7 +712,61 @@ void initialize() {
 static int  drv_intake_power  = INT32_MIN;
 static bool drv_intake_roller = false;
 
+/////
+// AUTON TIME LIMIT
+/////
+// auton_time_limit(ms) - call anywhere in an auton.  ms after that call the
+// routine is killed wherever it is, and the drive, intake and cascade stop.
+// It kills the task the same way PROS does when a match switches out of auton.
+// A LEFT+B test runs the auton in its own task (see ez_template_extras()) so
+// killing it never touches opcontrol.
+static pros::task_t      _limit_task     = nullptr;  // the routine's task
+static volatile uint32_t _limit_deadline = 0;
+static volatile bool     _limit_armed    = false;
+static volatile bool     _auton_test_running = false;   // LEFT+B run in progress
+
+static void auton_time_limit_clear() { _limit_armed = false; }
+
+static void auton_stop_all() {
+  drive_for_time_stop();
+  chassis.drive_set(0, 0);       // takes EZ out of PID mode; HOLD brake keeps it still
+  macro_cancel();                // the worker stops the cascade; the hold motor holds
+  macro_press_pending_clear();
+  intake_spin_stop();
+}
+
+static void time_limit_task(void*) {
+  while (true) {
+    if (_limit_armed && (int32_t)(pros::millis() - _limit_deadline) >= 0) {
+      _limit_armed = false;
+      // In a match, act only while auton is still live.  Once the field ends
+      // it, PROS has already deleted the task and the handle is stale.
+      bool live = !pros::competition::is_connected() ||
+                  (pros::competition::is_autonomous() && !pros::competition::is_disabled());
+      if (live) {
+        // This task outranks the routine, so it cannot run between the check
+        // above and this delete.
+        pros::c::task_delete(_limit_task);
+        auton_stop_all();
+        fins_jam_guard(FIN_JAM_IN_DRIVER);   // the tail of autonomous() never runs
+        _auton_test_running = false;
+        master.rumble(".");
+      }
+    }
+    pros::delay(10);
+  }
+}
+
+void auton_time_limit(int ms) {
+  static pros::Task worker(time_limit_task, nullptr, TASK_PRIORITY_DEFAULT + 1,
+                           TASK_STACK_DEPTH_DEFAULT, "Auton Limit");
+  _limit_task     = pros::c::task_get_current();
+  _limit_deadline = pros::millis() + ms;
+  _limit_armed    = true;
+}
+
 void disabled() {
+  auton_time_limit_clear();
   // Vent everything the moment the robot is disabled, so it is not left with
   // pistons held out between matches.
   release_all_pistons();
@@ -745,6 +799,7 @@ void competition_initialize() {
  * from where it left off.
  */
 void autonomous() {
+  auton_time_limit_clear();   // a limit only counts from where the routine sets it
   chassis.pid_targets_reset();
   chassis.drive_imu_reset();
   chassis.drive_sensor_reset();
@@ -765,6 +820,7 @@ void autonomous() {
     case 4: auto_5();  break;
     default:                           break;   // nothing selected
   }
+  auton_time_limit_clear();   // finished in time
 
   // Reached when a LEFT+B test run finishes.  In a match the auton task is
   // killed instead, and opcontrol() / disabled() switch the guard off.
@@ -842,7 +898,12 @@ void ez_template_extras() {
     if (!DriverModeActive() && auton_combo_pressed) {
       master.rumble("-");   // long buzz so you know the combo fired
       pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
-      autonomous();
+      // Own task, so auton_time_limit() can kill the routine without killing
+      // opcontrol.  The loop still waits for it, as before.  The task ends by
+      // itself when the routine returns, so nothing leaks.
+      _auton_test_running = true;
+      pros::Task test([] { autonomous(); _auton_test_running = false; }, "Auton Test");
+      while (_auton_test_running) pros::delay(ez::util::DELAY_TIME);
       chassis.drive_brake_set(preference);
       drv_intake_power = INT32_MIN;   // the auton drove the intake - resend from the buttons
     }
@@ -874,6 +935,7 @@ void ez_template_extras() {
 
 void opcontrol() {
   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
+  auton_time_limit_clear();      // the auton task is gone; its handle is stale
   macro_press_pending_clear();   // a delayed press left over from the auton
   fins_jam_guard(FIN_JAM_IN_DRIVER);   // autons only, unless testing
 
