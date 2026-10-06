@@ -68,7 +68,7 @@ constexpr bool   FIN_JAM_IN_DRIVER = false;
 // Drive the cascade where you want it, read p off the controller, put the
 // number here.  The macro and the L1 travel limit both use these.
 double CASCADE_LOW     = 190;   // bottom / travel
-double CASCADE_COLLECT = 330;   // where the macro parks, waiting for press 2
+double CASCADE_COLLECT = 320;   // where the macro parks, waiting for press 2
 double CASCADE_FLIP    = 370;   // press 1 rises to here first
 double CASCADE_OUT     = 430;   // press 2 rises to here
 int CASCADE_DROP_DELAY_MS = 350;  // press 1: ms after claw+flip drop before lowering to collect
