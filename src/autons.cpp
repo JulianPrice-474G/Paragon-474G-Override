@@ -331,8 +331,16 @@ pros::delay(500);*/
 ///
 void skills() {
   auton_setup();
-  
 
+  // ── ONE PIN MACRO ─────────────────────────────────────────────────────────
+  // Only from the parked state after press 1 (macro_press() first).  Intakes
+  // forward, close the claw, intakes backward, then press 2.  Returns at once.
+  // Defaults are ONE_PIN_* at the top of main.cpp.
+  //
+  //   one_pin_macro();                   // main.cpp defaults, stay at out height
+  //   one_pin_macro(500);                // finish press 2 at 500
+  //   one_pin_macro(-1, 800, 0, 1200);   // end, forward ms, claw wait ms, backward ms
+  //   macro_wait_done();                 // wait for the whole thing
 
   // Your code here.
 }
