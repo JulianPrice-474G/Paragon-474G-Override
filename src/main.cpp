@@ -520,6 +520,18 @@ static int _ch_power(volatile _SpinCh& c) {
 static void intake_spin_task(void*) {
   bool was_driving = false;
   while (true) {
+    // The macro (press 2, one_pin_macro) has the intake: it overrides any
+    // timed spin.  Drop the spins and write nothing - not even the zeroing
+    // pass, which would stop the macro's own intake.
+    if (macro_owns_intake()) {
+      _ch_fins.active = false;
+      _ch_roller.active = false;
+      _ch_drop.active = false;
+      was_driving = false;
+      pros::delay(ez::util::DELAY_TIME);
+      continue;
+    }
+
     bool driving = intake_spin_active();
 
     // Write while any group is running, plus one final pass on the tick
