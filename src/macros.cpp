@@ -37,6 +37,10 @@ static volatile bool     _running_move     = false;
 // auton, the delay task and the worker cannot both start at once.
 static pros::Mutex       _start_mx;
 
+// The next press 1 uses the CASCADE_FIRST_* values - see macro_first_flip_arm().
+static volatile bool     _first_flip_armed = false;
+void macro_first_flip_arm(bool on) { _first_flip_armed = on; }
+
 bool macro_running() { return _running; }
 bool macro_failed()  { return _failed; }
 void macro_press_pending_clear() { _pend = false; _move_queued = false; _press_queued = false; }
@@ -249,19 +253,26 @@ static void phase1_task(void*) {
   // first press passed, so it cannot leak into a later phase 2.
   _phase2_end = -1;
 
+  // The first press 1 of an auton can go higher and wait longer - see
+  // CASCADE_FIRST_FLIP_ON.  Used up here, even if this run is cancelled.
+  const bool   first   = _first_flip_armed;
+  _first_flip_armed    = false;
+  const double flip_h  = first ? CASCADE_FIRST_FLIP          : CASCADE_FLIP;
+  const int    drop_ms = first ? CASCADE_FIRST_DROP_DELAY_MS : CASCADE_DROP_DELAY_MS;
+
   // Preflight: flip piston to a known state before anything moves.
   flip_set(FLIP_ON);
   bool ok = macro_wait(MACRO_PISTON_SETTLE, "0 preflight") &&
             step_pause("0 preflight");
 
   // Up to the high point first, and only act once it has ARRIVED.
-  if (ok) ok = cascade_to(CASCADE_FLIP, "1 up") && step_pause("1 up");
+  if (ok) ok = cascade_to(flip_h, first ? "1 up first" : "1 up") && step_pause("1 up");
 
   // At the top: open the claw and drop the flip piston together.
   if (ok) {
     claw_set(CLAW_OFF);
     flip_set(FLIP_OFF);
-    ok = macro_wait(CASCADE_DROP_DELAY_MS, "2 drop") && step_pause("2 drop");
+    ok = macro_wait(drop_ms, "2 drop") && step_pause("2 drop");
   }
 
   if (ok) ok = cascade_to(CASCADE_COLLECT, "3 collect") && step_pause("3 collect");
