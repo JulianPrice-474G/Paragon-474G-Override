@@ -1,5 +1,16 @@
 #pragma once
 
+// Same PROS settings main.h makes, in case this header is included BEFORE
+// main.h (an editor auto-include put it above main.h more than once).  PROS
+// only reads them the first time its headers load, so without this the short
+// names (MOTOR_BRAKE_HOLD ...) vanish for the whole file.
+#ifndef PROS_USE_SIMPLE_NAMES
+#define PROS_USE_SIMPLE_NAMES
+#endif
+#ifndef PROS_USE_LITERALS
+#define PROS_USE_LITERALS
+#endif
+
 #include "api.h"
 
 /////
