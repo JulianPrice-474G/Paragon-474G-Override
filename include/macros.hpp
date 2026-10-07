@@ -181,7 +181,11 @@ bool macro_failed();
 //   chassis.pid_wait();
 //   cascade_move_wait();                         // now make sure it arrived
 //
-// speed is 0-127; leave it out for the macro's normal speed.  If a macro step
+// speed is 0-127 and is used EXACTLY, up or down - never faster.  Very low
+// speeds can stall short (going up especially), and the stall guard then
+// gives up after CASCADE_STALL_MS.  Leave it out for the macro's normal
+// behaviour: full speed, CASCADE_DOWN_SPEED down, floor powers so it always
+// arrives.  If a macro step
 // or another move is still running - or a delayed macro_press() has yet to
 // fire - the move WAITS and starts as soon as that is done, so it never breaks
 // the macro.  A later call replaces one still waiting.  The cascade holds

@@ -84,10 +84,13 @@ static void cascade_drive(int power)  { cascade_set(power); }
 //   action_height >= 0  fire when the cascade reaches that height on the way
 //   otherwise           fire action_delay_ms after the move starts
 // Either way it fires on arrival at the latest, so it is never lost.
+// exact_speed: drive at max_speed and never faster, up or down - no
+// CASCADE_DOWN_SPEED swap and no floor above it.  For cascade_move_async()
+// given a speed.  The macro's own moves leave it false.
 static bool cascade_to(double target, const char* step_name,
                        int max_speed = CASCADE_MOVE_SPEED,
                        int action_delay_ms = -1, void (*action)() = nullptr,
-                       double action_height = -1) {
+                       double action_height = -1, bool exact_speed = false) {
   _step = step_name;
 
   const uint32_t start        = pros::millis();
@@ -98,7 +101,7 @@ static bool cascade_to(double target, const char* step_name,
   // Downward moves get their own speed - gravity and the holding brake make a
   // descent behave differently from a lift at the same power.
   const bool going_up = (target >= last_pos);
-  if (!going_up) max_speed = CASCADE_DOWN_SPEED;
+  if (!going_up && !exact_speed) max_speed = CASCADE_DOWN_SPEED;
 
   while (pros::millis() - start < (uint32_t)CASCADE_MOVE_TIMEOUT) {
     if (_cancel) { cascade_stop(); return false; }
@@ -146,7 +149,9 @@ static bool cascade_to(double target, const char* step_name,
         if (_cancel) { cascade_stop(); return false; }
         double e = target - cascade_position();
         if (fabs(e) > CASCADE_MOVE_TOL) {
-          int p = (e > 0) ? CASCADE_SETTLE_POWER : -CASCADE_SETTLE_POWER;
+          int sp = (exact_speed && max_speed < CASCADE_SETTLE_POWER) ? max_speed
+                                                                    : CASCADE_SETTLE_POWER;
+          int p = (e > 0) ? sp : -sp;
           cascade_drive(p * CASCADE_RAISE_SIGN);
           steady_since = pros::millis();   // drifted out - start the clock again
         } else {
@@ -181,7 +186,8 @@ static bool cascade_to(double target, const char* step_name,
     double scale = fabs(err) / CASCADE_MOVE_SLOW;
     if (scale > 1.0) scale = 1.0;
     int power = (int)(max_speed * scale);
-    const int floor_power = (err > 0) ? CASCADE_MOVE_MIN_UP : CASCADE_MOVE_MIN;
+    int floor_power = (err > 0) ? CASCADE_MOVE_MIN_UP : CASCADE_MOVE_MIN;
+    if (exact_speed && floor_power > max_speed) floor_power = max_speed;
     if (power < floor_power) power = floor_power;
     if (err < 0) power = -power;
 
@@ -427,7 +433,12 @@ static double _move_target = 0;
 static int    _move_speed  = 0;
 
 static void move_task() {
-  bool ok = cascade_to(_move_target, "moving", _move_speed);
+  // A speed given to cascade_move_async() is used exactly; 0 = the normal
+  // macro behaviour at CASCADE_MOVE_SPEED.
+  const bool exact = _move_speed > 0;
+  bool ok = cascade_to(_move_target, "moving",
+                       exact ? _move_speed : CASCADE_MOVE_SPEED,
+                       -1, nullptr, -1, exact);
   cascade_stop();
   _cancel  = false;
   _failed  = !ok;
@@ -519,7 +530,7 @@ void macro_start() {
 /////
 void cascade_move_async(double target, int speed) {
   ensure_worker();
-  const int s = (speed > 0) ? speed : CASCADE_MOVE_SPEED;
+  const int s = (speed > 0) ? speed : 0;   // 0 = default; see move_task()
 
   _start_mx.take();
   if (_running || _pend || _firing || _press_queued || _one_pin_queued) {
