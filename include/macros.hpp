@@ -24,11 +24,12 @@ extern int    CASCADE_AFTER_FLIP_MS;  // ms after the flip piston extends
 extern int    CASCADE_DROP_DELAY_MS;  // press 1: wait after the claw/flip drop
 extern double CASCADE_MAX;      // L1 stops raising here
 
-// The first press 1 of an auton, when CASCADE_FIRST_FLIP_ON - its own flip
-// height and drop wait in place of CASCADE_FLIP / CASCADE_DROP_DELAY_MS.
-extern bool   CASCADE_FIRST_FLIP_ON;
-extern double CASCADE_FIRST_FLIP;
-extern int    CASCADE_FIRST_DROP_DELAY_MS;
+// Press 1's custom flip height and drop wait, in place of CASCADE_FLIP /
+// CASCADE_DROP_DELAY_MS.  Always in driver control; in autons only when
+// CASCADE_CUSTOM_FLIP_IN_AUTON is true.
+extern bool   CASCADE_CUSTOM_FLIP_IN_AUTON;
+extern double CASCADE_CUSTOM_FLIP;
+extern int    CASCADE_CUSTOM_DROP_DELAY_MS;
 
 /////
 // CASCADE MOVEMENT - CHANGE THESE
@@ -222,7 +223,7 @@ bool macro_wait_done(int timeout_ms = 8000);
 // at the start of opcontrol(), so one left over from an auton never fires.
 void macro_press_pending_clear();
 
-// true makes the NEXT press 1 use CASCADE_FIRST_FLIP and
-// CASCADE_FIRST_DROP_DELAY_MS; that press clears it.  autonomous() sets it
-// from CASCADE_FIRST_FLIP_ON; opcontrol() and disabled() clear it.
-void macro_first_flip_arm(bool on);
+// Tells the macro whether an auton is running, so press 1 can pick its flip
+// values.  autonomous() sets it; opcontrol(), disabled() and the end of a
+// LEFT+B test run clear it.
+void macro_in_auton(bool on);

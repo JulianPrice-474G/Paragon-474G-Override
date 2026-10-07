@@ -124,10 +124,11 @@ states `C F I`.
   COLLECT → park. While parked, L1/L2 are locked and the upper roller is armed.
   (A height-triggered version that fired mid-rise was glitchy on the robot and
   was replaced by this.)
-- **First press 1 of an auton** can use its own height and drop wait
-  (`CASCADE_FIRST_FLIP`, `CASCADE_FIRST_DROP_DELAY_MS`), switched by
-  `CASCADE_FIRST_FLIP_ON` in `main.cpp`. Armed by `autonomous()`, used up by
-  the first phase 1; driver control always uses the normal values.
+- **Press 1 has two sets of flip values.** Driver control always uses the
+  custom set (`CASCADE_CUSTOM_FLIP`, `CASCADE_CUSTOM_DROP_DELAY_MS`). Autons
+  use the normal set (`CASCADE_FLIP`, `CASCADE_DROP_DELAY_MS`) unless
+  `CASCADE_CUSTOM_FLIP_IN_AUTON` is true. `autonomous()` tells the macro it is
+  in an auton via `macro_in_auton()`.
 - **Press 2:** intake on → claw on → raise to OUT, with the flip piston extended
   and the upper roller reversed `CASCADE_FLIP_DELAY_MS` into the rise → hold
   until `CASCADE_AFTER_FLIP_MS` after the flip → **stays at OUT** by default →

@@ -74,14 +74,13 @@ double CASCADE_OUT     = 430;   // press 2 rises to here
 int CASCADE_DROP_DELAY_MS = 350;  // press 1: ms after claw+flip drop before lowering to collect
 double CASCADE_MAX     = 1000;  // L1 won't raise past this
 
-// ---- First press 1 of an auton ----
-// The first macro press in each auton can rise higher and wait longer at the
-// top than every later press 1.  true = use these for that first press; false
-// = it uses CASCADE_FLIP / CASCADE_DROP_DELAY_MS like every other press.
-// Driver control always uses the normal values.
-bool   CASCADE_FIRST_FLIP_ON       = false;
-double CASCADE_FIRST_FLIP          = 410;   // first press 1 rises to here
-int    CASCADE_FIRST_DROP_DELAY_MS = 500;   // ms after claw+flip drop before lowering
+// ---- Press 1, custom flip ----
+// A second set of press 1 flip values - higher, longer wait.  Driver control
+// ALWAYS uses these.  Autons use them only when CASCADE_CUSTOM_FLIP_IN_AUTON
+// is true; false keeps autons on CASCADE_FLIP / CASCADE_DROP_DELAY_MS above.
+bool   CASCADE_CUSTOM_FLIP_IN_AUTON = false;
+double CASCADE_CUSTOM_FLIP          = 410;   // press 1 rises to here
+int    CASCADE_CUSTOM_DROP_DELAY_MS = 500;   // ms after claw+flip drop before lowering
 
 // ---- Press 2 ----
 // How far into the rise to CASCADE_OUT the flip piston fires.  0 fires it as
@@ -726,7 +725,7 @@ void disabled() {
   // pistons held out between matches.
   release_all_pistons();
   macro_press_pending_clear();
-  macro_first_flip_arm(false);
+  macro_in_auton(false);
   fins_jam_guard(false);
 }
 
@@ -765,8 +764,8 @@ void autonomous() {
   fins_sync_zero();
   fins_jam_guard(true);   // fins stop on a jam - autons only
 
-  // The first press 1 of this auton uses CASCADE_FIRST_FLIP, if switched on.
-  macro_first_flip_arm(CASCADE_FIRST_FLIP_ON);
+  // Press 1 picks its flip values by mode - see CASCADE_CUSTOM_FLIP_IN_AUTON.
+  macro_in_auton(true);
 
   // The number in each case must match the auton_idx you gave that
   // ButtonAdd in build_screens().
@@ -782,7 +781,7 @@ void autonomous() {
   // Reached when a LEFT+B test run finishes.  In a match the auton task is
   // killed instead, and opcontrol() / disabled() switch the guard off.
   fins_jam_guard(FIN_JAM_IN_DRIVER);
-  macro_first_flip_arm(false);   // an auton that never pressed the macro
+  macro_in_auton(false);
 }
 // NOTE: EZ-Template's stock main.cpp defines screen_print_tracker() and
 // ez_screen_task() here, plus the global `pros::Task ezScreenTask(ez_screen_task);`.
@@ -889,7 +888,7 @@ void ez_template_extras() {
 void opcontrol() {
   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
   macro_press_pending_clear();   // a delayed press left over from the auton
-  macro_first_flip_arm(false);   // driver control always uses the normal flip
+  macro_in_auton(false);         // press 1 uses the custom flip in driver
   fins_jam_guard(FIN_JAM_IN_DRIVER);   // autons only, unless testing
 
   // Only ONE cascade motor holds - see cascade_apply_hold_motor() above for why.
