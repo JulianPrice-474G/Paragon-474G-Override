@@ -192,20 +192,27 @@ void sawp() {
 
 upper_roller_spin(700,127);
 pros::delay(200);
-chassis.pid_drive_set(-4_in, 127);
+chassis.pid_drive_set(-8.5_in, 127);
 chassis.pid_wait_quick_chain();
-drive_arc(120, -25, -127);
-chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(90, 127);
+chassis.pid_wait_quick_chain(); 
+
+chassis.pid_drive_set(-10, 127);
+chassis.pid_wait_quick_chain(); 
+//drive_arc(120, -20, -127);
+//chassis.pid_wait_quick_chain();
 pros::delay(300);
 claw_set(CLAW_OFF);
+pros::delay(150);
 macro_press();
-pros::delay(500);
 // First Pin
 press_y();
 intake_spin(3000,127);
-chassis.headingPID.target_set(132.5);
-chassis.pid_drive_set(16.5_in, 127);
-chassis.pid_wait_until(14_in);
+drive_arc(156.5, 127, 5);   // heading to stop at, left speed, right speed
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_constants_set(20, 0.0, 100.0);     
+chassis.pid_drive_set(15_in, 127);
+chassis.pid_wait_until(10_in);
 chassis.pid_speed_max_set(30);
 chassis.pid_wait_quick_chain();
 pros::delay(250);
@@ -225,8 +232,8 @@ pros::delay(300);
 //Second Pin
 macro_press();
 intake_spin(9000,127);
-chassis.headingPID.target_set(245);
-chassis.pid_drive_set(43, 127);
+chassis.headingPID.target_set(247);
+chassis.pid_drive_set(45, 127);
 chassis.pid_wait_until(25_in);
 chassis.pid_speed_max_set(35);
 chassis.pid_wait_quick_chain();
