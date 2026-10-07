@@ -106,7 +106,8 @@ constexpr int MACRO_STEP_DELAY = 0;  // ms
 //   press 2 -> flip height, then back to low
 //
 // Pressing WHILE the cascade is moving cancels instead.  Everything runs in
-// its own task, so the drivetrain never stops responding.
+// its own task, so the drivetrain never stops responding.  L1/L2 do not
+// cancel - they are ignored until the macro finishes.
 void macro_start();
 
 // Asks a running move to stop at its next check, leaving the cascade where it
@@ -156,16 +157,20 @@ bool macro_failed();
 //   chassis.pid_wait();
 //   cascade_move_wait();                         // now make sure it arrived
 //
-// speed is 0-127; leave it out for the macro's normal speed.  Does nothing if
-// a macro phase or another move is already running.  The cascade holds
+// speed is 0-127; leave it out for the macro's normal speed.  If a macro step
+// or another move is still running - or a delayed macro_press() has yet to
+// fire - the move WAITS and starts as soon as that is done, so it never breaks
+// the macro.  A later call replaces one still waiting.  The cascade holds
 // position once it arrives.
 void cascade_move_async(double target, int speed = 0);
 
-// True while a background move or a macro phase is driving the cascade.
+// True while a background move or a macro phase is driving the cascade, or a
+// move is waiting its turn.
 bool cascade_move_active();
 
 // Block until that finishes.  Returns false on timeout, or if the move stalled
-// or timed out on its own.
+// or timed out on its own.  The timeout includes any time spent waiting for
+// the macro, so give it longer when the macro may still be running.
 bool cascade_move_wait(int timeout_ms = 4000);
 
 // Run the collect macro from an auton, exactly as pressing RIGHT does in
@@ -187,9 +192,12 @@ bool cascade_move_wait(int timeout_ms = 4000);
 //
 //   macro_press(CASCADE_LOW);   // ... or back down to the bottom
 //   macro_press();              // ... or just stay at the out height
-// If anything is already driving the cascade - a cascade_move_async(), or a
-// macro step that hasn't finished - macro_press() cancels it and starts the
-// macro immediately.  (RIGHT in driver control still just cancels.)
+// If something is already driving the cascade:
+//  - a cascade_move_async() - macro_press() cancels it and starts the macro
+//    immediately.  A move still waiting its turn is dropped.
+//  - a macro step that hasn't finished - the press WAITS and runs once that
+//    step is done, so press 2 never lands in the middle of press 1.
+// (RIGHT in driver control still just cancels.)
 //
 // delay_time (ms) presses the macro that long from now, WITHOUT blocking - the
 // auton carries straight on, and drives, intakes and pistons are not held up:
@@ -200,7 +208,7 @@ bool cascade_move_wait(int timeout_ms = 4000);
 //
 // The takeover above happens when the delay ends, not when you call it.
 // macro_wait_done() also waits out the delay.  Another macro_press() before it
-// fires replaces it; macro_cancel() drops it.
+// fires replaces it; macro_cancel() drops it, and any queued press or move.
 void macro_press(double end_height = -1, int delay_time = 0);
 bool macro_wait_done(int timeout_ms = 8000);
 

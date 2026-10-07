@@ -903,11 +903,9 @@ void opcontrol() {
       // own task, so the drivetrain keeps responding throughout.
       if (master.get_digital_new_press(DIGITAL_RIGHT)) macro_start();
 
-      // Touching the cascade manually also cancels a move - the driver should
-      // not have to find the right button to take back control.
-      if (macro_running() &&
-          (master.get_digital(DIGITAL_L1) || master.get_digital(DIGITAL_L2)))
-        macro_cancel();
+      // L1/L2 do NOT cancel the macro - cancelling mid-step left it half done.
+      // They are ignored until it finishes (see the cascade block below), then
+      // work as normal if still held.  RIGHT is the way to abort.
 
         // Intake piston - Y toggles between HIGH and MIDDLE.
         if (master.get_digital_new_press(DIGITAL_Y)) press_y();

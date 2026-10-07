@@ -18,11 +18,34 @@ static double      _phase2_end  = -1;
 static volatile bool     _pend       = false;
 static volatile double   _pend_end   = -1;
 static volatile uint32_t _pend_at    = 0;
+static volatile bool     _firing     = false;  // the delay task is pressing it now
+
+// Requests that arrive while the cascade is busy wait their turn instead of
+// breaking what is running.  The worker starts them as soon as it is free -
+// see start_queued().  One slot each; a newer request replaces an older one.
+static volatile bool     _move_queued      = false;   // a cascade_move_async()
+static volatile double   _queued_target    = 0;
+static volatile int      _queued_speed     = 0;
+static volatile bool     _press_queued     = false;   // a macro_press()
+static volatile double   _press_queued_end = -1;
+
+// True while the worker runs a plain cascade_move_async() rather than a macro
+// phase.  A macro press takes over a move, but waits for a phase.
+static volatile bool     _running_move     = false;
+
+// Held while deciding "is the cascade free? then start something", so the
+// auton, the delay task and the worker cannot both start at once.
+static pros::Mutex       _start_mx;
 
 bool macro_running() { return _running; }
 bool macro_failed()  { return _failed; }
-void macro_press_pending_clear() { _pend = false; }
-void macro_cancel()  { _pend = false; if (_running) _cancel = true; }
+void macro_press_pending_clear() { _pend = false; _move_queued = false; _press_queued = false; }
+void macro_cancel() {
+  _pend = false;
+  _move_queued  = false;
+  _press_queued = false;
+  if (_running) _cancel = true;
+}
 
 const char* macro_status_text() {
   static char buf[20];
@@ -244,13 +267,14 @@ static void phase1_task(void*) {
   if (ok) ok = cascade_to(CASCADE_COLLECT, "3 collect") && step_pause("3 collect");
 
   cascade_stop();
-  _running = false;
   // Only park-and-arm if it actually arrived.  A cancel or stall drops back to
   // idle, so the roller never arms off a failed move.
   _phase  = ok ? PH_WAITING : PH_IDLE;
   _failed = !ok;
   if (ok) _step = "WAITING";
   _cancel = false;
+  // Last, so a press that sees the cascade free also sees the phase it left.
+  _running = false;
 }
 
 // Fired partway through phase 2's rise - see CASCADE_FLIP_DELAY_MS.
@@ -317,11 +341,11 @@ static void phase2_task(void*) {
   // Hold rather than coast: the cascade is left raised, so letting it free-wheel
   // would drop it.  cascade_stop() would only zero the voltage.
   cascade_hold();
-  _running = false;
   _phase   = PH_IDLE;
   _cancel  = false;
   _failed  = !ok;
   if (ok) _step = "done";
+  _running = false;   // last - see phase1_task()
 }
 
 // ONE long-lived worker rather than a task per press.  pros::Task has no
@@ -341,10 +365,41 @@ static int    _move_speed  = 0;
 static void move_task() {
   bool ok = cascade_to(_move_target, "moving", _move_speed);
   cascade_stop();
-  _running = false;
   _cancel  = false;
   _failed  = !ok;
   if (ok) _step = "done";
+  _running_move = false;
+  _running = false;   // last - see phase1_task()
+}
+
+// Hand a move to the worker.  Only call with the cascade free.
+static void move_start(double target, int speed) {
+  _move_target  = target;
+  _move_speed   = speed;
+  _running      = true;
+  _running_move = true;
+  _cancel       = false;
+  _failed       = false;
+  _step         = "moving";
+  _req          = REQ_MOVE;
+}
+
+// Start whatever waited for the step that just finished.  A press goes first.
+// A move also waits for a delayed press still to fire, so it runs after that
+// press's macro step - the order the auton asked for them.
+static void start_queued() {
+  _start_mx.take();
+  if (!_running) {
+    if (_press_queued) {
+      _press_queued = false;
+      _phase2_end   = _press_queued_end;
+      macro_start();
+    } else if (_move_queued && !_pend && !_firing) {
+      _move_queued = false;
+      move_start(_queued_target, _queued_speed);
+    }
+  }
+  _start_mx.give();
 }
 
 static void macro_worker(void*) {
@@ -355,6 +410,8 @@ static void macro_worker(void*) {
       if      (r == REQ_PHASE1) phase1_task(nullptr);
       else if (r == REQ_PHASE2) phase2_task(nullptr);
       else                      move_task();
+    } else if (!_running && (_press_queued || _move_queued)) {
+      start_queued();
     }
     pros::delay(ez::util::DELAY_TIME);
   }
@@ -374,7 +431,8 @@ void macro_start() {
 
   ensure_worker();
 
-  _running = true;
+  _running      = true;
+  _running_move = false;
   _cancel  = false;
   _failed  = false;
   _step    = "starting";
@@ -385,24 +443,27 @@ void macro_start() {
 // Public: background cascade moves, for autons
 /////
 void cascade_move_async(double target, int speed) {
-  if (_running) return;          // a macro phase or another move owns it
-
   ensure_worker();
+  const int s = (speed > 0) ? speed : CASCADE_MOVE_SPEED;
 
-  _move_target = target;
-  _move_speed  = (speed > 0) ? speed : CASCADE_MOVE_SPEED;
-  _running     = true;
-  _cancel      = false;
-  _failed      = false;
-  _step        = "moving";
-  _req         = REQ_MOVE;
+  _start_mx.take();
+  if (_running || _pend || _firing || _press_queued) {
+    // Busy, or a press is due first: wait for it, then go.  Dropping it
+    // instead left the cascade wherever the macro finished.
+    _queued_target = target;
+    _queued_speed  = s;
+    _move_queued   = true;
+  } else {
+    move_start(target, s);
+  }
+  _start_mx.give();
 }
 
-bool cascade_move_active() { return _running; }
+bool cascade_move_active() { return _running || _move_queued; }
 
 bool cascade_move_wait(int timeout_ms) {
   const uint32_t start = pros::millis();
-  while (_running) {
+  while (_running || _move_queued) {
     if ((int)(pros::millis() - start) > timeout_ms) return false;
     pros::delay(ez::util::DELAY_TIME);
   }
@@ -410,12 +471,16 @@ bool cascade_move_wait(int timeout_ms) {
 }
 
 // For autons.  Unlike RIGHT in driver control - where a press mid-move just
-// cancels - this TAKES OVER: whatever is driving the cascade (a
-// cascade_move_async() or an unfinished macro step) is cancelled and the macro
-// starts straight away.  So a route can fire off a background move and press
-// the macro later without first checking the move has finished.
+// cancels - this never cancels a macro step:
+//  - a cascade_move_async() still running is TAKEN OVER: cancelled, and the
+//    macro starts straight away.  So a route can fire off a background move
+//    and press the macro later without first checking the move has finished.
+//  - an unfinished macro step is WAITED FOR: the press runs once it is done.
+//    Cancelling it instead dropped press 1 back to idle, so the "second" press
+//    started press 1 over again.
 static void macro_press_now(double end_height) {
-  if (_running) {
+  _start_mx.take();
+  if (_running && _running_move) {
     _cancel = true;
     // Every loop that drives the cascade checks _cancel each tick, so this is
     // one or two ticks.  The cap is only a backstop.
@@ -423,10 +488,17 @@ static void macro_press_now(double end_height) {
     while (_running && pros::millis() - start < 500) pros::delay(ez::util::DELAY_TIME);
   }
 
-  // Only the SECOND press uses it, but storing it on every press means a
-  // cancelled run cannot leave a stale target behind for the next one.
-  _phase2_end = end_height;
-  macro_start();
+  if (_running) {
+    // A macro step is still moving.  The worker presses once it finishes.
+    _press_queued_end = end_height;
+    _press_queued     = true;
+  } else {
+    // Only the SECOND press uses it, but storing it on every press means a
+    // cancelled run cannot leave a stale target behind for the next one.
+    _phase2_end = end_height;
+    macro_start();
+  }
+  _start_mx.give();
 }
 
 // Fires a delayed press when its time comes.  Its own long-lived task, so the
@@ -434,8 +506,12 @@ static void macro_press_now(double end_height) {
 static void macro_delay_task(void*) {
   while (true) {
     if (_pend && pros::millis() >= _pend_at) {
-      _pend = false;
+      // _firing covers the gap between clearing _pend and the press starting,
+      // so a queued move cannot slip in ahead of the press it waits for.
+      _firing = true;
+      _pend   = false;
       macro_press_now(_pend_end);
+      _firing = false;
     }
     pros::delay(ez::util::DELAY_TIME);
   }
@@ -443,6 +519,9 @@ static void macro_delay_task(void*) {
 
 void macro_press(double end_height, int delay_time) {
   _pend = false;   // a new press replaces one still waiting
+  // ... and a move still waiting its turn.  A move asked for AFTER this call
+  // stays queued and runs once this press's step is done.
+  _move_queued = false;
 
   if (delay_time <= 0) {
     macro_press_now(end_height);
@@ -457,7 +536,7 @@ void macro_press(double end_height, int delay_time) {
 
 bool macro_wait_done(int timeout_ms) {
   const uint32_t start = pros::millis();
-  while (_running || _pend) {
+  while (_running || _pend || _firing || _press_queued) {
     if ((int)(pros::millis() - start) > timeout_ms) return false;
     pros::delay(ez::util::DELAY_TIME);
   }

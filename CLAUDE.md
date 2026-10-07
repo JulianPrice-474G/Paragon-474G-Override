@@ -128,13 +128,18 @@ states `C F I`.
   and the upper roller reversed `CASCADE_FLIP_DELAY_MS` into the rise → hold
   until `CASCADE_AFTER_FLIP_MS` after the flip → **stays at OUT** by default →
   intake off, swap holding motor, hold position.
-- In an auton, `macro_press()` **takes over the cascade**: if a
-  `cascade_move_async()` or an unfinished macro step is running, it cancels it
-  and starts the macro at once. (RIGHT in driver control still only cancels.)
+- **The macro is never broken by another cascade request.** In an auton:
+  `macro_press()` cancels a running `cascade_move_async()` and starts at once,
+  but **waits** for an unfinished macro step (cancelling press 1 used to make
+  the "second" press restart press 1). `cascade_move_async()` during a macro
+  step or a pending delayed press **waits** and runs after it (it used to be
+  silently dropped). One queued slot each; a `macro_press()` call drops a
+  queued move. (RIGHT in driver control still only cancels.)
 - `macro_press(h)` on the second press sends the cascade on to
   height `h` after the flip. The value is ignored on the first press, and it is
   cleared after use, so a later RIGHT press in driver control stays at OUT.
-- Pressing RIGHT or touching L1/L2 mid-move cancels. One long-lived worker task,
+- Pressing RIGHT mid-move cancels. L1/L2 are **ignored** while the macro moves
+  (they used to cancel it) and work again once it ends. One long-lived worker task,
   shared with `cascade_move_async()` so the two never drive the cascade at once.
 - All the timings and heights are at the top of `main.cpp`.
 - Moves brake and settle at the target (a heavy cascade coasted 60° past), then
