@@ -88,6 +88,15 @@ int CASCADE_FLIP_DELAY_MS = 300;
 // from the flip, so time spent still rising is already used up.
 int CASCADE_AFTER_FLIP_MS = 200;
 
+// ---- One pin macro (one_pin_macro) ----
+// From the parked state after press 1: intakes forward, close the claw,
+// intakes backward, then press 2.  These are the defaults - one_pin_macro()
+// can also be given its own times per call.
+int ONE_PIN_FWD_MS       = 1000;   // all intakes forward this long
+int ONE_PIN_CLAW_WAIT_MS = 0;      // after closing the claw, before reversing
+int ONE_PIN_REV_MS       = 1000;   // all intakes backward this long
+int ONE_PIN_SPEED        = 127;    // intake power for both, 0-127
+
 // Power for downward macro moves.  At the same power the cascade was slower
 // going down than up, so down moves get their own number.  80% of full.
 int CASCADE_DOWN_SPEED = 127 * 95 / 100;

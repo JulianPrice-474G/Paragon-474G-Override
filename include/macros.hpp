@@ -18,6 +18,12 @@ extern int    CASCADE_FLIP_DELAY_MS;  // ms into that rise before the piston fir
 extern int    CASCADE_AFTER_FLIP_MS;  // ms after the flip piston extends
                                       //   before the cascade moves again
 
+// one_pin_macro() defaults - set at the top of src/main.cpp.
+extern int    ONE_PIN_FWD_MS;
+extern int    ONE_PIN_CLAW_WAIT_MS;
+extern int    ONE_PIN_REV_MS;
+extern int    ONE_PIN_SPEED;
+
 // Upper travel limit.  L1 stops raising once the rotation sensor reads this,
 // so the cascade cannot be driven into its top stop.  Manual control only -
 // the macro's targets are all below it.
@@ -218,6 +224,25 @@ bool cascade_move_wait(int timeout_ms = 4000);
 // fires replaces it; macro_cancel() drops it, and any queued press or move.
 void macro_press(double end_height = -1, int delay_time = 0);
 bool macro_wait_done(int timeout_ms = 8000);
+
+// One pin macro.  Only from the parked state after press 1 (macro_waiting()).
+// Runs ALL the intakes forward fwd_ms, closes the claw, waits claw_wait_ms,
+// runs all the intakes backward rev_ms, then does press 2 - grip, lift, flip -
+// finishing at end_height like macro_press(end_height).  Returns at once; the
+// cascade worker runs it, so the auton keeps driving.
+//
+//   one_pin_macro();                    // main.cpp defaults, stay at out height
+//   one_pin_macro(500);                 // finish at 500
+//   one_pin_macro(-1, 800, 0, 1200);    // 0.8 s forward, 1.2 s backward
+//
+// If press 1 is still running it waits for it.  If the macro is not parked
+// after press 1 at all, it does nothing and returns false.  A cascade move
+// still running is taken over, like macro_press().  macro_wait_done() waits
+// for the whole thing.
+bool one_pin_macro(double end_height = -1,
+                   int fwd_ms       = ONE_PIN_FWD_MS,
+                   int claw_wait_ms = ONE_PIN_CLAW_WAIT_MS,
+                   int rev_ms       = ONE_PIN_REV_MS);
 
 // Drops a delayed press that has not fired yet.  Called from disabled() and
 // at the start of opcontrol(), so one left over from an auton never fires.

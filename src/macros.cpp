@@ -28,6 +28,13 @@ static volatile double   _queued_target    = 0;
 static volatile int      _queued_speed     = 0;
 static volatile bool     _press_queued     = false;   // a macro_press()
 static volatile double   _press_queued_end = -1;
+static volatile bool     _one_pin_queued   = false;   // a one_pin_macro()
+
+// one_pin_macro()'s times for the run about to start.
+static double _one_pin_end      = -1;
+static int    _one_pin_fwd_ms   = 0;
+static int    _one_pin_claw_ms  = 0;
+static int    _one_pin_rev_ms   = 0;
 
 // True while the worker runs a plain cascade_move_async() rather than a macro
 // phase.  A macro press takes over a move, but waits for a phase.
@@ -43,11 +50,14 @@ void macro_in_auton(bool on) { _in_auton = on; }
 
 bool macro_running() { return _running; }
 bool macro_failed()  { return _failed; }
-void macro_press_pending_clear() { _pend = false; _move_queued = false; _press_queued = false; }
+void macro_press_pending_clear() {
+  _pend = false; _move_queued = false; _press_queued = false; _one_pin_queued = false;
+}
 void macro_cancel() {
   _pend = false;
-  _move_queued  = false;
-  _press_queued = false;
+  _move_queued    = false;
+  _press_queued   = false;
+  _one_pin_queued = false;
   if (_running) _cancel = true;
 }
 
@@ -210,6 +220,14 @@ static void intake_run(bool on, bool roller_back = false) {
   upper_roller.move(roller_back ? p : -p);
 }
 
+// All four intake motors at one power, upper roller included.  Positive runs
+// them the way intake_run(true) does; negative runs every one of them backward.
+static void intake_all(int p) {
+  fins_set(p);
+  dropdown.move(-p);
+  upper_roller.move(-p);
+}
+
 
 
 // Testing pause between actions.  Keeps the finished step's label on the
@@ -358,10 +376,46 @@ static void phase2_task(void*) {
   _running = false;   // last - see phase1_task()
 }
 
+// one_pin_macro(): intakes forward, claw, intakes backward, then press 2.
+// Only ever started from PH_WAITING - see one_pin_macro().
+static void one_pin_task() {
+  _intake_owned = true;
+  intake_spin_stop();   // take the intake from any timed spin, as phase 2 does
+  pros::delay(20);
+
+  intake_all(ONE_PIN_SPEED);
+  bool ok = macro_wait(_one_pin_fwd_ms, "1pin fwd");
+
+  if (ok) {
+    claw_set(CLAW_ON);
+    ok = macro_wait(_one_pin_claw_ms, "1pin claw");
+  }
+
+  if (ok) {
+    intake_all(-ONE_PIN_SPEED);
+    ok = macro_wait(_one_pin_rev_ms, "1pin rev");
+  }
+
+  if (ok) {
+    // Press 2 as normal.  It takes the intake itself and cleans up after.
+    _phase2_end = _one_pin_end;
+    phase2_task(nullptr);
+    return;
+  }
+
+  // Cancelled before press 2.  Still parked, so a later press can carry on.
+  intake_run(false);
+  _intake_owned = false;
+  cascade_hold();
+  _cancel  = false;
+  _failed  = true;
+  _running = false;   // last - see phase1_task()
+}
+
 // ONE long-lived worker rather than a task per press.  pros::Task has no
 // destructor - it is a thin wrapper around a handle - so `delete` freed the
 // wrapper while leaving the RTOS task behind, leaking one per press.
-enum _Req { REQ_NONE, REQ_PHASE1, REQ_PHASE2, REQ_MOVE };
+enum _Req { REQ_NONE, REQ_PHASE1, REQ_PHASE2, REQ_MOVE, REQ_ONE_PIN };
 static void move_task();
 static volatile _Req _req = REQ_NONE;
 
@@ -400,7 +454,17 @@ static void move_start(double target, int speed) {
 static void start_queued() {
   _start_mx.take();
   if (!_running) {
-    if (_press_queued) {
+    if (_one_pin_queued) {
+      _one_pin_queued = false;
+      if (_phase == PH_WAITING) {
+        _running = true; _running_move = false; _cancel = false; _failed = false;
+        _step = "1pin";
+        _req  = REQ_ONE_PIN;
+      } else {
+        _failed = true;   // press 1 did not park - nothing to do the pin from
+        _step   = "1pin: not parked";
+      }
+    } else if (_press_queued) {
       _press_queued = false;
       _phase2_end   = _press_queued_end;
       macro_start();
@@ -417,10 +481,11 @@ static void macro_worker(void*) {
     _Req r = _req;
     if (r != REQ_NONE) {
       _req = REQ_NONE;
-      if      (r == REQ_PHASE1) phase1_task(nullptr);
-      else if (r == REQ_PHASE2) phase2_task(nullptr);
-      else                      move_task();
-    } else if (!_running && (_press_queued || _move_queued)) {
+      if      (r == REQ_PHASE1)  phase1_task(nullptr);
+      else if (r == REQ_PHASE2)  phase2_task(nullptr);
+      else if (r == REQ_ONE_PIN) one_pin_task();
+      else                       move_task();
+    } else if (!_running && (_press_queued || _move_queued || _one_pin_queued)) {
       start_queued();
     }
     pros::delay(ez::util::DELAY_TIME);
@@ -457,7 +522,7 @@ void cascade_move_async(double target, int speed) {
   const int s = (speed > 0) ? speed : CASCADE_MOVE_SPEED;
 
   _start_mx.take();
-  if (_running || _pend || _firing || _press_queued) {
+  if (_running || _pend || _firing || _press_queued || _one_pin_queued) {
     // Busy, or a press is due first: wait for it, then go.  Dropping it
     // instead left the cascade wherever the macro finished.
     _queued_target = target;
@@ -546,9 +611,42 @@ void macro_press(double end_height, int delay_time) {
 
 bool macro_wait_done(int timeout_ms) {
   const uint32_t start = pros::millis();
-  while (_running || _pend || _firing || _press_queued) {
+  while (_running || _pend || _firing || _press_queued || _one_pin_queued) {
     if ((int)(pros::millis() - start) > timeout_ms) return false;
     pros::delay(ez::util::DELAY_TIME);
   }
   return !_failed;
+}
+
+bool one_pin_macro(double end_height, int fwd_ms, int claw_wait_ms, int rev_ms) {
+  ensure_worker();
+  _pend = false;           // replaces a delayed press still waiting, like macro_press()
+  _move_queued = false;
+
+  _start_mx.take();
+  // A plain cascade move is taken over, as macro_press() does.
+  if (_running && _running_move) {
+    _cancel = true;
+    const uint32_t start = pros::millis();
+    while (_running && pros::millis() - start < 500) pros::delay(ez::util::DELAY_TIME);
+  }
+
+  _one_pin_end     = end_height;
+  _one_pin_fwd_ms  = fwd_ms;
+  _one_pin_claw_ms = claw_wait_ms;
+  _one_pin_rev_ms  = rev_ms;
+
+  bool started = true;
+  if (_running) {
+    _one_pin_queued = true;            // press 1 still going - run once it parks
+  } else if (_phase == PH_WAITING) {
+    _running = true; _running_move = false; _cancel = false; _failed = false;
+    _step = "1pin";
+    _req  = REQ_ONE_PIN;
+  } else {
+    _step   = "1pin: not parked";      // not after press 1 - do nothing
+    started = false;
+  }
+  _start_mx.give();
+  return started;
 }
