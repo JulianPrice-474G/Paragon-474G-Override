@@ -1009,8 +1009,12 @@ void opcontrol() {
     } else {
       // Parked while the UI has the controller.  move(0) rather than skipping,
       // or a motor holds whatever it was last told to do.
-      cascade_set(0);
-      intake_set(0);
+      //
+      // EXCEPT while the macro, a cascade move or a timed intake spin is still
+      // running - e.g. one an auton started just before a LEFT+B test run
+      // returned.  Zeroing them every tick here fought it to a standstill.
+      if (!macro_running())                               cascade_set(0);
+      if (!macro_owns_intake() && !intake_spin_active())  intake_set(0);
       // Pistons hold their state and are not re-commanded here.
     }
 
