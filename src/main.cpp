@@ -62,25 +62,23 @@ constexpr int    FIN_JAM_GRACE_MS = 300;
 constexpr bool   FIN_JAM_IN_DRIVER = false;
 
 /////
-// CASCADE HEIGHTS - CHANGE THESE
-/////
 // Rotation sensor readings - the "p" value on the controller's middle row.
 // Drive the cascade where you want it, read p off the controller, put the
 // number here.  The macro and the L1 travel limit both use these.
 double CASCADE_LOW     = 190;   // bottom / travel
-double CASCADE_COLLECT = 320;   // where the macro parks, waiting for press 2
-double CASCADE_FLIP    = 370;   // press 1 rises to here first
+double CASCADE_COLLECT = 330;   // where the macro parks, waiting for press 2
+double CASCADE_FLIP    = 385;   // press 1 rises to here first
 double CASCADE_OUT     = 430;   // press 2 rises to here
-int CASCADE_DROP_DELAY_MS = 350;  // press 1: ms after claw+flip drop before lowering to collect
-double CASCADE_MAX     = 1000;  // L1 won't raise past this
+int CASCADE_DROP_DELAY_MS = 250;  // press 1: ms after claw+flip drop before lowering to collect
+double CASCADE_MAX     = 1100;  // L1 won't raise past this
 
 // ---- Press 1, custom flip ----
 // A second set of press 1 flip values - higher, longer wait.  Driver control
 // ALWAYS uses these.  Autons use them only when CASCADE_CUSTOM_FLIP_IN_AUTON
 // is true; false keeps autons on CASCADE_FLIP / CASCADE_DROP_DELAY_MS above.
-bool   CASCADE_CUSTOM_FLIP_IN_AUTON = false;
-double CASCADE_CUSTOM_FLIP          = 410;   // press 1 rises to here
-int    CASCADE_CUSTOM_DROP_DELAY_MS = 500;   // ms after claw+flip drop before lowering
+bool   CASCADE_CUSTOM_FLIP_IN_AUTON = true;
+double CASCADE_CUSTOM_FLIP          = 390;   // press 1 rises to here
+int    CASCADE_CUSTOM_DROP_DELAY_MS = 350;   // ms after claw+flip drop before lowering
 
 // ---- Press 2 ----
 // How far into the rise to CASCADE_OUT the flip piston fires.  0 fires it as
@@ -123,14 +121,14 @@ pros::Motor fin_2(FIN_2_PORT);
 // PNEUMATICS - ADI (3-wire) ports, letters A-H
 /////
 constexpr char INTAKE_PISTON_PORT = 'F';  // 25 mm, UP <-> MIDDLE - toggled by Y
-constexpr char CLAW_PORT          = 'B';  // toggled by DOWN
-constexpr char C_FLIP_PORT        = 'A';  // toggled by LEFT
+constexpr char CLAW_PORT          = 'A';  // toggled by DOWN
+constexpr char C_FLIP_PORT        = 'B';  // toggled by LEFT
 
 // Single-acting solenoids.  true = extended, false = retracted.
 // If your pistons turn out to behave backwards, swap these two values - that is
 // the only place the sense of "extended" is defined.
-constexpr bool PISTON_EXTENDED  = true;
-constexpr bool PISTON_RETRACTED = false;
+constexpr bool PISTON_EXTENDED  = false;
+constexpr bool PISTON_RETRACTED = true;
 
 // Starts EXTENDED (intake UP).  The second constructor argument is the
 // power-on state, so it is already up before opcontrol runs.
