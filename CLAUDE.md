@@ -156,7 +156,8 @@ states `C F I`.
   than once; confirm on the robot before assuming.
 - `one_pin_macro(end, fwd_ms, claw_wait_ms, rev_ms)` — from the parked state
   after press 1 only: all intakes forward → claw on → all intakes backward →
-  press 2. Defaults are `ONE_PIN_*` at the top of `main.cpp`. Waits for an
+  press 2, with the fins and dropdown outtaking throughout (upper roller as
+  normal: forward, then reverse at the flip). Defaults are `ONE_PIN_*` at the top of `main.cpp`. Waits for an
   unfinished press 1; does nothing (returns false) if not parked.
 
 ## Autons

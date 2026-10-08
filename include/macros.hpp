@@ -243,7 +243,9 @@ bool macro_wait_done(int timeout_ms = 8000);
 // One pin macro.  Only from the parked state after press 1 (macro_waiting()).
 // Runs ALL the intakes forward fwd_ms, closes the claw, waits claw_wait_ms,
 // runs all the intakes backward rev_ms, then does press 2 - grip, lift, flip -
-// finishing at end_height like macro_press(end_height).  Returns at once; the
+// finishing at end_height like macro_press(end_height).  In that press 2 the
+// fins and dropdown OUTTAKE the whole time; the upper roller runs forward, then
+// reverses at the flip, as in a normal press 2.  Returns at once; the
 // cascade worker runs it, so the auton keeps driving.
 //
 //   one_pin_macro();                    // main.cpp defaults, stay at out height

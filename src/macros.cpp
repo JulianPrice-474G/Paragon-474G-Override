@@ -14,6 +14,11 @@ static bool        _failed      = false;  // last run ended STALLED or TIMEOUT
 // out height.
 static double      _phase2_end  = -1;
 
+// Set by one_pin_macro() for its press 2: the fins and dropdown run in the
+// OUTTAKE direction the whole time.  The upper roller does its usual
+// forward-then-reverse-at-flip.  Cleared after every phase 2.
+static bool        _phase2_outtake = false;
+
 // A macro_press() with a delay_time, waiting to fire.  See macro_press().
 static volatile bool     _pend       = false;
 static volatile double   _pend_end   = -1;
@@ -218,11 +223,13 @@ static bool _intake_owned = false;
 bool macro_owns_intake() { return _intake_owned; }
 
 // roller_back reverses ONLY the upper roller (port 19); the fins and dropdown
-// carry on in the normal direction.
+// carry on in the normal direction - or in the outtake direction throughout,
+// during one_pin_macro()'s press 2 (_phase2_outtake).
 static void intake_run(bool on, bool roller_back = false) {
   int p = on ? MACRO_INTAKE_SPEED : 0;
-  fins_set(p);
-  dropdown.move(-p);
+  int f = _phase2_outtake ? -p : p;   // fins + dropdown
+  fins_set(f);
+  dropdown.move(-f);
   upper_roller.move(roller_back ? p : -p);
 }
 
@@ -367,6 +374,7 @@ static void phase2_task(void*) {
   // Release the intake on every exit path, cancel and stall included.
   intake_run(false);
   _intake_owned = false;
+  _phase2_outtake = false;   // only ever for the one press 2 that set it
 
   // Hand the holding job to the other motor after each completed run, so the
   // heat of carrying a raised cascade is shared between them.
@@ -404,7 +412,10 @@ static void one_pin_task() {
 
   if (ok) {
     // Press 2 as normal.  It takes the intake itself and cleans up after.
-    _phase2_end = _one_pin_end;
+    // ... except the fins and dropdown outtake the whole time; the upper
+    // roller still goes forward, then reverses at the flip.
+    _phase2_end     = _one_pin_end;
+    _phase2_outtake = true;
     phase2_task(nullptr);
     return;
   }
