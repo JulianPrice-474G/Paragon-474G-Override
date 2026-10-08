@@ -79,7 +79,7 @@ double CASCADE_MAX     = 1100;  // L1 won't raise past this
 // is true; false keeps autons on CASCADE_FLIP / CASCADE_DROP_DELAY_MS above.
 bool   CASCADE_CUSTOM_FLIP_IN_AUTON = true;
 double CASCADE_CUSTOM_FLIP          = 390;   // press 1 rises to here
-int    CASCADE_CUSTOM_DROP_DELAY_MS = 350;   // ms after claw+flip drop before lowering
+int    CASCADE_CUSTOM_DROP_DELAY_MS = 700;   // ms after claw+flip drop before lowering
 
 // ---- Press 2 ----
 // How far into the rise to CASCADE_OUT the flip piston fires.  0 fires it as
