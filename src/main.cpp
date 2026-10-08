@@ -38,6 +38,7 @@ constexpr int8_t FIN_2_PORT = 11;  // the one that spins opposite the other two
 constexpr int L_SPEED    = 127;      // L1 - full power
 constexpr int L2_SPEED   = L_SPEED * 50 / 100;  // L2 - 50% of L_SPEED (= 63)
 constexpr int R_SPEED = 127;         // R1 / R2 group
+constexpr int A_FWD_MS = 1000;       // A held: all intakes forward this long, then backward
 constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can ask for
 
 // How close to the target heading drive_arc() calls it arrived.
@@ -960,7 +961,7 @@ void opcontrol() {
       //   port 11 (fin_2) fin      - always runs, mounted opposite the rest
       //   port 4  (dropdown) dropdown - always runs
       //   port 19 (upper_roller) upper roller - runs ONLY at the collect height
-      // A runs all four the R2 way, upper roller included, at any height.
+      // A runs all four forward for A_FWD_MS, then backward, roller included.
 
       // The upper roller (port 19) only turns while the cascade is AT the
       // collect height.  Anywhere else the fins (ports 1 and 11) and the
@@ -980,9 +981,18 @@ void opcontrol() {
       } else {
         int  power  = 0;
         bool roller = true;
+        // A held: all four, upper roller included at any height - forward
+        // for A_FWD_MS, then backward for as long as A stays held.
+        static uint32_t a_since = 0;   // when this A hold began; 0 = not held
+        const bool a_held = master.get_digital(DIGITAL_A);
+        if (!a_held) a_since = 0;
+
         if      (master.get_digital(DIGITAL_R2)) { power = -R_SPEED; roller = roller_enabled; }
         else if (master.get_digital(DIGITAL_R1)) { power =  R_SPEED; roller = roller_enabled; }
-        else if (master.get_digital(DIGITAL_A))  { power = -R_SPEED; }   // all four, any height
+        else if (a_held) {
+          if (a_since == 0) a_since = pros::millis();
+          power = (pros::millis() - a_since < (uint32_t)A_FWD_MS) ? R_SPEED : -R_SPEED;
+        }
         if (power != drv_intake_power || roller != drv_intake_roller) {
           intake_set(power, roller);
           drv_intake_power  = power;

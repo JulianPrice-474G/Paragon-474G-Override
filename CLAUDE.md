@@ -100,7 +100,7 @@ Outside it the UI owns LEFT/RIGHT/A/B for menu navigation.
 | DOWN / LEFT | toggle claw / toggle C-flip |
 | RIGHT | cascade macro |
 | LEFT+B held 1 s | run selected auton — only outside driver mode, off a comp switch |
-| A (hold) | all four intake motors the R2 way, upper roller included at any cascade height |
+| A (hold) | all four intake motors forward for `A_FWD_MS` (1 s), then backward while still held; upper roller included at any cascade height |
 | B | unused (still half of the LEFT+B auton combo) |
 
 Controller in driver mode: row 1 `p### temps heading` (IMU zeroed on entering driver mode), row 2 commanded piston
