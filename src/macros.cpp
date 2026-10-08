@@ -14,9 +14,14 @@ static bool        _failed      = false;  // last run ended STALLED or TIMEOUT
 // out height.
 static double      _phase2_end  = -1;
 
+// Set by macro_press_2(): phase 2 runs the fins and dropdown BACKWARD the
+// whole time.  The upper roller does its usual forward-then-back.  Used once.
+static bool        _phase2_back = false;
+
 // A macro_press() with a delay_time, waiting to fire.  See macro_press().
 static volatile bool     _pend       = false;
 static volatile double   _pend_end   = -1;
+static volatile bool     _pend_back  = false;
 static volatile uint32_t _pend_at    = 0;
 static volatile bool     _firing     = false;  // the delay task is pressing it now
 
@@ -28,6 +33,7 @@ static volatile double   _queued_target    = 0;
 static volatile int      _queued_speed     = 0;
 static volatile bool     _press_queued     = false;   // a macro_press()
 static volatile double   _press_queued_end = -1;
+static volatile bool     _press_queued_back = false;
 static volatile bool     _one_pin_queued   = false;   // a one_pin_macro()
 
 // one_pin_macro()'s times for the run about to start.
@@ -218,11 +224,13 @@ static bool _intake_owned = false;
 bool macro_owns_intake() { return _intake_owned; }
 
 // roller_back reverses ONLY the upper roller (port 19); the fins and dropdown
-// carry on in the normal direction.
+// carry on in the normal direction - or backward throughout, if this press
+// came from macro_press_2() (_phase2_back).
 static void intake_run(bool on, bool roller_back = false) {
   int p = on ? MACRO_INTAKE_SPEED : 0;
-  fins_set(p);
-  dropdown.move(-p);
+  int f = _phase2_back ? -p : p;   // fins + dropdown
+  fins_set(f);
+  dropdown.move(-f);
   upper_roller.move(roller_back ? p : -p);
 }
 
@@ -274,8 +282,10 @@ bool cascade_at_collect() {
 /////
 static void phase1_task(void*) {
   // An end height only means anything on the SECOND press.  Clear whatever the
-  // first press passed, so it cannot leak into a later phase 2.
-  _phase2_end = -1;
+  // first press passed, so it cannot leak into a later phase 2.  Same for
+  // macro_press_2()'s backward intake.
+  _phase2_end  = -1;
+  _phase2_back = false;
 
   // Custom flip values in driver control always, in autons only if switched
   // on - see CASCADE_CUSTOM_FLIP_IN_AUTON.
@@ -366,6 +376,7 @@ static void phase2_task(void*) {
 
   // Release the intake on every exit path, cancel and stall included.
   intake_run(false);
+  _phase2_back = false;   // used once, like _phase2_end
   _intake_owned = false;
 
   // Hand the holding job to the other motor after each completed run, so the
@@ -404,7 +415,8 @@ static void one_pin_task() {
 
   if (ok) {
     // Press 2 as normal.  It takes the intake itself and cleans up after.
-    _phase2_end = _one_pin_end;
+    _phase2_end  = _one_pin_end;
+    _phase2_back = false;
     phase2_task(nullptr);
     return;
   }
@@ -478,6 +490,7 @@ static void start_queued() {
     } else if (_press_queued) {
       _press_queued = false;
       _phase2_end   = _press_queued_end;
+      _phase2_back  = _press_queued_back;
       macro_start();
     } else if (_move_queued && !_pend && !_firing) {
       _move_queued = false;
@@ -564,7 +577,7 @@ bool cascade_move_wait(int timeout_ms) {
 //  - an unfinished macro step is WAITED FOR: the press runs once it is done.
 //    Cancelling it instead dropped press 1 back to idle, so the "second" press
 //    started press 1 over again.
-static void macro_press_now(double end_height) {
+static void macro_press_now(double end_height, bool back = false) {
   _start_mx.take();
   if (_running && _running_move) {
     _cancel = true;
@@ -576,12 +589,14 @@ static void macro_press_now(double end_height) {
 
   if (_running) {
     // A macro step is still moving.  The worker presses once it finishes.
-    _press_queued_end = end_height;
+    _press_queued_end  = end_height;
+    _press_queued_back = back;
     _press_queued     = true;
   } else {
     // Only the SECOND press uses it, but storing it on every press means a
     // cancelled run cannot leave a stale target behind for the next one.
-    _phase2_end = end_height;
+    _phase2_end  = end_height;
+    _phase2_back = back;
     macro_start();
   }
   _start_mx.give();
@@ -596,28 +611,37 @@ static void macro_delay_task(void*) {
       // so a queued move cannot slip in ahead of the press it waits for.
       _firing = true;
       _pend   = false;
-      macro_press_now(_pend_end);
+      macro_press_now(_pend_end, _pend_back);
       _firing = false;
     }
     pros::delay(ez::util::DELAY_TIME);
   }
 }
 
-void macro_press(double end_height, int delay_time) {
+static void macro_press_impl(double end_height, int delay_time, bool back) {
   _pend = false;   // a new press replaces one still waiting
   // ... and a move still waiting its turn.  A move asked for AFTER this call
   // stays queued and runs once this press's step is done.
   _move_queued = false;
 
   if (delay_time <= 0) {
-    macro_press_now(end_height);
+    macro_press_now(end_height, back);
     return;
   }
 
   static pros::Task worker(macro_delay_task, nullptr, "Macro Delay");
-  _pend_end = end_height;
-  _pend_at  = pros::millis() + delay_time;
-  _pend     = true;
+  _pend_end  = end_height;
+  _pend_back = back;
+  _pend_at   = pros::millis() + delay_time;
+  _pend      = true;
+}
+
+void macro_press(double end_height, int delay_time) {
+  macro_press_impl(end_height, delay_time, false);
+}
+
+void macro_press_2(double end_height, int delay_time) {
+  macro_press_impl(end_height, delay_time, true);
 }
 
 bool macro_wait_done(int timeout_ms) {

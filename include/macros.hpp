@@ -238,6 +238,17 @@ bool cascade_move_wait(int timeout_ms = 4000);
 // macro_wait_done() also waits out the delay.  Another macro_press() before it
 // fires replaces it; macro_cancel() drops it, and any queued press or move.
 void macro_press(double end_height = -1, int delay_time = 0);
+
+// Same as macro_press() in every way - same parameters, same first press -
+// except on the SECOND press the fins and dropdown run BACKWARD the whole
+// time instead of forward.  The upper roller (port 19) still runs forward,
+// then reverses at the flip, as normal.  On a first press it acts exactly
+// like macro_press().
+//
+//   macro_press();          // 1st press - normal
+//   macro_wait_done();
+//   macro_press_2(500);     // 2nd press - fins + dropdown backward, end at 500
+void macro_press_2(double end_height = -1, int delay_time = 0);
 bool macro_wait_done(int timeout_ms = 8000);
 
 // One pin macro.  Only from the parked state after press 1 (macro_waiting()).
