@@ -54,6 +54,7 @@ soft-float archives and breaks the link. Check any `.a` with
 | `src/user_screen.cpp` | brain UI pages and controller screen (team-specific) |
 | `src/ui_engine.cpp` | UI engine — shared with the template repo, see below |
 | `src/vision.cpp` | AI Vision helpers and the live detection view |
+| `src/auton_timer.cpp` / `include/auton_timer.hpp` | 15 s match-accurate cut-off for LEFT+B runs — self-contained, `AUTON_TIMER_ON` turns it off |
 | `include/subsystems.hpp` | externs + subsystem helper declarations |
 
 ## Always use the subsystem helpers
@@ -171,6 +172,16 @@ verified for heading, drive, turn and swing.
 Swing returns must **alternate** swing type (LEFT out, RIGHT back) — returning
 with the same type drives one side in reverse and lands short.
 
+**What the end of auton does in a match** (checked against the PROS 4.2.2
+kernel and VEXos): VEXos forces every motor to coast and ignores motor
+commands (HOLD is not held); PROS deletes the auton task wherever it is and
+runs `disabled()` — which here vents every piston (claw opens, flip releases,
+intake to MIDDLE). 3-wire outputs are *not* disabled. Other tasks (macro
+worker, timed spins, EZ PID) keep running unseen and are not stopped by
+`opcontrol()`. LEFT+B runs copy all of this at exactly 15 s via
+`auton_run_timed()` (see `auton_timer.hpp`), then stay limp until a button is
+pressed.
+
 ## Traps that have bitten this project
 
 - **Stale VS Code tabs.** If a file changed on disk while its tab was open,
@@ -186,6 +197,10 @@ with the same type drives one side in reverse and lands short.
   value, not a bad one.
 - `pros::Task` has no destructor — `delete` leaks the RTOS task. Use one
   long-lived worker.
+- **The auton task can be deleted at any instruction** (end of auton). A
+  `pros::Mutex` it holds then stays locked forever. Never hold a lock across
+  a wait in code an auton calls; the macro guards its start decisions by
+  pausing the scheduler (`_StartLock`) for exactly this reason.
 - `pros::Rotation::get_position()` is **centidegrees**; motors are degrees.
 
 ## Brain UI template

@@ -45,9 +45,33 @@ static int    _one_pin_rev_ms   = 0;
 // phase.  A macro press takes over a move, but waits for a phase.
 static volatile bool     _running_move     = false;
 
-// Held while deciding "is the cascade free? then start something", so the
-// auton, the delay task and the worker cannot both start at once.
-static pros::Mutex       _start_mx;
+// Guards the "is the cascade free? then start something" decisions, so the
+// auton, the delay task and the worker cannot both start at once.  It pauses
+// the task scheduler rather than taking a mutex: when auton ends, the auton
+// task is deleted wherever it is (PROS does this in a match, and so does the
+// auton timer), and a mutex it held then would stay locked for good and
+// freeze the macro.  Nothing can be deleted inside a paused-scheduler section.
+// Keep these sections tiny - no delays, no device calls.
+extern "C" {
+void    rtos_suspend_all(void);   // PROS kernel (kapi.h), not in the public headers
+int32_t rtos_resume_all(void);
+}
+struct _StartLock {
+  _StartLock()  { rtos_suspend_all(); }
+  ~_StartLock() { rtos_resume_all(); }
+};
+
+// A plain cascade move is taken over by a macro press: ask it to stop, and
+// wait for it.  No lock is held while waiting, for the reason above.
+static void take_over_move() {
+  if (!(_running && _running_move)) return;
+  _cancel = true;
+  // Every loop that drives the cascade checks _cancel each tick, so this is
+  // one or two ticks.  The cap is only a backstop.
+  const uint32_t start = pros::millis();
+  while (_running && _running_move && pros::millis() - start < 500)
+    pros::delay(ez::util::DELAY_TIME);
+}
 
 // True while an auton runs.  Press 1 uses it to pick its flip values.
 static volatile bool     _in_auton = false;
@@ -474,7 +498,7 @@ static void move_start(double target, int speed) {
 // A move also waits for a delayed press still to fire, so it runs after that
 // press's macro step - the order the auton asked for them.
 static void start_queued() {
-  _start_mx.take();
+  _StartLock lock;
   if (!_running) {
     if (_one_pin_queued) {
       _one_pin_queued = false;
@@ -495,7 +519,6 @@ static void start_queued() {
       move_start(_queued_target, _queued_speed);
     }
   }
-  _start_mx.give();
 }
 
 static void macro_worker(void*) {
@@ -543,7 +566,7 @@ void cascade_move_async(double target, int speed) {
   ensure_worker();
   const int s = (speed > 0) ? speed : 0;   // 0 = default; see move_task()
 
-  _start_mx.take();
+  _StartLock lock;
   if (_running || _pend || _firing || _press_queued || _one_pin_queued) {
     // Busy, or a press is due first: wait for it, then go.  Dropping it
     // instead left the cascade wherever the macro finished.
@@ -553,7 +576,6 @@ void cascade_move_async(double target, int speed) {
   } else {
     move_start(target, s);
   }
-  _start_mx.give();
 }
 
 bool cascade_move_active() { return _running || _move_queued; }
@@ -576,15 +598,10 @@ bool cascade_move_wait(int timeout_ms) {
 //    Cancelling it instead dropped press 1 back to idle, so the "second" press
 //    started press 1 over again.
 static void macro_press_now(double end_height) {
-  _start_mx.take();
-  if (_running && _running_move) {
-    _cancel = true;
-    // Every loop that drives the cascade checks _cancel each tick, so this is
-    // one or two ticks.  The cap is only a backstop.
-    const uint32_t start = pros::millis();
-    while (_running && pros::millis() - start < 500) pros::delay(ez::util::DELAY_TIME);
-  }
+  ensure_worker();   // here, not inside the lock - it may create the task
+  take_over_move();
 
+  _StartLock lock;
   if (_running) {
     // A macro step is still moving.  The worker presses once it finishes.
     _press_queued_end = end_height;
@@ -595,7 +612,6 @@ static void macro_press_now(double end_height) {
     _phase2_end = end_height;
     macro_start();
   }
-  _start_mx.give();
 }
 
 // Fires a delayed press when its time comes.  Its own long-lived task, so the
@@ -645,14 +661,10 @@ bool one_pin_macro(double end_height, int fwd_ms, int claw_wait_ms, int rev_ms) 
   _pend = false;           // replaces a delayed press still waiting, like macro_press()
   _move_queued = false;
 
-  _start_mx.take();
   // A plain cascade move is taken over, as macro_press() does.
-  if (_running && _running_move) {
-    _cancel = true;
-    const uint32_t start = pros::millis();
-    while (_running && pros::millis() - start < 500) pros::delay(ez::util::DELAY_TIME);
-  }
+  take_over_move();
 
+  _StartLock lock;
   _one_pin_end     = end_height;
   _one_pin_fwd_ms  = fwd_ms;
   _one_pin_claw_ms = claw_wait_ms;
@@ -669,6 +681,5 @@ bool one_pin_macro(double end_height, int fwd_ms, int claw_wait_ms, int rev_ms) 
     _step   = "1pin: not parked";      // not after press 1 - do nothing
     started = false;
   }
-  _start_mx.give();
   return started;
 }

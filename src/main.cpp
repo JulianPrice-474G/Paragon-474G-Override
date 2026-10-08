@@ -5,6 +5,7 @@
 /////
 #include "main.h"
 #include "ui_engine.hpp"
+#include "auton_timer.hpp"   // 15 s cut-off for LEFT+B runs - removable, see the file
 
 #include <algorithm>
 #include <cmath>
@@ -875,7 +876,7 @@ void ez_template_extras() {
     if (!DriverModeActive() && auton_combo_pressed) {
       master.rumble("-");   // long buzz so you know the combo fired
       pros::motor_brake_mode_e_t preference = chassis.drive_brake_get();
-      autonomous();
+      auton_run_timed();   // autonomous(), cut at 15 s like a match - include/auton_timer.hpp
       chassis.drive_brake_set(preference);
       drv_intake_power = INT32_MIN;   // the auton drove the intake - resend from the buttons
     }
