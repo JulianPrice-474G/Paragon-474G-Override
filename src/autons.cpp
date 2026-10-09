@@ -819,13 +819,13 @@ void auto_4() {
 
 chassis.pid_speed_max_set(127);
 upper_roller_spin(700,127);
-cascade_move_async(260, 127);
-pros::delay(100);
+cascade_move_async(110, 127);
+pros::delay(200);
 chassis.pid_drive_set(-8_in, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(270, 127);
 chassis.pid_wait_quick_chain(); 
-chassis.pid_drive_set(-10, 127);
+chassis.pid_drive_set(-11, 127);
 chassis.pid_wait_quick_chain(); 
 pros::delay(300);
 chassis.headingPID.target_set(chassis.drive_imu_get()); 
@@ -836,7 +836,7 @@ macro_press();
 
 press_y();
 intake_spin(12000,127);
-chassis.pid_drive_set(10, 127);
+chassis.pid_drive_set(9_in, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(132.5, 127);
 chassis.pid_wait_quick_chain();
