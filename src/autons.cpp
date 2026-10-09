@@ -327,7 +327,6 @@ pros::delay(500);*/
 
 
 }
-
 //First single Pin
 void Auto_for_Normal() {
 upper_roller_spin(700,127);
@@ -559,7 +558,7 @@ claw_set(CLAW_OFF);
 pros::delay(200);
 chassis.pid_speed_max_set(127);
 
-//Get To MatchLaoder 2
+//Get To MatchLaoder 3
 
 
 intake_spin(10000,127);
@@ -587,6 +586,29 @@ claw_set(CLAW_OFF);
 pros::delay(200);
 chassis.pid_speed_max_set(127);
 
+//Score FInal Pin
+intake_spin(10000,127);
+macro_press();
+chassis.pid_drive_set(25, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(358, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(12, 30);
+chassis.pid_wait_quick_chain();
+pros::delay(500);
+chassis.pid_drive_set(-7_in, 35);
+chassis.pid_wait_quick_chain();
+macro_press(750);
+chassis.pid_turn_set(315, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(58, 127);
+chassis.pid_wait_until(45_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain();
+cascade_move_async(700, 127);
+pros::delay(300);
+claw_set(CLAW_OFF);
+pros::delay(200);
 
 }
 
