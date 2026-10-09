@@ -14,7 +14,7 @@
 // on the brain, the robot runs SAWP anyway instead of sitting still.  This
 // picks which one:  false = SAWP (slot 1),  true = SAWP Mirrored (slot 4).
 // Picking an auton on the brain always overrides it.
-bool MATCH_DEFAULT_MIRRORED = true;
+bool MATCH_DEFAULT_MIRRORED = false;
 
 // These are out of 127
 const int DRIVE_SPEED = 110;
@@ -212,6 +212,7 @@ chassis.pid_turn_set(90, 127);
 chassis.pid_wait_quick_chain(); 
 chassis.pid_drive_set(-10, 127);
 chassis.pid_wait_quick_chain(); 
+cascade_move_async(0, 127);
 pros::delay(300);
 chassis.headingPID.target_set(chassis.drive_imu_get()); 
 claw_set(CLAW_OFF);
@@ -220,7 +221,7 @@ macro_press();
 //Getting Secpond Pin
 
 press_y();
-intake_spin(3000,127);
+intake_spin(12000,127);
 chassis.pid_drive_set(10, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(227.5, 127);
@@ -231,7 +232,6 @@ chassis.pid_speed_max_set(30);
 chassis.pid_wait_quick_chain();
 chassis.pid_speed_max_set(127);
 pros::delay(350);
-macro_press(500,350); 
 chassis.pid_turn_set(90, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_drive_set(9, 127);
@@ -239,13 +239,14 @@ chassis.pid_wait_quick_chain();
 
 //Drive Back to distacne we stop in SAWP
 chassis.pid_wait_quick_chain();
+macro_press(500);
 chassis.pid_turn_set(230, 127); 
 chassis.pid_wait_quick_chain();
 chassis.pid_drive_set(-27, 127);
 chassis.pid_wait_until(-20_in);
 chassis.pid_speed_max_set(30);
 chassis.pid_wait_quick_chain();
-cascade_move_async(470, 127);
+cascade_move_async(415, 127);
 pros::delay(300);
 chassis.headingPID.target_set(chassis.drive_imu_get()); 
 claw_set(CLAW_OFF);
@@ -278,8 +279,8 @@ chassis.pid_drive_set(-20, 127);
 chassis.pid_wait_until(-13_in);
 chassis.pid_speed_max_set(30);
 chassis.pid_wait_quick_chain();
-cascade_move_async(425, 127);
-pros::delay(300);
+cascade_move_async(375, 127);
+pros::delay(350);
 claw_set(CLAW_OFF);
 }
 
