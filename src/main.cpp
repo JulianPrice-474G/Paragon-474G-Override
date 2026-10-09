@@ -63,32 +63,46 @@ constexpr int    FIN_JAM_GRACE_MS = 300;
 // Tested and working - leave false so it only runs in autons.
 constexpr bool   FIN_JAM_IN_DRIVER = false;
 
+// L1 won't raise the cascade past this rotation sensor reading.  Manual
+// control only, so shared - not part of the macro settings below.
+double CASCADE_MAX = 1100;
+
 /////
-// Rotation sensor readings - the "p" value on the controller's middle row.
-// Drive the cascade where you want it, read p off the controller, put the
-// number here.  The macro and the L1 travel limit both use these.
-double CASCADE_LOW     = 190;   // bottom / travel
-double CASCADE_COLLECT = 330;   // where the macro parks, waiting for press 2
-double CASCADE_FLIP    = 385;   // press 1 rises to here first
-double CASCADE_OUT     = 430;   // press 2 rises to here
-int CASCADE_DROP_DELAY_MS = 250;  // press 1: ms after claw+flip drop before lowering to collect
-double CASCADE_MAX     = 1100;  // L1 won't raise past this
+// MACRO SETTINGS - CHANGE THESE
+/////
+// Two full sets: AUTO_ for autons (LEFT+B test runs included) and DRIVER_ for
+// driver control.  Changing one never touches the other.  Heights are
+// rotation sensor readings - the "p" value on the controller's middle row.
+//
+// Press 1 custom flip: while ..._CUSTOM_FLIP_ON is true, press 1 rises to
+// ..._CUSTOM_FLIP and waits ..._CUSTOM_DROP_DELAY_MS, instead of
+// ..._CASCADE_FLIP and ..._DROP_DELAY_MS.  Each mode has its own switch.
 
-// ---- Press 1, custom flip ----
-// A second set of press 1 flip values - higher, longer wait.  Driver control
-// ALWAYS uses these.  Autons use them only when CASCADE_CUSTOM_FLIP_IN_AUTON
-// is true; false keeps autons on CASCADE_FLIP / CASCADE_DROP_DELAY_MS above.
-bool   CASCADE_CUSTOM_FLIP_IN_AUTON = true;
-double CASCADE_CUSTOM_FLIP          = 390;   // press 1 rises to here
-int    CASCADE_CUSTOM_DROP_DELAY_MS = 700;   // ms after claw+flip drop before lowering
+// ---- AUTONS ----
+double AUTO_CASCADE_LOW          = 190;   // bottom / travel
+double AUTO_CASCADE_COLLECT      = 330;   // press 1 parks here, waiting for press 2
+double AUTO_CASCADE_FLIP         = 385;   // press 1 rises to here first
+int    AUTO_DROP_DELAY_MS        = 250;   // press 1: after claw+flip drop, before lowering
+bool   AUTO_CUSTOM_FLIP_ON       = true;  // press 1 uses the two below instead
+double AUTO_CUSTOM_FLIP          = 390;
+int    AUTO_CUSTOM_DROP_DELAY_MS = 700;
+double AUTO_CASCADE_OUT          = 430;   // press 2 rises to here
+int    AUTO_FLIP_DELAY_MS        = 300;   // press 2: ms into the rise before the flip fires
+int    AUTO_AFTER_FLIP_MS        = 200;   // press 2: ms after the flip before moving on
+int    AUTO_DOWN_SPEED           = 127 * 95 / 100;   // power for downward macro moves
 
-// ---- Press 2 ----
-// How far into the rise to CASCADE_OUT the flip piston fires.  0 fires it as
-// the cascade starts moving; longer than the rise and it fires on arrival.
-int CASCADE_FLIP_DELAY_MS = 300;
-// How long after the flip fires before the cascade may move again.  Counted
-// from the flip, so time spent still rising is already used up.
-int CASCADE_AFTER_FLIP_MS = 200;
+// ---- DRIVER CONTROL ----
+double DRIVER_CASCADE_LOW          = 190;
+double DRIVER_CASCADE_COLLECT      = 330;
+double DRIVER_CASCADE_FLIP         = 385;
+int    DRIVER_DROP_DELAY_MS        = 250;
+bool   DRIVER_CUSTOM_FLIP_ON       = true;
+double DRIVER_CUSTOM_FLIP          = 390;
+int    DRIVER_CUSTOM_DROP_DELAY_MS = 700;
+double DRIVER_CASCADE_OUT          = 430;
+int    DRIVER_FLIP_DELAY_MS        = 300;
+int    DRIVER_AFTER_FLIP_MS        = 200;
+int    DRIVER_DOWN_SPEED           = 127 * 95 / 100;
 
 // ---- One pin macro (one_pin_macro) ----
 // From the parked state after press 1: intakes forward, close the claw,
@@ -98,10 +112,6 @@ int ONE_PIN_FWD_MS       = 1000;   // all intakes forward this long
 int ONE_PIN_CLAW_WAIT_MS = 0;      // after closing the claw, before reversing
 int ONE_PIN_REV_MS       = 1000;   // all intakes backward this long
 int ONE_PIN_SPEED        = 127;    // intake power for both, 0-127
-
-// Power for downward macro moves.  At the same power the cascade was slower
-// going down than up, so down moves get their own number.  80% of full.
-int CASCADE_DOWN_SPEED = 127 * 95 / 100;
 
 /////
 // CASCADE HOLD (currently unused - kept for the macro work)
@@ -785,7 +795,7 @@ void autonomous() {
   fins_sync_zero();
   fins_jam_guard(true);   // fins stop on a jam - autons only
 
-  // Press 1 picks its flip values by mode - see CASCADE_CUSTOM_FLIP_IN_AUTON.
+  // The macro uses the AUTO_ settings while this is on - see the top of main.cpp.
   macro_in_auton(true);
 
   // The number in each case must match the auton_idx you gave that

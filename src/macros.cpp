@@ -73,9 +73,34 @@ static void take_over_move() {
     pros::delay(ez::util::DELAY_TIME);
 }
 
-// True while an auton runs.  Press 1 uses it to pick its flip values.
+// True while an auton runs.  Picks which macro settings are used.
 static volatile bool     _in_auton = false;
 void macro_in_auton(bool on) { _in_auton = on; }
+
+// The macro settings for the mode the robot is in: AUTO_ in an auton, DRIVER_
+// otherwise (see the top of main.cpp).  Each phase reads them once as it
+// starts, so a press keeps one set the whole way through.
+struct MacroSettings {
+  double collect, flip;
+  int    drop_ms;
+  bool   custom_on;
+  double custom_flip;
+  int    custom_drop_ms;
+  double out;
+  int    flip_delay_ms, after_flip_ms, down_speed;
+};
+
+static MacroSettings macro_settings() {
+  if (_in_auton)
+    return {AUTO_CASCADE_COLLECT, AUTO_CASCADE_FLIP, AUTO_DROP_DELAY_MS,
+            AUTO_CUSTOM_FLIP_ON, AUTO_CUSTOM_FLIP, AUTO_CUSTOM_DROP_DELAY_MS,
+            AUTO_CASCADE_OUT, AUTO_FLIP_DELAY_MS, AUTO_AFTER_FLIP_MS,
+            AUTO_DOWN_SPEED};
+  return {DRIVER_CASCADE_COLLECT, DRIVER_CASCADE_FLIP, DRIVER_DROP_DELAY_MS,
+          DRIVER_CUSTOM_FLIP_ON, DRIVER_CUSTOM_FLIP, DRIVER_CUSTOM_DROP_DELAY_MS,
+          DRIVER_CASCADE_OUT, DRIVER_FLIP_DELAY_MS, DRIVER_AFTER_FLIP_MS,
+          DRIVER_DOWN_SPEED};
+}
 
 bool macro_running() { return _running; }
 bool macro_failed()  { return _failed; }
@@ -114,7 +139,7 @@ static void cascade_drive(int power)  { cascade_set(power); }
 //   otherwise           fire action_delay_ms after the move starts
 // Either way it fires on arrival at the latest, so it is never lost.
 // exact_speed: drive at max_speed and never faster, up or down - no
-// CASCADE_DOWN_SPEED swap and no floor above it.  For cascade_move_async()
+// ..._DOWN_SPEED swap and no floor above it.  For cascade_move_async()
 // given a speed.  The macro's own moves leave it false.
 static bool cascade_to(double target, const char* step_name,
                        int max_speed = CASCADE_MOVE_SPEED,
@@ -130,7 +155,7 @@ static bool cascade_to(double target, const char* step_name,
   // Downward moves get their own speed - gravity and the holding brake make a
   // descent behave differently from a lift at the same power.
   const bool going_up = (target >= last_pos);
-  if (!going_up && !exact_speed) max_speed = CASCADE_DOWN_SPEED;
+  if (!going_up && !exact_speed) max_speed = macro_settings().down_speed;
 
   while (pros::millis() - start < (uint32_t)CASCADE_MOVE_TIMEOUT) {
     if (_cancel) { cascade_stop(); return false; }
@@ -291,7 +316,7 @@ bool macro_waiting() { return _phase == PH_WAITING; }
 
 // Geometric check - is the cascade physically near the collect height.
 bool cascade_near_collect() {
-  return fabs(cascade_position() - CASCADE_COLLECT) <= CASCADE_COLLECT_TOL;
+  return fabs(cascade_position() - macro_settings().collect) <= CASCADE_COLLECT_TOL;
 }
 
 // The upper roller is allowed to spin ONLY while the sequence is parked at
@@ -308,11 +333,12 @@ static void phase1_task(void*) {
   // first press passed, so it cannot leak into a later phase 2.
   _phase2_end = -1;
 
-  // Custom flip values in driver control always, in autons only if switched
-  // on - see CASCADE_CUSTOM_FLIP_IN_AUTON.
-  const bool   custom  = !_in_auton || CASCADE_CUSTOM_FLIP_IN_AUTON;
-  const double flip_h  = custom ? CASCADE_CUSTOM_FLIP          : CASCADE_FLIP;
-  const int    drop_ms = custom ? CASCADE_CUSTOM_DROP_DELAY_MS : CASCADE_DROP_DELAY_MS;
+  // This mode's settings.  The custom flip pair replaces the normal flip
+  // height and drop wait when this mode's ..._CUSTOM_FLIP_ON switch is on.
+  const MacroSettings S = macro_settings();
+  const bool   custom  = S.custom_on;
+  const double flip_h  = custom ? S.custom_flip    : S.flip;
+  const int    drop_ms = custom ? S.custom_drop_ms : S.drop_ms;
 
   // Preflight: flip piston to a known state before anything moves.
   flip_set(FLIP_ON);
@@ -329,7 +355,7 @@ static void phase1_task(void*) {
     ok = macro_wait(drop_ms, "2 drop") && step_pause("2 drop");
   }
 
-  if (ok) ok = cascade_to(CASCADE_COLLECT, "3 collect") && step_pause("3 collect");
+  if (ok) ok = cascade_to(S.collect, "3 collect") && step_pause("3 collect");
 
   cascade_stop();
   // Only park-and-arm if it actually arrived.  A cancel or stall drops back to
@@ -342,7 +368,7 @@ static void phase1_task(void*) {
   _running = false;
 }
 
-// Fired partway through phase 2's rise - see CASCADE_FLIP_DELAY_MS.
+// Fired partway through phase 2's rise - see ..._FLIP_DELAY_MS in main.cpp.
 static uint32_t _flip_fired_ms = 0;   // when the flip piston last extended
 
 static void fire_flip() {
@@ -352,6 +378,8 @@ static void fire_flip() {
 }
 
 static void phase2_task(void*) {
+  const MacroSettings S = macro_settings();   // this mode's settings
+
   // Intake runs for the whole of phase 2, from this press until it is back at
   // low.  _intake_owned stops opcontrol writing zero over the top of it.
   _intake_owned = true;
@@ -370,18 +398,18 @@ static void phase2_task(void*) {
   bool ok = macro_wait(MACRO_PISTON_SETTLE, "4 claw") && step_pause("4 claw");
 
   // Rise to the out height, with the flip piston firing partway UP rather than
-  // after arriving - CASCADE_FLIP_DELAY_MS into the move.  The upper roller
+  // after arriving - S.flip_delay_ms into the move.  The upper roller
   // reverses at the same moment and stays reversed until the end.
-  if (ok) ok = cascade_to(CASCADE_OUT, "5 out", CASCADE_MOVE_SPEED,
-                          CASCADE_FLIP_DELAY_MS, fire_flip) &&
+  if (ok) ok = cascade_to(S.out, "5 out", CASCADE_MOVE_SPEED,
+                          S.flip_delay_ms, fire_flip) &&
                step_pause("5 out");
 
-  // Hold before descending, so the flip piston has CASCADE_AFTER_FLIP_MS from
+  // Hold before descending, so the flip piston has S.after_flip_ms from
   // the moment it fired.  Measured from the flip rather than from arriving at
   // the top, so an early flip has already used some of it up.
   if (ok) {
     int elapsed = (int)(pros::millis() - _flip_fired_ms);
-    int remain  = CASCADE_AFTER_FLIP_MS - elapsed;
+    int remain  = S.after_flip_ms - elapsed;
     if (remain > 0) ok = macro_wait(remain, "6 after flip") && step_pause("6 after flip");
   }
 

@@ -14,39 +14,44 @@
 #include "api.h"
 
 /////
-// CASCADE HEIGHTS - CHANGE THESE
+// MACRO SETTINGS - set at the top of src/main.cpp
 /////
-// Rotation sensor readings, the "p" value on the controller's middle row.
-// Drive the cascade where you want it, read p, put the number here.
-// Defined at the top of src/main.cpp so they sit with the ports and speeds.
-// Plain variables, not constexpr, so they can be changed in one place.
-extern double CASCADE_LOW;      // bottom / travel
-extern double CASCADE_COLLECT;  // intake height
-extern double CASCADE_FLIP;     // raised above collect, where the flip piston fires
-extern double CASCADE_OUT;         // phase 2 raise height, above flip
-extern int    CASCADE_DOWN_SPEED;     // power for downward moves
-extern int    CASCADE_FLIP_DELAY_MS;  // ms into that rise before the piston fires
-extern int    CASCADE_AFTER_FLIP_MS;  // ms after the flip piston extends
-                                      //   before the cascade moves again
+// Two full sets: AUTO_ for autons, DRIVER_ for driver control.  The macro
+// picks the set when each press starts.  Heights are rotation sensor readings.
+extern double AUTO_CASCADE_LOW;             // bottom / travel
+extern double AUTO_CASCADE_COLLECT;         // press 1 parks here, waiting for press 2
+extern double AUTO_CASCADE_FLIP;            // press 1 rises here first
+extern int    AUTO_DROP_DELAY_MS;           // press 1: wait after the claw/flip drop
+extern bool   AUTO_CUSTOM_FLIP_ON;          // press 1 uses CUSTOM_FLIP / CUSTOM_DROP_DELAY_MS
+extern double AUTO_CUSTOM_FLIP;
+extern int    AUTO_CUSTOM_DROP_DELAY_MS;
+extern double AUTO_CASCADE_OUT;             // press 2 rises here
+extern int    AUTO_FLIP_DELAY_MS;           // press 2: ms into the rise before the flip
+extern int    AUTO_AFTER_FLIP_MS;           // press 2: ms after the flip before moving on
+extern int    AUTO_DOWN_SPEED;              // power for downward macro moves
+
+extern double DRIVER_CASCADE_LOW;
+extern double DRIVER_CASCADE_COLLECT;
+extern double DRIVER_CASCADE_FLIP;
+extern int    DRIVER_DROP_DELAY_MS;
+extern bool   DRIVER_CUSTOM_FLIP_ON;
+extern double DRIVER_CUSTOM_FLIP;
+extern int    DRIVER_CUSTOM_DROP_DELAY_MS;
+extern double DRIVER_CASCADE_OUT;
+extern int    DRIVER_FLIP_DELAY_MS;
+extern int    DRIVER_AFTER_FLIP_MS;
+extern int    DRIVER_DOWN_SPEED;
+
+// Upper travel limit.  L1 stops raising once the rotation sensor reads this,
+// so the cascade cannot be driven into its top stop.  Manual control only, so
+// one value for both modes.
+extern double CASCADE_MAX;
 
 // one_pin_macro() defaults - set at the top of src/main.cpp.
 extern int    ONE_PIN_FWD_MS;
 extern int    ONE_PIN_CLAW_WAIT_MS;
 extern int    ONE_PIN_REV_MS;
 extern int    ONE_PIN_SPEED;
-
-// Upper travel limit.  L1 stops raising once the rotation sensor reads this,
-// so the cascade cannot be driven into its top stop.  Manual control only -
-// the macro's targets are all below it.
-extern int    CASCADE_DROP_DELAY_MS;  // press 1: wait after the claw/flip drop
-extern double CASCADE_MAX;      // L1 stops raising here
-
-// Press 1's custom flip height and drop wait, in place of CASCADE_FLIP /
-// CASCADE_DROP_DELAY_MS.  Always in driver control; in autons only when
-// CASCADE_CUSTOM_FLIP_IN_AUTON is true.
-extern bool   CASCADE_CUSTOM_FLIP_IN_AUTON;
-extern double CASCADE_CUSTOM_FLIP;
-extern int    CASCADE_CUSTOM_DROP_DELAY_MS;
 
 /////
 // CASCADE MOVEMENT - CHANGE THESE
@@ -91,7 +96,7 @@ constexpr int    CASCADE_STALL_MS  = 2000;
 // Symptom of getting it wrong: the macro immediately stalls and aborts.
 constexpr int CASCADE_RAISE_SIGN = 1;
 
-// How close to CASCADE_COLLECT still counts as "in the collect state".  Wider
+// How close to the collect height still counts as "in the collect state".  Wider
 // than CASCADE_MOVE_TOL on purpose: the cascade drifts a little while holding,
 // and the upper roller should not cut out when it does.
 constexpr double CASCADE_COLLECT_TOL = 12;
@@ -176,7 +181,7 @@ bool macro_failed();
 // the robot can drive at the same time.  Direction is worked out from where
 // the cascade is now - a target above it raises, below it lowers.
 //
-//   cascade_move_async(CASCADE_OUT);             // starts moving, returns at once
+//   cascade_move_async(AUTO_CASCADE_OUT);        // starts moving, returns at once
 //   chassis.pid_drive_set(24_in, DRIVE_SPEED);   // drives while it rises
 //   chassis.pid_wait();
 //   cascade_move_wait();                         // now make sure it arrived
@@ -184,7 +189,7 @@ bool macro_failed();
 // speed is 0-127 and is used EXACTLY, up or down - never faster.  Very low
 // speeds can stall short (going up especially), and the stall guard then
 // gives up after CASCADE_STALL_MS.  Leave it out for the macro's normal
-// behaviour: full speed, CASCADE_DOWN_SPEED down, floor powers so it always
+// behaviour: full speed, AUTO_DOWN_SPEED down, floor powers so it always
 // arrives.  If a macro step
 // or another move is still running - or a delayed macro_press() has yet to
 // fire - the move WAITS and starts as soon as that is done, so it never breaks
@@ -218,7 +223,7 @@ bool cascade_move_wait(int timeout_ms = 4000);
 //   macro_press(500);       // 2nd press - grip, lift, flip, then go to 500
 //   macro_wait_done();
 //
-//   macro_press(CASCADE_LOW);   // ... or back down to the bottom
+//   macro_press(AUTO_CASCADE_LOW);   // ... or back down to the bottom
 //   macro_press();              // ... or just stay at the out height
 // If something is already driving the cascade:
 //  - a cascade_move_async() - macro_press() cancels it and starts the macro
@@ -265,7 +270,7 @@ bool one_pin_macro(double end_height = -1,
 // at the start of opcontrol(), so one left over from an auton never fires.
 void macro_press_pending_clear();
 
-// Tells the macro whether an auton is running, so press 1 can pick its flip
-// values.  autonomous() sets it; opcontrol(), disabled() and the end of a
-// LEFT+B test run clear it.
+// Tells the macro whether an auton is running, so it uses the AUTO_ settings
+// rather than the DRIVER_ ones.  autonomous() sets it; opcontrol(), disabled()
+// and the end of a LEFT+B test run clear it.
 void macro_in_auton(bool on);

@@ -121,18 +121,20 @@ states `C F I`.
 ## The macro (RIGHT)
 
 - **Press 1:** preflight (flip on) → rise to FLIP and **arrive** → open the claw
-  and drop the flip piston together → wait `CASCADE_DROP_DELAY_MS` → lower to
+  and drop the flip piston together → wait `..._DROP_DELAY_MS` → lower to
   COLLECT → park. While parked, L1/L2 are locked and the upper roller is armed.
   (A height-triggered version that fired mid-rise was glitchy on the robot and
   was replaced by this.)
-- **Press 1 has two sets of flip values.** Driver control always uses the
-  custom set (`CASCADE_CUSTOM_FLIP`, `CASCADE_CUSTOM_DROP_DELAY_MS`). Autons
-  use the normal set (`CASCADE_FLIP`, `CASCADE_DROP_DELAY_MS`) unless
-  `CASCADE_CUSTOM_FLIP_IN_AUTON` is true. `autonomous()` tells the macro it is
-  in an auton via `macro_in_auton()`.
+- **Two full sets of macro settings** at the top of `main.cpp`: `AUTO_*` for
+  autons (LEFT+B runs included) and `DRIVER_*` for driver control — heights,
+  drop/flip/after-flip timings, down speed. Each set has its own press 1
+  custom flip (`..._CUSTOM_FLIP`, `..._CUSTOM_DROP_DELAY_MS`) and its own
+  switch `..._CUSTOM_FLIP_ON`. `autonomous()` tells the macro it is in an
+  auton via `macro_in_auton()`; each phase picks its set as it starts.
+  `CASCADE_MAX` (L1 limit) is shared.
 - **Press 2:** intake on → claw on → raise to OUT, with the flip piston extended
-  and the upper roller reversed `CASCADE_FLIP_DELAY_MS` into the rise → hold
-  until `CASCADE_AFTER_FLIP_MS` after the flip → **stays at OUT** by default →
+  and the upper roller reversed `..._FLIP_DELAY_MS` into the rise → hold
+  until `..._AFTER_FLIP_MS` after the flip → **stays at OUT** by default →
   intake off, swap holding motor, hold position.
 - **The macro is never broken by another cascade request.** In an auton:
   `macro_press()` cancels a running `cascade_move_async()` and starts at once,
@@ -149,7 +151,7 @@ states `C F I`.
   shared with `cascade_move_async()` so the two never drive the cascade at once.
 - All the timings and heights are at the top of `main.cpp`.
 - Moves brake and settle at the target (a heavy cascade coasted 60° past), then
-  leave as soon as they are steady. Downward moves use `CASCADE_DOWN_SPEED`.
+  leave as soon as they are steady. Downward moves use `..._DOWN_SPEED`.
   Easing and the stall guard trade off: too little floor power stalls, too much
   overshoots.
 - Claw and flip piston have **separate** sense constants in `macros.hpp`:
