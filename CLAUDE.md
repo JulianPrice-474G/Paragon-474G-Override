@@ -90,7 +90,9 @@ Positive intake power runs the intake the same way the **R1** button does.
 
 ## Driver control
 
-Subsystems only respond in **driver mode** (hold **UP+X** 1 s to toggle).
+Subsystems only respond in **driver mode** (hold **UP+X** 1 s to toggle). In a
+real match (competition connected) it turns on by itself when driver control
+starts.
 Outside it the UI owns LEFT/RIGHT/A/B for menu navigation.
 
 | button | action |

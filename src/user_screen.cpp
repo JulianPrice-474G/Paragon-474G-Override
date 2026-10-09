@@ -511,9 +511,13 @@ void handle_ctrl_input() {
 
   // On the very first tick of opcontrol, paint the home screen. Without this
   // the controller shows whatever EZ-Template left from autonomous/disabled.
+  // In a real match (field control or competition switch) go straight into
+  // driver mode instead, so the subsystems work without anyone holding UP+X.
+  bool enter_driver = false;
   if (first_call) {
     first_call = false;
-    _ctrl_home();
+    if (pros::competition::is_connected()) enter_driver = true;
+    else                                   _ctrl_home();
   }
 
   // ── Driver mode toggle ────────────────────────────────────────────────────
@@ -521,8 +525,8 @@ void handle_ctrl_input() {
   // to be held together for DRIVER_MODE_HOLD_MS.  A quick tap of either button
   // does nothing, so both stay usable for your subsystems.  Change the buttons
   // at the top of this file.
-  if (_driver_mode_combo_fired()) {
-    driver_mode = !driver_mode;
+  if (enter_driver || _driver_mode_combo_fired()) {
+    driver_mode = enter_driver ? true : !driver_mode;
     EngineDriverMode(driver_mode);  // locks or unlocks brain screen touch input
     CtrlRumble(driver_mode ? "-" : ".");
     if (driver_mode) {
