@@ -328,6 +328,97 @@ pros::delay(500);*/
 
 }
 
+//First single Pin
+void Auto_for_Normal() {
+upper_roller_spin(700,127);
+pros::delay(200);
+cascade_move_async(260, 127);
+chassis.pid_drive_set(-8.5_in, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(90, 127);
+chassis.pid_wait_quick_chain(); 
+chassis.pid_drive_set(-10, 127);
+chassis.pid_wait_quick_chain(); 
+pros::delay(250);
+chassis.headingPID.target_set(chassis.drive_imu_get()); 
+claw_set(CLAW_OFF);
+pros::delay(200);
+macro_press();
+//Getting Secpond Pin
+
+press_y();
+intake_spin(3000,127);
+chassis.pid_drive_set(10, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(227, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(25, 127);
+chassis.pid_wait_until(12_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain();
+chassis.pid_speed_max_set(127);
+pros::delay(350);
+macro_press(500,350); 
+chassis.pid_turn_set(270, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(-25, 127);
+chassis.pid_wait_quick_chain();
+
+//Drive Back to distacne we stop in SAWP
+chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(230, 127); 
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(-22, 127);
+chassis.pid_wait_until(-16_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain();
+cascade_move_async(470, 127);
+pros::delay(300);
+chassis.headingPID.target_set(chassis.drive_imu_get()); 
+claw_set(CLAW_OFF);
+cascade_move_async(750, 127);
+pros::delay(350);
+
+//3rd Pin get ready
+macro_press();
+intake_spin(9000,127);
+chassis.pid_speed_max_set(127);
+chassis.headingPID.target_set(247);
+chassis.pid_drive_set(41, 127);
+//chassis.pid_drive_set(44, 127);
+chassis.pid_wait_quick_chain();
+
+//Thrid Piun 
+intake_spin(10000,127);
+macro_press();
+chassis.pid_turn_set(313, 127); 
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(22, 127);
+chassis.pid_wait_until(13_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain();
+chassis.pid_speed_max_set(127);
+pros::delay(600);
+macro_press(475);
+chassis.pid_speed_max_set(127);
+chassis.pid_turn_set(270, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(-18, 127);
+chassis.pid_wait_until(-8_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain();
+cascade_move_async(435, 127);
+pros::delay(300);
+claw_set(CLAW_OFF);
+
+
+}
+
+
+
+
+
+
 ///
 // Skills - the "Skills" button on the brain (slot 2)
 ///
