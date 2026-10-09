@@ -751,10 +751,20 @@ void initialize() {
 static int  drv_intake_power  = INT32_MIN;
 static bool drv_intake_roller = false;
 
+// True from the start of an auton until driver control starts, so disabled()
+// can tell "the auton just ended" from "the match is over".
+static bool auton_ran_last = false;
+
 void disabled() {
   // Vent everything the moment the robot is disabled, so it is not left with
-  // pistons held out between matches.
-  release_all_pistons();
+  // pistons held out between matches - EXCEPT the flip piston (claw wrist)
+  // straight after an auton: it stays where the auton left it.
+  if (auton_ran_last) {
+    intake_piston_set(false);
+    claw_set(false);
+  } else {
+    release_all_pistons();
+  }
   macro_press_pending_clear();
   macro_in_auton(false);
   fins_jam_guard(false);
@@ -785,6 +795,7 @@ void competition_initialize() {
  * from where it left off.
  */
 void autonomous() {
+  auton_ran_last = true;   // disabled() keeps the flip piston up after this
   chassis.pid_targets_reset();
   chassis.drive_imu_reset();
   chassis.drive_sensor_reset();
@@ -927,6 +938,7 @@ void ez_template_extras() {
 void opcontrol() {
   chassis.drive_brake_set(MOTOR_BRAKE_COAST);
   macro_press_pending_clear();   // a delayed press left over from the auton
+  auton_ran_last = false;        // from here, disabled() releases every piston
   macro_in_auton(false);         // press 1 uses the custom flip in driver
   fins_jam_guard(FIN_JAM_IN_DRIVER);   // autons only, unless testing
 
