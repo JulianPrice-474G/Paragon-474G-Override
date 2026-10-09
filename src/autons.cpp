@@ -11,10 +11,10 @@
 // MATCH DEFAULT AUTON - CHANGE THIS
 /////
 // In a real match (field control / competition switch) with NO auton picked
-// on the brain, the robot runs SAWP anyway instead of sitting still.  This
-// picks which one:  false = SAWP (slot 1),  true = SAWP Mirrored (slot 4).
+// on the brain, the robot runs this one anyway instead of sitting still.
 // Picking an auton on the brain always overrides it.
-bool MATCH_DEFAULT_MIRRORED = true;
+//   0 = SAWP   1 = Skills   2 = 1 pin   3 = SAWP Mirrored   4 = PID Test
+int MATCH_DEFAULT_AUTON = 2;   // 1 pin
 
 // These are out of 127
 const int DRIVE_SPEED = 110;

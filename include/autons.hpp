@@ -10,9 +10,10 @@ void default_constants();
 // by autonomous() before your routine runs.
 void auton_setup();
 
-// Match default: with no auton picked on the brain, a real match runs SAWP
-// (false) or SAWP Mirrored (true).  Set at the top of autons.cpp.
-extern bool MATCH_DEFAULT_MIRRORED;
+// Match default: with no auton picked on the brain, a real match runs this
+// slot (0 SAWP, 1 Skills, 2 1 pin, 3 SAWP Mirrored, 4 PID Test).  Set at the
+// top of autons.cpp.
+extern int MATCH_DEFAULT_AUTON;
 
 void sawp();
 void skills();

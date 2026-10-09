@@ -820,10 +820,10 @@ void autonomous() {
   int auton = get_selected_auton();
 
   // Real match (field control or competition switch) with nothing picked on
-  // the brain: run SAWP or SAWP Mirrored rather than sit still.  Which one is
-  // MATCH_DEFAULT_MIRRORED at the top of autons.cpp.
+  // the brain: run MATCH_DEFAULT_AUTON (top of autons.cpp) rather than sit
+  // still.
   if (auton < 0 && pros::competition::is_connected())
-    auton = MATCH_DEFAULT_MIRRORED ? 3 : 0;
+    auton = MATCH_DEFAULT_AUTON;
 
   switch (auton) {
     case 0: sawp();    break;

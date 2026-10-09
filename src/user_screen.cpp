@@ -410,15 +410,18 @@ const char* ai_vision_text() {
 }
 
 const char* selected_auton_text() {
-  static char buf[32];
+  static char buf[48];   // fits "Selected: none (match: SAWP Mirrored)"
   static const char* names[] = { "SAWP", "Skills", "1 pin", "SAWP Mirrored", "PID Test" };
   int idx = SelectedAuton();
-  if (idx < 0 || idx >= (int)(sizeof(names) / sizeof(names[0])))
+  const int n = (int)(sizeof(names) / sizeof(names[0]));
+  if (idx < 0 || idx >= n) {
     // Nothing picked: a real match runs the default - see autonomous().
+    const int d = MATCH_DEFAULT_AUTON;
     snprintf(buf, sizeof(buf), "Selected: none (match: %s)",
-             MATCH_DEFAULT_MIRRORED ? "SAWP Mir" : "SAWP");
-  else
+             (d >= 0 && d < n) ? names[d] : "none");
+  } else {
     snprintf(buf, sizeof(buf), "Selected: %s", names[idx]);
+  }
   return buf;
 }
 
