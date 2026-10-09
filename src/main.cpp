@@ -81,8 +81,8 @@ double CASCADE_MAX = 1100;
 // ---- AUTONS ----
 double AUTO_CASCADE_LOW          = 190;   // bottom / travel
 double AUTO_CASCADE_COLLECT      = 330;   // press 1 parks here, waiting for press 2
-double AUTO_CASCADE_FLIP         = 385;   // press 1 rises to here first
-int    AUTO_DROP_DELAY_MS        = 250;   // press 1: after claw+flip drop, before lowering
+double AUTO_CASCADE_FLIP         = 390;   // press 1 rises to here first
+int    AUTO_DROP_DELAY_MS        = 600;   // press 1: after claw+flip drop, before lowering
 bool   AUTO_CUSTOM_FLIP_ON       = true;  // press 1 uses the two below instead
 double AUTO_CUSTOM_FLIP          = 390;
 int    AUTO_CUSTOM_DROP_DELAY_MS = 700;

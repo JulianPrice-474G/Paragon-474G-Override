@@ -186,11 +186,94 @@ void sawp() {
   // piston mirrors in step and handle the intake group's wiring for you.
   //
   // AI Vision:
+  \
   //   if (vision_align(2000)) { /* facing a target */ }
   //   else                    { /* nothing found, fall back */ }
   // vision_align() stops the drive before returning either way; its tuning
   // constants are at the top of include/vision.hpp.
 
+
+chassis.pid_speed_max_set(127);
+upper_roller_spin(700,127);
+cascade_move_async(260, 127);
+pros::delay(100);
+chassis.pid_drive_set(-8_in, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(90, 127);
+chassis.pid_wait_quick_chain(); 
+chassis.pid_drive_set(-10, 127);
+chassis.pid_wait_quick_chain(); 
+pros::delay(300);
+chassis.headingPID.target_set(chassis.drive_imu_get()); 
+claw_set(CLAW_OFF);
+pros::delay(300);
+macro_press();
+//Getting Secpond Pin
+
+press_y();
+intake_spin(3000,127);
+chassis.pid_drive_set(10, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(227.5, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(25, 127);
+chassis.pid_wait_until(12_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain();
+chassis.pid_speed_max_set(127);
+pros::delay(350);
+macro_press(500,350); 
+chassis.pid_turn_set(90, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(9, 127);
+chassis.pid_wait_quick_chain();
+
+//Drive Back to distacne we stop in SAWP
+chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(230, 127); 
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(-27, 127);
+chassis.pid_wait_until(-20_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain();
+cascade_move_async(470, 127);
+pros::delay(300);
+chassis.headingPID.target_set(chassis.drive_imu_get()); 
+claw_set(CLAW_OFF);
+cascade_move_async(750, 127);
+pros::delay(350);
+
+//3rd Pin get ready
+macro_press();
+chassis.pid_speed_max_set(127);
+chassis.headingPID.target_set(247);
+chassis.pid_drive_set(37, 127);
+//chassis.pid_drive_set(44, 127);
+chassis.pid_wait_quick_chain();
+
+//Thrid Piun 
+intake_spin(18000,127);
+chassis.pid_turn_set(313, 127); 
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(29, 127);
+chassis.pid_wait_until(10_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain();
+chassis.pid_speed_max_set(127);
+pros::delay(1000);
+macro_press(475);
+chassis.pid_speed_max_set(127);
+chassis.pid_turn_set(270, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(-20, 127);
+chassis.pid_wait_until(-13_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain();
+cascade_move_async(425, 127);
+pros::delay(300);
+claw_set(CLAW_OFF);
+}
+/*
 upper_roller_spin(700,127);
 pros::delay(200);
 cascade_move_async(260, 127);
@@ -324,15 +407,12 @@ pros::delay(500);*/
 
 
 
-
-
-}
 //First single Pin
 void Auto_for_Normal() {
 upper_roller_spin(700,127);
 pros::delay(200);
 cascade_move_async(260, 127);
-chassis.pid_drive_set(-8.5_in, 127);
+chassis.pid_drive_set(-7.5_in, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(90, 127);
 chassis.pid_wait_quick_chain(); 
@@ -358,7 +438,7 @@ chassis.pid_wait_quick_chain();
 chassis.pid_speed_max_set(127);
 pros::delay(350);
 macro_press(500,350); 
-chassis.pid_turn_set(270, 127);
+chassis.pid_turn_set(90, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_drive_set(-25, 127);
 chassis.pid_wait_quick_chain();
