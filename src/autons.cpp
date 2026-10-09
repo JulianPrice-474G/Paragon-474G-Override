@@ -825,18 +825,18 @@ chassis.pid_drive_set(-8_in, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(270, 127);
 chassis.pid_wait_quick_chain(); 
-chassis.pid_drive_set(-11, 127);
+chassis.pid_drive_set(-8, 127);
 chassis.pid_wait_quick_chain(); 
 pros::delay(300);
-chassis.headingPID.target_set(chassis.drive_imu_get()); 
 claw_set(CLAW_OFF);
-pros::delay(300);
+pros::delay(200);
+chassis.headingPID.target_set(chassis.drive_imu_get()); 
 macro_press();
 //Getting Secpond Pin
 
 press_y();
 intake_spin(12000,127);
-chassis.pid_drive_set(9_in, 127);
+chassis.pid_drive_set(8_in, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(132.5, 127);
 chassis.pid_wait_quick_chain();
@@ -858,8 +858,8 @@ macro_press(500);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(130, 127); 
 chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(-28.5, 127);
-chassis.pid_wait_until(-20_in);
+chassis.pid_drive_set(-29, 127);
+chassis.pid_wait_until(-24_in);
 chassis.pid_speed_max_set(30);
 chassis.pid_wait_quick_chain();
 cascade_move_async(415, 127);
@@ -867,13 +867,13 @@ pros::delay(300);
 chassis.headingPID.target_set(chassis.drive_imu_get()); 
 claw_set(CLAW_OFF);
 cascade_move_async(750, 127);
-pros::delay(350);
+pros::delay(200);
 
 //3rd Pin get ready
 macro_press();
 chassis.pid_speed_max_set(127);
 chassis.headingPID.target_set(-247);
-chassis.pid_drive_set(38, 127);
+chassis.pid_drive_set(37, 127);
 //chassis.pid_drive_set(44, 127);
 chassis.pid_wait_quick_chain();
 

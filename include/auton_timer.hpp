@@ -32,7 +32,7 @@
 // did before).  To take it out completely, delete this file and
 // src/auton_timer.cpp, and in ez_template_extras() in main.cpp change
 // auton_run_timed() back to autonomous() and remove the #include.
-constexpr bool     AUTON_TIMER_ON = false;   // set to true to enable the timer
+constexpr bool     AUTON_TIMER_ON = true;   // set to true to enable the timer
 constexpr uint32_t AUTON_TIMER_MS = 15000;   // auton period length
 
 // Run the selected auton the way a LEFT+B test does, timed as above.  Blocks
