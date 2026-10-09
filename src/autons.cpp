@@ -239,6 +239,8 @@ chassis.pid_wait_quick_chain();
 
 //Drive Back to distacne we stop in SAWP
 chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(0, 127);     // pin knock - same as SAWP Mirrored's
+chassis.pid_wait_quick_chain();
 macro_press(500);
 chassis.pid_turn_set(230, 127); 
 chassis.pid_wait_quick_chain();
