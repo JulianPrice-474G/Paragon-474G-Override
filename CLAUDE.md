@@ -102,6 +102,7 @@ Outside it the UI owns LEFT/RIGHT/A/B for menu navigation.
 | Y | intake piston HIGH ↔ MIDDLE |
 | DOWN / LEFT | toggle claw / toggle C-flip |
 | RIGHT | cascade macro |
+| X | while parked after press 1: all intakes backward, claw closes after `GRAB_REV_MS` (150 ms), stays backward until press 2 (ignored while UP is held) |
 | LEFT+B held 1 s | run selected auton — only outside driver mode, off a comp switch |
 | A (hold) | all four intake motors forward for `A_FWD_MS` (1 s), then backward while still held; upper roller included at any cascade height |
 | B | unused (still half of the LEFT+B auton combo) |

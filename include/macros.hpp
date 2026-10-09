@@ -47,6 +47,10 @@ extern int    DRIVER_DOWN_SPEED;
 // one value for both modes.
 extern double CASCADE_MAX;
 
+// macro_grab() settings - set at the top of src/main.cpp.
+extern int    GRAB_REV_MS;
+extern int    GRAB_SPEED;
+
 // one_pin_macro() defaults - set at the top of src/main.cpp.
 extern int    ONE_PIN_FWD_MS;
 extern int    ONE_PIN_CLAW_WAIT_MS;
@@ -265,6 +269,12 @@ bool one_pin_macro(double end_height = -1,
                    int fwd_ms       = ONE_PIN_FWD_MS,
                    int claw_wait_ms = ONE_PIN_CLAW_WAIT_MS,
                    int rev_ms       = ONE_PIN_REV_MS);
+
+// X in driver control.  Only while parked after press 1 (macro_waiting()):
+// runs all four intake motors backward, then after GRAB_REV_MS closes the
+// claw, still backward.  The intake stays backward until press 2 (RIGHT)
+// takes it over.  Returns false, doing nothing, if not parked.
+bool macro_grab();
 
 // Drops a delayed press that has not fired yet.  Called from disabled() and
 // at the start of opcontrol(), so one left over from an auton never fires.

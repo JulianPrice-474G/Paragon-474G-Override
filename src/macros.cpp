@@ -442,6 +442,34 @@ static void phase2_task(void*) {
   _running = false;   // last - see phase1_task()
 }
 
+// macro_grab() (X in driver control): while parked after press 1, all four
+// intake motors backward, then after GRAB_REV_MS close the claw.  The intake
+// stays backward - _intake_owned keeps opcontrol off it - until press 2 takes
+// the intake over.  Its own small task, NOT the cascade worker: the cascade is
+// not touched, and RIGHT must still be able to start press 2 at any moment.
+static volatile bool _grab_req = false;
+
+static void grab_task(void*) {
+  while (true) {
+    if (_grab_req) {
+      _grab_req = false;
+      _intake_owned = true;
+      intake_all(-GRAB_SPEED);
+      pros::delay(GRAB_REV_MS);
+      // Press 2 may have started meanwhile - it grips the claw itself.
+      if (_phase == PH_WAITING && !_running) claw_set(CLAW_ON);
+    }
+    pros::delay(ez::util::DELAY_TIME);
+  }
+}
+
+bool macro_grab() {
+  if (_running || _phase != PH_WAITING) return false;   // only while parked
+  static pros::Task worker(grab_task, nullptr, "Macro Grab");
+  _grab_req = true;
+  return true;
+}
+
 // one_pin_macro(): intakes forward, claw, intakes backward, then press 2.
 // Only ever started from PH_WAITING - see one_pin_macro().
 static void one_pin_task() {

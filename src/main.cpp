@@ -113,6 +113,12 @@ int ONE_PIN_CLAW_WAIT_MS = 0;      // after closing the claw, before reversing
 int ONE_PIN_REV_MS       = 1000;   // all intakes backward this long
 int ONE_PIN_SPEED        = 127;    // intake power for both, 0-127
 
+// ---- X grab (macro_grab) ----
+// X while parked after press 1: all intakes backward, then after GRAB_REV_MS
+// close the claw.  The intake keeps going backward until press 2 (RIGHT).
+int GRAB_REV_MS = 150;   // backward this long before the claw closes
+int GRAB_SPEED  = 127;   // backward intake power, 0-127
+
 /////
 // CASCADE HOLD (currently unused - kept for the macro work)
 /////
@@ -967,6 +973,12 @@ void opcontrol() {
       // Pressing while it is moving cancels instead.  Both halves run in their
       // own task, so the drivetrain keeps responding throughout.
       if (master.get_digital_new_press(DIGITAL_RIGHT)) macro_start();
+
+      // X while parked after press 1: intake backward, then close the claw -
+      // see macro_grab().  Ignored while UP is held, so the UP+X driver mode
+      // combo does not set it off.
+      if (master.get_digital_new_press(DIGITAL_X) && !master.get_digital(DIGITAL_UP))
+        macro_grab();
 
       // L1/L2 do NOT cancel the macro - cancelling mid-step left it half done.
       // They are ignored until it finishes (see the cascade block below), then
