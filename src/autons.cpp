@@ -14,7 +14,7 @@
 // on the brain, the robot runs SAWP anyway instead of sitting still.  This
 // picks which one:  false = SAWP (slot 1),  true = SAWP Mirrored (slot 4).
 // Picking an auton on the brain always overrides it.
-bool MATCH_DEFAULT_MIRRORED = false;
+bool MATCH_DEFAULT_MIRRORED = true;
 
 // These are out of 127
 const int DRIVE_SPEED = 110;
