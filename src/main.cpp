@@ -800,11 +800,19 @@ void autonomous() {
 
   // The number in each case must match the auton_idx you gave that
   // ButtonAdd in build_screens().
-  switch (get_selected_auton()) {
+  int auton = get_selected_auton();
+
+  // Real match (field control or competition switch) with nothing picked on
+  // the brain: run SAWP or SAWP Mirrored rather than sit still.  Which one is
+  // MATCH_DEFAULT_MIRRORED at the top of autons.cpp.
+  if (auton < 0 && pros::competition::is_connected())
+    auton = MATCH_DEFAULT_MIRRORED ? 3 : 0;
+
+  switch (auton) {
     case 0: sawp();    break;
     case 1: skills();  break;
     case 2: one_pin(); break;
-    case 3: sawp_mirrored(); break;
+    case 3: auto_4();  break;   // SAWP Mirrored
     case 4: auto_5();  break;
     default:                           break;   // nothing selected
   }

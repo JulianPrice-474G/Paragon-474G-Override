@@ -167,7 +167,10 @@ states `C F I`.
 
 `autonomous()` resets the chassis (IMU, encoders, PID targets, odom, brake)
 before the routine; each routine then calls `auton_setup()` for subsystems.
-Slots: `sawp`, `skills`, `one_pin`, `auto_4`, `auto_5`. **`auto_5` is the PID
+Slots: `sawp`, `skills`, `one_pin`, `auto_4` (**SAWP Mirrored** — a separate,
+hand-mirrored copy of SAWP), `auto_5`. In a real match with no auton picked on
+the brain, `autonomous()` runs SAWP, or SAWP Mirrored if
+`MATCH_DEFAULT_MIRRORED` (top of `autons.cpp`) is true. **`auto_5` is the PID
 test bench** — pick a test with `PID_TEST`. Default PID constants have been
 verified for heading, drive, turn and swing.
 

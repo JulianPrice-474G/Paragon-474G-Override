@@ -414,7 +414,9 @@ const char* selected_auton_text() {
   static const char* names[] = { "SAWP", "Skills", "1 pin", "SAWP Mirrored", "PID Test" };
   int idx = SelectedAuton();
   if (idx < 0 || idx >= (int)(sizeof(names) / sizeof(names[0])))
-    snprintf(buf, sizeof(buf), "Selected: none");
+    // Nothing picked: a real match runs the default - see autonomous().
+    snprintf(buf, sizeof(buf), "Selected: none (match: %s)",
+             MATCH_DEFAULT_MIRRORED ? "SAWP Mir" : "SAWP");
   else
     snprintf(buf, sizeof(buf), "Selected: %s", names[idx]);
   return buf;

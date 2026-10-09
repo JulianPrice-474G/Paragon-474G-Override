@@ -10,11 +10,14 @@ void default_constants();
 // by autonomous() before your routine runs.
 void auton_setup();
 
+// Match default: with no auton picked on the brain, a real match runs SAWP
+// (false) or SAWP Mirrored (true).  Set at the top of autons.cpp.
+extern bool MATCH_DEFAULT_MIRRORED;
+
 void sawp();
-void sawp_mirrored();
 void skills();
 void one_pin();
-void auto_4();
+void auto_4();   // SAWP Mirrored
 void auto_5();
 
 void drive_example();

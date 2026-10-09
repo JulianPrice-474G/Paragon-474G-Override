@@ -7,6 +7,15 @@
 // https://ez-robotics.github.io/EZ-Template/
 /////
 
+/////
+// MATCH DEFAULT AUTON - CHANGE THIS
+/////
+// In a real match (field control / competition switch) with NO auton picked
+// on the brain, the robot runs SAWP anyway instead of sitting still.  This
+// picks which one:  false = SAWP (slot 1),  true = SAWP Mirrored (slot 4).
+// Picking an auton on the brain always overrides it.
+bool MATCH_DEFAULT_MIRRORED = false;
+
 // These are out of 127
 const int DRIVE_SPEED = 110;
 const int TURN_SPEED = 90;
@@ -274,191 +283,6 @@ pros::delay(300);
 claw_set(CLAW_OFF);
 }
 
-///
-// SAWP Mirrored - the "SAWP Mirrored" button on the brain (slot 4)
-///
-// A copy of sawp() for the other side of the field, with every heading
-// mirrored (360 - angle: 90 <-> 270, 227.5 -> 132.5 ...).  Distances, speeds,
-// the macro, intake and pistons are the same.  It is a COPY - a change to
-// sawp() is not carried over; mirror it here by hand.
-void sawp_mirrored() {
-  auton_setup();
-
-  // Your code here.
-  //
-  // ── DRIVING ───────────────────────────────────────────────────────────────
-  // Distances in inches, angles in degrees.  Angles are ABSOLUTE: 90_deg means
-  // "end up facing 90", not "turn 90 more".
-  //
-  //   chassis.pid_drive_set(24_in, DRIVE_SPEED, true);  // true = slew, long
-  //   chassis.pid_wait();                               //   moves from a stop
-  //
-  //   chassis.pid_turn_set(90_deg, TURN_SPEED);         // turn on the spot
-  //   chassis.pid_wait();
-  //
-  //   chassis.pid_swing_set(ez::LEFT_SWING, 90_deg, SWING_SPEED, 45);
-  //   chassis.pid_wait();          // pivot about one side; 4th number is how
-  //                                // much the held side helps (0 = locked)
-  //
-  // Waiting:
-  //   chassis.pid_wait();               // until it has settled - use before
-  //                                     //   grabbing or scoring
-  //   chassis.pid_wait_quick_chain();   // exits early and runs on into the
-  //                                     //   next move - use between legs
-  //   chassis.pid_wait_until(12_in);    // returns partway through, so you can
-  //                                     //   start the intake while still driving
-  //
-  // Simpler alternative to a swing - give it the two side speeds and the
-  // heading to stop at.  Blocks, so no pid_wait() after it:
-  //   drive_arc(90, 100, 40);           // curve right to 90
-  //   drive_arc(0, 40, 100);            // curve back to 0
-  //   drive_arc(90, 80, -80);           // spin on the spot
-  // Open-loop: it drives at exactly the speeds you give and only checks when
-  // to stop, so it will not self-correct.  Lower the speeds if it overshoots.
-  //
-  // ── SUBSYSTEMS ────────────────────────────────────────────────────────────
-  // All of these return immediately - nothing waits for them.
-  //
-  //   claw_set(true);           // pistons: true = activated
-  //   flip_set(false);
-  //   press_y();                // intake HIGH <-> MIDDLE, like the Y button
-  //   intake_pos_set(INTAKE_MIDDLE);  // straight to a position
-  //
-  //   intake_spin(3000, 127);   // all four, 3 s then stops itself
-  //   intake_spin(-1, 127);     // -1 = run until stopped
-  //   intake_spin_stop();
-  //
-  //   fins_spin(800, 127);      // one group at a time - these are INDEPENDENT
-  //   upper_roller_spin(500, 127);    //   and overlap freely, so the roller can run
-  //   dropdown_spin(-1, 127);   //   while the fins are doing something else
-  //
-  //   fins_set(127);            // direct versions - run until set again
-  //   upper_roller_set(127);
-  //   dropdown_set(127);
-  //
-  //   cascade_set(90);          // both cascade motors, +ve raises
-  //   cascade_set(0);
-  //
-  // ── CASCADE TO A HEIGHT, WHILE DRIVING ────────────────────────────────────
-  // cascade_move_async() returns straight away and the cascade travels in the
-  // background.  Direction is worked out for you - a target above where it is
-  // now raises, below it lowers.  It holds position once it arrives.
-  //
-  //   cascade_move_async(CASCADE_OUT);             // starts rising, returns now
-  //   chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
-  //   chassis.pid_wait();                          // drove while it rose
-  //   cascade_move_wait();                         // confirm it got there
-  //
-  //   cascade_move_async(300, 60);                 // any value, slower
-  //   cascade_move_active();                       // true while it is moving
-  //
-  // ── THE COLLECT MACRO ─────────────────────────────────────────────────────
-  // Same two presses as RIGHT in driver control.
-  //
-  //   macro_press();            // 1st: up, flip, park at collect
-  //   macro_wait_done();
-  //   intake_spin(1000, 127);   // whatever you need while it is parked
-  //   macro_press();            // 2nd: grip, lift, flip, back to low
-  //   macro_wait_done();
-  //
-  // macro_wait_done() returns false if a move stalled or timed out, so an
-  // auton can fall back instead of carrying on as though it worked.
-  //
-  // +127 runs the intake the same way R1 does; negative for the other way.
-  // The spins run in the background, so the next drive starts straight away
-  // with the intake still turning.
-  //
-  // Use these rather than .set_value() or .move() directly: they keep the
-  // piston mirrors in step and handle the intake group's wiring for you.
-  //
-  // AI Vision:
-  \
-  //   if (vision_align(2000)) { /* facing a target */ }
-  //   else                    { /* nothing found, fall back */ }
-  // vision_align() stops the drive before returning either way; its tuning
-  // constants are at the top of include/vision.hpp.
-
-
-chassis.pid_speed_max_set(127);
-upper_roller_spin(700,127);
-cascade_move_async(260, 127);
-pros::delay(100);
-chassis.pid_drive_set(-8_in, 127);
-chassis.pid_wait_quick_chain();
-chassis.pid_turn_set(270, 127);
-chassis.pid_wait_quick_chain(); 
-chassis.pid_drive_set(-10, 127);
-chassis.pid_wait_quick_chain(); 
-pros::delay(300);
-chassis.headingPID.target_set(chassis.drive_imu_get()); 
-claw_set(CLAW_OFF);
-pros::delay(300);
-macro_press();
-//Getting Secpond Pin
-
-press_y();
-intake_spin(3000,127);
-chassis.pid_drive_set(10, 127);
-chassis.pid_wait_quick_chain();
-chassis.pid_turn_set(132.5, 127);
-chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(25, 127);
-chassis.pid_wait_until(12_in);
-chassis.pid_speed_max_set(30);
-chassis.pid_wait_quick_chain();
-chassis.pid_speed_max_set(127);
-pros::delay(350);
-macro_press(500,350); 
-chassis.pid_turn_set(270, 127);
-chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(9, 127);
-chassis.pid_wait_quick_chain();
-
-//Drive Back to distacne we stop in SAWP
-chassis.pid_wait_quick_chain();
-chassis.pid_turn_set(130, 127); 
-chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(-27, 127);
-chassis.pid_wait_until(-20_in);
-chassis.pid_speed_max_set(30);
-chassis.pid_wait_quick_chain();
-cascade_move_async(470, 127);
-pros::delay(300);
-chassis.headingPID.target_set(chassis.drive_imu_get()); 
-claw_set(CLAW_OFF);
-cascade_move_async(750, 127);
-pros::delay(350);
-
-//3rd Pin get ready
-macro_press();
-chassis.pid_speed_max_set(127);
-chassis.headingPID.target_set(113);
-chassis.pid_drive_set(37, 127);
-//chassis.pid_drive_set(44, 127);
-chassis.pid_wait_quick_chain();
-
-//Thrid Piun 
-intake_spin(18000,127);
-chassis.pid_turn_set(47, 127); 
-chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(29, 127);
-chassis.pid_wait_until(10_in);
-chassis.pid_speed_max_set(30);
-chassis.pid_wait_quick_chain();
-chassis.pid_speed_max_set(127);
-pros::delay(1000);
-macro_press(475);
-chassis.pid_speed_max_set(127);
-chassis.pid_turn_set(90, 127);
-chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(-20, 127);
-chassis.pid_wait_until(-13_in);
-chassis.pid_speed_max_set(30);
-chassis.pid_wait_quick_chain();
-cascade_move_async(425, 127);
-pros::delay(300);
-claw_set(CLAW_OFF);
-}
 /*
 upper_roller_spin(700,127);
 pros::delay(200);
@@ -888,35 +712,189 @@ void one_pin() {
 }
 
 ///
-// Auto 4 - NOT on a brain button any more; slot 4 runs sawp_mirrored().
-// Kept so the code is not lost.  To use it again, point a case in
-// autonomous() (main.cpp) at auto_4().
+// Auto 4 - SAWP Mirrored, the "SAWP Mirrored" button on the brain (slot 4)
 ///
+// SAWP for the other side of the field: started as a copy of sawp() with
+// every heading mirrored (360 - angle: 90 <-> 270, 227.5 -> 132.5 ...).
+// Distances, speeds, macro, intake and pistons the same.  It is its own code
+// now - change it here, separately from sawp().
 void auto_4() {
   auton_setup();
 
   // Your code here.
-  chassis.pid_turn_set(140, 127);
-chassis.pid_wait();
-macro_press(350);                                      
-chassis.pid_drive_set(-16, 127);
-chassis.pid_wait();
-drive_arc(270,  -2,  -127);
+  //
+  // ── DRIVING ───────────────────────────────────────────────────────────────
+  // Distances in inches, angles in degrees.  Angles are ABSOLUTE: 90_deg means
+  // "end up facing 90", not "turn 90 more".
+  //
+  //   chassis.pid_drive_set(24_in, DRIVE_SPEED, true);  // true = slew, long
+  //   chassis.pid_wait();                               //   moves from a stop
+  //
+  //   chassis.pid_turn_set(90_deg, TURN_SPEED);         // turn on the spot
+  //   chassis.pid_wait();
+  //
+  //   chassis.pid_swing_set(ez::LEFT_SWING, 90_deg, SWING_SPEED, 45);
+  //   chassis.pid_wait();          // pivot about one side; 4th number is how
+  //                                // much the held side helps (0 = locked)
+  //
+  // Waiting:
+  //   chassis.pid_wait();               // until it has settled - use before
+  //                                     //   grabbing or scoring
+  //   chassis.pid_wait_quick_chain();   // exits early and runs on into the
+  //                                     //   next move - use between legs
+  //   chassis.pid_wait_until(12_in);    // returns partway through, so you can
+  //                                     //   start the intake while still driving
+  //
+  // Simpler alternative to a swing - give it the two side speeds and the
+  // heading to stop at.  Blocks, so no pid_wait() after it:
+  //   drive_arc(90, 100, 40);           // curve right to 90
+  //   drive_arc(0, 40, 100);            // curve back to 0
+  //   drive_arc(90, 80, -80);           // spin on the spot
+  // Open-loop: it drives at exactly the speeds you give and only checks when
+  // to stop, so it will not self-correct.  Lower the speeds if it overshoots.
+  //
+  // ── SUBSYSTEMS ────────────────────────────────────────────────────────────
+  // All of these return immediately - nothing waits for them.
+  //
+  //   claw_set(true);           // pistons: true = activated
+  //   flip_set(false);
+  //   press_y();                // intake HIGH <-> MIDDLE, like the Y button
+  //   intake_pos_set(INTAKE_MIDDLE);  // straight to a position
+  //
+  //   intake_spin(3000, 127);   // all four, 3 s then stops itself
+  //   intake_spin(-1, 127);     // -1 = run until stopped
+  //   intake_spin_stop();
+  //
+  //   fins_spin(800, 127);      // one group at a time - these are INDEPENDENT
+  //   upper_roller_spin(500, 127);    //   and overlap freely, so the roller can run
+  //   dropdown_spin(-1, 127);   //   while the fins are doing something else
+  //
+  //   fins_set(127);            // direct versions - run until set again
+  //   upper_roller_set(127);
+  //   dropdown_set(127);
+  //
+  //   cascade_set(90);          // both cascade motors, +ve raises
+  //   cascade_set(0);
+  //
+  // ── CASCADE TO A HEIGHT, WHILE DRIVING ────────────────────────────────────
+  // cascade_move_async() returns straight away and the cascade travels in the
+  // background.  Direction is worked out for you - a target above where it is
+  // now raises, below it lowers.  It holds position once it arrives.
+  //
+  //   cascade_move_async(CASCADE_OUT);             // starts rising, returns now
+  //   chassis.pid_drive_set(24_in, DRIVE_SPEED, true);
+  //   chassis.pid_wait();                          // drove while it rose
+  //   cascade_move_wait();                         // confirm it got there
+  //
+  //   cascade_move_async(300, 60);                 // any value, slower
+  //   cascade_move_active();                       // true while it is moving
+  //
+  // ── THE COLLECT MACRO ─────────────────────────────────────────────────────
+  // Same two presses as RIGHT in driver control.
+  //
+  //   macro_press();            // 1st: up, flip, park at collect
+  //   macro_wait_done();
+  //   intake_spin(1000, 127);   // whatever you need while it is parked
+  //   macro_press();            // 2nd: grip, lift, flip, back to low
+  //   macro_wait_done();
+  //
+  // macro_wait_done() returns false if a move stalled or timed out, so an
+  // auton can fall back instead of carrying on as though it worked.
+  //
+  // +127 runs the intake the same way R1 does; negative for the other way.
+  // The spins run in the background, so the next drive starts straight away
+  // with the intake still turning.
+  //
+  // Use these rather than .set_value() or .move() directly: they keep the
+  // piston mirrors in step and handle the intake group's wiring for you.
+  //
+  // AI Vision:
+  \
+  //   if (vision_align(2000)) { /* facing a target */ }
+  //   else                    { /* nothing found, fall back */ }
+  // vision_align() stops the drive before returning either way; its tuning
+  // constants are at the top of include/vision.hpp.
+
+
+chassis.pid_speed_max_set(127);
+upper_roller_spin(700,127);
+cascade_move_async(260, 127);
+pros::delay(100);
+chassis.pid_drive_set(-8_in, 127);
 chassis.pid_wait_quick_chain();
-drive_for_time(1000, -127);
-chassis.pid_wait_quick_chain();
-cascade_move_async(350,127);
-pros::delay(200);
+chassis.pid_turn_set(270, 127);
+chassis.pid_wait_quick_chain(); 
+chassis.pid_drive_set(-10, 127);
+chassis.pid_wait_quick_chain(); 
+pros::delay(300);
+chassis.headingPID.target_set(chassis.drive_imu_get()); 
 claw_set(CLAW_OFF);
 pros::delay(300);
 macro_press();
+//Getting Secpond Pin
+
+press_y();
 intake_spin(3000,127);
-chassis.pid_drive_set(5, 127);
-chassis.pid_wait();
-pros::delay(300);
-macro_press(350);
-chassis.pid_drive_set(-5, 127);
+chassis.pid_drive_set(10, 127);
 chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(132.5, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(25, 127);
+chassis.pid_wait_until(12_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain();
+chassis.pid_speed_max_set(127);
+pros::delay(350);
+macro_press(500,350); 
+chassis.pid_turn_set(270, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(9, 127);
+chassis.pid_wait_quick_chain();
+
+//Drive Back to distacne we stop in SAWP
+chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(130, 127); 
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(-27, 127);
+chassis.pid_wait_until(-20_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain();
+cascade_move_async(470, 127);
+pros::delay(300);
+chassis.headingPID.target_set(chassis.drive_imu_get()); 
+claw_set(CLAW_OFF);
+cascade_move_async(750, 127);
+pros::delay(350);
+
+//3rd Pin get ready
+macro_press();
+chassis.pid_speed_max_set(127);
+chassis.headingPID.target_set(113);
+chassis.pid_drive_set(37, 127);
+//chassis.pid_drive_set(44, 127);
+chassis.pid_wait_quick_chain();
+
+//Thrid Piun 
+intake_spin(18000,127);
+chassis.pid_turn_set(47, 127); 
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(29, 127);
+chassis.pid_wait_until(10_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain();
+chassis.pid_speed_max_set(127);
+pros::delay(1000);
+macro_press(475);
+chassis.pid_speed_max_set(127);
+chassis.pid_turn_set(90, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(-20, 127);
+chassis.pid_wait_until(-13_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain();
+cascade_move_async(425, 127);
+pros::delay(300);
+claw_set(CLAW_OFF);
 }
 
 ///
