@@ -381,7 +381,6 @@ pros::delay(350);
 
 //3rd Pin get ready
 macro_press();
-intake_spin(9000,127);
 chassis.pid_speed_max_set(127);
 chassis.headingPID.target_set(247);
 chassis.pid_drive_set(41, 127);
@@ -410,8 +409,6 @@ chassis.pid_wait_quick_chain();
 cascade_move_async(435, 127);
 pros::delay(300);
 claw_set(CLAW_OFF);
-
-
 }
 
 
