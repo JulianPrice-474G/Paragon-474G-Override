@@ -804,7 +804,7 @@ void autonomous() {
     case 0: sawp();    break;
     case 1: skills();  break;
     case 2: one_pin(); break;
-    case 3: auto_4();  break;
+    case 3: sawp_mirrored(); break;
     case 4: auto_5();  break;
     default:                           break;   // nothing selected
   }

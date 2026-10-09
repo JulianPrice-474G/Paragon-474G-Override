@@ -11,6 +11,7 @@ void default_constants();
 void auton_setup();
 
 void sawp();
+void sawp_mirrored();
 void skills();
 void one_pin();
 void auto_4();
