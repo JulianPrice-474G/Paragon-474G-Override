@@ -411,7 +411,7 @@ const char* ai_vision_text() {
 
 const char* selected_auton_text() {
   static char buf[48];   // fits "Selected: none (match: SAWP Mirrored)"
-  static const char* names[] = { "SAWP", "Skills", "1 pin", "SAWP Mirrored", "PID Test" };
+  static const char* names[] = { "SAWP", "Skills", "1 pin", "SAWP Mirrored", "PID Test", "2 pin wall" };
   int idx = SelectedAuton();
   const int n = (int)(sizeof(names) / sizeof(names[0]));
   if (idx < 0 || idx >= n) {
@@ -467,7 +467,7 @@ const char* ctrl_battery_text() {
 
 
 
-enum _CtrlState { CTRL_HOME, CTRL_NAV, CTRL_A0, CTRL_A1, CTRL_A2, CTRL_A3, CTRL_A4 };
+enum _CtrlState { CTRL_HOME, CTRL_NAV, CTRL_A0, CTRL_A1, CTRL_A2, CTRL_A3, CTRL_A4, CTRL_A5 };
 
 // ── What the controller shows in each state ──────────────────────────────────
 //  Keep strings ≤ 15 chars — the VEX LCD is narrower than the 19-char API limit.
@@ -485,7 +485,7 @@ static void _ctrl_nav() {
 }
 
 static void _ctrl_auton(int idx) {
-  static const char* names[] = { "SAWP", "Skills", "1 pin", "SAWP Mirrored", "PID Test" };  // match your button names
+  static const char* names[] = { "SAWP", "Skills", "1 pin", "SAWP Mirrored", "PID Test", "2 pin wall" };  // match your button names
   CtrlLabel(0, names[idx]);
   CtrlLabel(1, "(A)sel  (B)back");
   CtrlLabel(2, "(< >) Nxt Auton");
@@ -494,7 +494,7 @@ static void _ctrl_auton(int idx) {
 // Controller confirmation after A selects an auton.  Without this the display is
 // identical before and after the press, so there is no way to tell it registered.
 static void _ctrl_selected(int idx) {
-  static const char* names[] = { "SAWP", "Skills", "1 pin", "SAWP Mirrored", "PID Test" };
+  static const char* names[] = { "SAWP", "Skills", "1 pin", "SAWP Mirrored", "PID Test", "2 pin wall" };
   CtrlLabel(0, names[idx]);
   CtrlLabel(1, "** SELECTED **");
   CtrlLabel(2, "(< >) Nxt Auton");
@@ -571,7 +571,7 @@ void handle_ctrl_input() {
       //        then PageShow() navigates the brain screen to that auton's detail page.
       //   B  = bail back to home without changing the auton selection.
       case CTRL_A0:
-        if (left_new)  { ctrl_state = CTRL_A4; _ctrl_auton(4); }
+        if (left_new)  { ctrl_state = CTRL_A5; _ctrl_auton(5); }
         if (right_new) { ctrl_state = CTRL_A1; _ctrl_auton(1); }
         if (a_new)     { ForceSelectAuton(0); PageShow("auton_1"); _ctrl_selected(0); }
         if (b_new)     { ctrl_state = CTRL_HOME; _ctrl_home(); }
@@ -596,8 +596,14 @@ void handle_ctrl_input() {
         break;
       case CTRL_A4:
         if (left_new)  { ctrl_state = CTRL_A3; _ctrl_auton(3); }
-        if (right_new) { ctrl_state = CTRL_A0; _ctrl_auton(0); }
+        if (right_new) { ctrl_state = CTRL_A5; _ctrl_auton(5); }
         if (a_new)     { ForceSelectAuton(4); PageShow("auton_5"); _ctrl_selected(4); }
+        break;
+
+      case CTRL_A5:
+        if (left_new)  { ctrl_state = CTRL_A4; _ctrl_auton(4); }
+        if (right_new) { ctrl_state = CTRL_A0; _ctrl_auton(0); }
+        if (a_new)     { ForceSelectAuton(5); PageShow("auton_6"); _ctrl_selected(5); }
         if (b_new)     { ctrl_state = CTRL_HOME; _ctrl_home(); }
         break;
     }
@@ -616,6 +622,7 @@ void build_screens() {
   PageAdd("auton_3");     // detail page for Auto 3
   PageAdd("auton_4");     // detail page for SAWP Mirrored
   PageAdd("auton_5");     // detail page for Auto 5
+  PageAdd("auton_6");     // detail page for 2 pin wall
 
   // ── IMU popup - declared once, opened from every auton page ────────────────
   // Live AI Vision view.  Not a camera feed - the sensor sends no video over the
@@ -641,13 +648,16 @@ void build_screens() {
   BoxAdd(   "auton_tab",   0, 31, 240,  3, UI_GOLD, 0);  // gold underline = active tab
   BoxAdd(   "auton_tab",   0, 33, 480,  1, UI_GRAY, 0);  // full-width separator
 
-  // Three auton buttons — auton_idx (last number) must match case N in autonomous().
+  // Six auton buttons — auton_idx (last number) must match case N in autonomous().
+  // 74 wide, 5 apart, so all six fit across the 480 px screen; two-word names
+  // go on two lines to fit.
   ButtonPressStyle(UI_PRESS_RIPPLE);
-  ButtonAdd("auton_tab",   5, 44, 89, 158, UI_GOLD,    "SAWP", "auton_1", UI_ELEM_GROW, 0);
-  ButtonAdd("auton_tab", 100, 44, 89, 158, UI_GOLD,    "Skills", "auton_2", UI_ELEM_GROW, 1);
-  ButtonAdd("auton_tab", 195, 44, 89, 158, UI_GOLD,    "1 pin", "auton_3", UI_ELEM_GROW, 2);
-  ButtonAdd("auton_tab", 290, 44, 89, 158, UI_GOLD,    "SAWP\nMirrored", "auton_4", UI_ELEM_GROW, 3);
-  ButtonAdd("auton_tab", 385, 44, 89, 158, UI_GOLD,    "PID Test", "auton_5", UI_ELEM_GROW, 4);
+  ButtonAdd("auton_tab",   5, 44, 74, 158, UI_GOLD,    "SAWP", "auton_1", UI_ELEM_GROW, 0);
+  ButtonAdd("auton_tab",  84, 44, 74, 158, UI_GOLD,    "Skills", "auton_2", UI_ELEM_GROW, 1);
+  ButtonAdd("auton_tab", 163, 44, 74, 158, UI_GOLD,    "1 pin", "auton_3", UI_ELEM_GROW, 2);
+  ButtonAdd("auton_tab", 242, 44, 74, 158, UI_GOLD,    "SAWP\nMirror", "auton_4", UI_ELEM_GROW, 3);
+  ButtonAdd("auton_tab", 321, 44, 74, 158, UI_GOLD,    "PID\nTest", "auton_5", UI_ELEM_GROW, 4);
+  ButtonAdd("auton_tab", 400, 44, 74, 158, UI_GOLD,    "2 pin\nwall", "auton_6", UI_ELEM_GROW, 5);
   ButtonPressStyle(UI_PRESS_NONE);
 
   // Selection confirmation, under the three buttons
@@ -714,6 +724,15 @@ void build_screens() {
   // draws on top of it - LVGL renders in creation order.
   BoxAdd(   "auton_5",  10, 62, 460, 168, UI_GOLD, 12);
   LabelAdd( "auton_5", 140, 137, "Put auton info here", 18, UI_BLACK);
+
+  ButtonAdd("auton_6", 10, 10, 80, 32, UI_GOLD, "< Back", "auton_tab");
+  LabelAdd( "auton_6", 130, 18, "2 pin wall", 20, UI_WHITE);
+  ButtonAdd("auton_6", 390, 10, 80, 32, UI_GREEN, "IMU", "popup:imu");
+  BoxAdd(   "auton_6",   0, 52, 480,   2, UI_GRAY, 0);
+  // Gold panel filling the page body.  Added BEFORE the label so the label
+  // draws on top of it - LVGL renders in creation order.
+  BoxAdd(   "auton_6",  10, 62, 460, 168, UI_GOLD, 12);
+  LabelAdd( "auton_6", 140, 137, "Put auton info here", 18, UI_BLACK);
 
   PageShow("auton_tab");
 }

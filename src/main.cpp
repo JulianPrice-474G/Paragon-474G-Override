@@ -828,6 +828,7 @@ void autonomous() {
     case 2: one_pin(); break;
     case 3: auto_4();  break;   // SAWP Mirrored
     case 4: auto_5();  break;
+    case 5: two_pin_wall(); break;
     default:                           break;   // nothing selected
   }
 

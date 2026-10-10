@@ -11,7 +11,7 @@ void default_constants();
 void auton_setup();
 
 // Match default: with no auton picked on the brain, a real match runs this
-// slot (0 SAWP, 1 Skills, 2 1 pin, 3 SAWP Mirrored, 4 PID Test).  Set at the
+// slot (0 SAWP, 1 Skills, 2 1 pin, 3 SAWP Mirrored, 4 PID Test, 5 2 pin wall).  Set at the
 // top of autons.cpp.
 extern int MATCH_DEFAULT_AUTON;
 
@@ -20,6 +20,7 @@ void skills();
 void one_pin();
 void auto_4();   // SAWP Mirrored
 void auto_5();
+void two_pin_wall();
 
 void drive_example();
 void turn_example();

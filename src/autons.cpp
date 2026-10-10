@@ -14,6 +14,7 @@
 // on the brain, the robot runs this one anyway instead of sitting still.
 // Picking an auton on the brain always overrides it.
 //   0 = SAWP   1 = Skills   2 = 1 pin   3 = SAWP Mirrored   4 = PID Test
+//   5 = 2 pin wall
 int MATCH_DEFAULT_AUTON = 2;   // 1 pin
 
 // These are out of 127
@@ -916,6 +917,15 @@ chassis.pid_wait_quick_chain();
 cascade_move_async(350, 127);
 pros::delay(350);
 claw_set(CLAW_OFF);
+}
+
+///
+// 2 pin wall - the "2 pin wall" button on the brain (slot 6)
+///
+void two_pin_wall() {
+  auton_setup();
+
+  // Your code here.
 }
 
 ///
