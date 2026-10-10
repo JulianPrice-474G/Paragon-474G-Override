@@ -52,10 +52,7 @@ extern int    GRAB_REV_MS;
 extern int    GRAB_SPEED;
 
 // one_pin_macro() defaults - set at the top of src/main.cpp.
-extern int    ONE_PIN_FWD_MS;
-extern int    ONE_PIN_CLAW_WAIT_MS;
 extern int    ONE_PIN_REV_MS;
-extern int    ONE_PIN_SPEED;
 
 /////
 // CASCADE MOVEMENT - CHANGE THESE
@@ -250,25 +247,25 @@ void macro_press(double end_height = -1, int delay_time = 0);
 bool macro_wait_done(int timeout_ms = 8000);
 
 // One pin macro.  Only from the parked state after press 1 (macro_waiting()).
-// Runs ALL the intakes forward fwd_ms, closes the claw, waits claw_wait_ms,
-// runs all the intakes backward rev_ms, then does press 2 - grip, lift, flip -
-// finishing at end_height like macro_press(end_height).  In that press 2 the
+// Starts like X in driver control (macro_grab): ALL the intakes backward at
+// GRAB_SPEED, the claw closes after grab_ms while they keep going backward,
+// and rev_ms later it does press 2 - grip, lift, flip - finishing at
+// end_height like macro_press(end_height).  In that press 2 the
 // fins and dropdown OUTTAKE the whole time; the upper roller runs forward, then
 // reverses at the flip, as in a normal press 2.  Returns at once; the
 // cascade worker runs it, so the auton keeps driving.
 //
 //   one_pin_macro();                    // main.cpp defaults, stay at out height
 //   one_pin_macro(500);                 // finish at 500
-//   one_pin_macro(-1, 800, 0, 1200);    // 0.8 s forward, 1.2 s backward
+//   one_pin_macro(-1, 50, 1200);        // claw after 50 ms, press 2 1.2 s later
 //
 // If press 1 is still running it waits for it.  If the macro is not parked
 // after press 1 at all, it does nothing and returns false.  A cascade move
 // still running is taken over, like macro_press().  macro_wait_done() waits
 // for the whole thing.
 bool one_pin_macro(double end_height = -1,
-                   int fwd_ms       = ONE_PIN_FWD_MS,
-                   int claw_wait_ms = ONE_PIN_CLAW_WAIT_MS,
-                   int rev_ms       = ONE_PIN_REV_MS);
+                   int grab_ms = GRAB_REV_MS,
+                   int rev_ms  = ONE_PIN_REV_MS);
 
 // X in driver control.  Only while parked after press 1 (macro_waiting()):
 // runs all four intake motors backward, then after GRAB_REV_MS closes the

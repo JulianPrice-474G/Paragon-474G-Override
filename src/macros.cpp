@@ -37,8 +37,7 @@ static volatile bool     _one_pin_queued   = false;   // a one_pin_macro()
 
 // one_pin_macro()'s times for the run about to start.
 static double _one_pin_end      = -1;
-static int    _one_pin_fwd_ms   = 0;
-static int    _one_pin_claw_ms  = 0;
+static int    _one_pin_grab_ms  = 0;
 static int    _one_pin_rev_ms   = 0;
 
 // True while the worker runs a plain cascade_move_async() rather than a macro
@@ -477,16 +476,13 @@ static void one_pin_task() {
   intake_spin_stop();   // take the intake from any timed spin, as phase 2 does
   pros::delay(20);
 
-  intake_all(ONE_PIN_SPEED);
-  bool ok = macro_wait(_one_pin_fwd_ms, "1pin fwd");
+  // The cup, exactly as X does it (macro_grab): all four backward, then the
+  // claw closes while they keep going backward.
+  intake_all(-GRAB_SPEED);
+  bool ok = macro_wait(_one_pin_grab_ms, "1pin grab");
 
   if (ok) {
     claw_set(CLAW_ON);
-    ok = macro_wait(_one_pin_claw_ms, "1pin claw");
-  }
-
-  if (ok) {
-    intake_all(-ONE_PIN_SPEED);
     ok = macro_wait(_one_pin_rev_ms, "1pin rev");
   }
 
@@ -712,7 +708,7 @@ bool macro_wait_done(int timeout_ms) {
   return !_failed;
 }
 
-bool one_pin_macro(double end_height, int fwd_ms, int claw_wait_ms, int rev_ms) {
+bool one_pin_macro(double end_height, int grab_ms, int rev_ms) {
   ensure_worker();
   _pend = false;           // replaces a delayed press still waiting, like macro_press()
   _move_queued = false;
@@ -722,8 +718,7 @@ bool one_pin_macro(double end_height, int fwd_ms, int claw_wait_ms, int rev_ms) 
 
   _StartLock lock;
   _one_pin_end     = end_height;
-  _one_pin_fwd_ms  = fwd_ms;
-  _one_pin_claw_ms = claw_wait_ms;
+  _one_pin_grab_ms = grab_ms;
   _one_pin_rev_ms  = rev_ms;
 
   bool started = true;

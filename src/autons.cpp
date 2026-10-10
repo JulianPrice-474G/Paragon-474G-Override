@@ -513,13 +513,13 @@ void skills() {
   auton_setup();
 
   // ── ONE PIN MACRO ─────────────────────────────────────────────────────────
-  // Only from the parked state after press 1 (macro_press() first).  Intakes
-  // forward, close the claw, intakes backward, then press 2.  Returns at once.
-  // Defaults are ONE_PIN_* at the top of main.cpp.
+  // Only from the parked state after press 1 (macro_press() first).  Same as
+  // X in driver control: intakes backward, claw closes after grab_ms while
+  // they keep going backward, then press 2 after rev_ms.  Returns at once.
   //
-  //   one_pin_macro();                   // main.cpp defaults, stay at out height
+  //   one_pin_macro();                   // defaults, stay at out height
   //   one_pin_macro(500);                // finish press 2 at 500
-  //   one_pin_macro(-1, 800, 0, 1200);   // end, forward ms, claw wait ms, backward ms
+  //   one_pin_macro(-1, 50, 1200);       // end, claw after ms, then press 2 after ms
   //   macro_wait_done();                 // wait for the whole thing
 
   // Your code here.
@@ -551,7 +551,7 @@ chassis.pid_speed_max_set(30);
 chassis.pid_wait_quick_chain();
 pros::delay(1000);
 macro_wait_done();  
-one_pin_macro(450, 400,0,1500);
+one_pin_macro(450, GRAB_REV_MS, 1500);
 pros::delay(3000);
 chassis.pid_turn_set(180, 127);
 chassis.pid_wait_quick_chain();

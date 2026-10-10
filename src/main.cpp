@@ -105,13 +105,10 @@ int    DRIVER_AFTER_FLIP_MS        = 200;
 int    DRIVER_DOWN_SPEED           = 127 * 95 / 100;
 
 // ---- One pin macro (one_pin_macro) ----
-// From the parked state after press 1: intakes forward, close the claw,
-// intakes backward, then press 2.  These are the defaults - one_pin_macro()
-// can also be given its own times per call.
-int ONE_PIN_FWD_MS       = 1000;   // all intakes forward this long
-int ONE_PIN_CLAW_WAIT_MS = 0;      // after closing the claw, before reversing
-int ONE_PIN_REV_MS       = 1000;   // all intakes backward this long
-int ONE_PIN_SPEED        = 127;    // intake power for both, 0-127
+// From the parked state after press 1: the same as X below - intakes
+// backward, claw closes after GRAB_REV_MS - then press 2 after ONE_PIN_REV_MS.
+// Default only - one_pin_macro() can be given its own times per call.
+int ONE_PIN_REV_MS = 1000;   // after the claw closes, still backward, before press 2
 
 // ---- X grab (macro_grab) ----
 // X while parked after press 1: all intakes backward, then after GRAB_REV_MS
