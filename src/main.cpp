@@ -113,7 +113,7 @@ int ONE_PIN_REV_MS = 1000;   // after the claw closes, still backward, before pr
 // ---- X grab (macro_grab) ----
 // X while parked after press 1: all intakes backward, then after GRAB_REV_MS
 // close the claw.  The intake keeps going backward until press 2 (RIGHT).
-int GRAB_REV_MS = 40;    // backward this long before the claw closes
+int GRAB_REV_MS = 85;    // backward this long before the claw closes
 int GRAB_SPEED  = 127;   // backward intake power, 0-127
 
 /////
