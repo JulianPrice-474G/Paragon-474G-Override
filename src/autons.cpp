@@ -15,7 +15,7 @@
 // Picking an auton on the brain always overrides it.
 //   0 = SAWP   1 = Skills   2 = 1 pin   3 = SAWP Mirrored   4 = PID Test
 //   5 = 2 pin wall
-int MATCH_DEFAULT_AUTON = 2;   // 1 pin
+int MATCH_DEFAULT_AUTON = 5;   // 2 pin wall
 
 // These are out of 127
 const int DRIVE_SPEED = 110;
