@@ -703,6 +703,7 @@ pros::delay(300);
 claw_set(CLAW_OFF);
 pros::delay(200);
 
+
 }
 
 ///
@@ -919,11 +920,55 @@ pros::delay(350);
 claw_set(CLAW_OFF);
 }
 
-///
-// 2 pin wall - the "2 pin wall" button on the brain (slot 6)
-///
 void two_pin_wall() {
-  auton_setup();
+auton_setup();
+chassis.pid_speed_max_set(127);
+upper_roller_spin(700,127);
+cascade_move_async(110, 127);
+pros::delay(200);
+chassis.pid_drive_set(-8_in, 127);
+chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(270, 127);
+chassis.pid_wait_quick_chain(); 
+chassis.pid_drive_set(-8, 127);
+chassis.pid_wait_quick_chain(); 
+press_y();
+pros::delay(300);
+claw_set(CLAW_OFF);
+pros::delay(200);
+chassis.headingPID.target_set(chassis.drive_imu_get()); 
+macro_press();
+intake_spin(18000,127);
+chassis.pid_drive_set(3, 127);
+chassis.pid_wait_quick_chain(); 
+chassis.pid_turn_set(0, 80);
+chassis.pid_wait_quick_chain(); 
+chassis.pid_drive_set(-10, 50);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(4,50);
+chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(33.5, 80);
+chassis.pid_wait_quick_chain();
+chassis.pid_drive_set(15, 100);
+chassis.pid_wait_until(2_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain(); 
+pros::delay(2000);
+chassis.pid_drive_set(-15, 60);
+chassis.pid_wait_quick_chain(); 
+macro_press(450,127);
+chassis.pid_turn_set(0, 127);
+chassis.pid_wait_quick_chain(); 
+chassis.pid_drive_set(1, 127);
+chassis.pid_wait_quick_chain(); 
+chassis.pid_turn_set(270, 127);
+chassis.pid_wait_quick_chain(); 
+chassis.pid_drive_set(-8, 127);
+chassis.pid_wait_quick_chain(); 
+macro_press(400,127);
+pros::delay(300);
+claw_set(CLAW_OFF);
+pros::delay(200);
 
   // Your code here.
 }
