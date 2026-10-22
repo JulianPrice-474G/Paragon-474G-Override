@@ -448,8 +448,61 @@ static void phase2_task(void*) {
 // not touched, and RIGHT must still be able to start press 2 at any moment.
 static volatile bool _grab_req = false;
 
+// macro_grab_auto()'s request: forward, then X, then backward, then stop.
+static volatile bool _grab_auto_req  = false;
+static volatile bool _grab_auto_busy = false;   // macro_wait_done() waits for it
+static int           _grab_auto_fwd  = 0;
+static int           _grab_auto_rev  = 0;
+
+// A macro phase (not a plain cascade move) is running.
+static bool grab_phase_running() { return _running && !_running_move; }
+
+// Still parked after press 1, press 2 not started.
+static bool grab_parked() { return _phase == PH_WAITING && !grab_phase_running(); }
+
+// Waits ms, giving up early (false) if press 2 starts and takes the intake.
+static bool grab_wait(int ms) {
+  const uint32_t end = pros::millis() + (ms > 0 ? ms : 0);
+  while (pros::millis() < end) {
+    if (!grab_parked()) return false;
+    pros::delay(ez::util::DELAY_TIME);
+  }
+  return grab_parked();
+}
+
+static void grab_auto_run() {
+  // Press 1 still going: wait for it to finish.
+  while (grab_phase_running()) pros::delay(ez::util::DELAY_TIME);
+  if (!grab_parked()) return;   // did not park - nothing to grab from
+
+  _intake_owned = true;
+  intake_spin_stop();   // take the intake from any timed spin, as phase 2 does
+  pros::delay(20);
+
+  intake_all(GRAB_SPEED);                          // forward
+  bool ok = grab_wait(_grab_auto_fwd);
+  if (ok) {
+    intake_all(-GRAB_SPEED);                       // X: backward ...
+    ok = grab_wait(GRAB_REV_MS);
+  }
+  if (ok) {
+    claw_set(CLAW_ON);                             // ... claw closes
+    ok = grab_wait(_grab_auto_rev);                // ... still backward
+  }
+  // Press 2 started meanwhile: it owns the intake now - leave it alone.
+  if (grab_parked()) {
+    intake_all(0);
+    _intake_owned = false;
+  }
+}
+
 static void grab_task(void*) {
   while (true) {
+    if (_grab_auto_req) {
+      _grab_auto_req = false;
+      grab_auto_run();
+      _grab_auto_busy = false;
+    }
     if (_grab_req) {
       _grab_req = false;
       _intake_owned = true;
@@ -466,6 +519,18 @@ bool macro_grab() {
   if (_running || _phase != PH_WAITING) return false;   // only while parked
   static pros::Task worker(grab_task, nullptr, "Macro Grab");
   _grab_req = true;
+  return true;
+}
+
+bool macro_grab_auto(int fwd_ms, int rev_ms) {
+  // Parked, or press 1 on its way there (a phase running from not-parked).
+  const bool press1 = grab_phase_running() && _phase != PH_WAITING;
+  if (!grab_parked() && !press1) return false;
+  static pros::Task worker(grab_task, nullptr, "Macro Grab");
+  _grab_auto_fwd  = fwd_ms;
+  _grab_auto_rev  = rev_ms;
+  _grab_auto_busy = true;
+  _grab_auto_req  = true;
   return true;
 }
 
@@ -701,7 +766,8 @@ void macro_press(double end_height, int delay_time) {
 
 bool macro_wait_done(int timeout_ms) {
   const uint32_t start = pros::millis();
-  while (_running || _pend || _firing || _press_queued || _one_pin_queued) {
+  while (_running || _pend || _firing || _press_queued || _one_pin_queued ||
+         _grab_auto_busy) {
     if ((int)(pros::millis() - start) > timeout_ms) return false;
     pros::delay(ez::util::DELAY_TIME);
   }

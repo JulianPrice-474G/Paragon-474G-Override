@@ -273,6 +273,17 @@ bool one_pin_macro(double end_height = -1,
 // takes it over.  Returns false, doing nothing, if not parked.
 bool macro_grab();
 
+// X for autons, with a forward spin before it and a time limit after it.
+// From the parked state after press 1 (waits for press 1 if it is still
+// running): all four intakes FORWARD for fwd_ms, then X - all backward, claw
+// closes after GRAB_REV_MS - then still backward for rev_ms, then the intakes
+// stop.  Stays parked; macro_press() does press 2.  Returns at once;
+// macro_wait_done() waits for it.  Returns false, doing nothing, if not
+// parked or press 1 is not running.  Press 2 starting part-way ends it.
+//
+//   macro_grab_auto(500, 1000);   // forward 0.5 s, X, backward 1 s, stop
+bool macro_grab_auto(int fwd_ms, int rev_ms);
+
 // Drops a delayed press that has not fired yet.  Called from disabled() and
 // at the start of opcontrol(), so one left over from an auton never fires.
 void macro_press_pending_clear();
