@@ -165,9 +165,9 @@ states `C F I`.
   `grab_ms` (default `GRAB_REV_MS`), still backward → `rev_ms` later press 2, with the fins and dropdown outtaking throughout (upper roller as
   normal: forward, then reverse at the flip). `ONE_PIN_REV_MS` and the `GRAB_*` settings are at the top of `main.cpp`. Waits for an
   unfinished press 1; does nothing (returns false) if not parked.
-- `macro_grab_auto(fwd_ms, rev_ms)` — X for autons: from parked after press 1
-  (waits for press 1), all intakes forward `fwd_ms` → X (backward, claw after
-  `GRAB_REV_MS`) → still backward `rev_ms` → intakes stop, still parked.
+- `macro_grab_auto(rev_ms, fwd_ms)` — X for autons: from parked after press 1
+  (waits for press 1), all intakes backward `rev_ms` → X (still backward, claw
+  after `GRAB_REV_MS`) → forward `fwd_ms` → intakes stop, still parked.
   `macro_press()` then does press 2. `macro_wait_done()` waits for it.
 
 ## Autons

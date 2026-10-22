@@ -448,7 +448,7 @@ static void phase2_task(void*) {
 // not touched, and RIGHT must still be able to start press 2 at any moment.
 static volatile bool _grab_req = false;
 
-// macro_grab_auto()'s request: forward, then X, then backward, then stop.
+// macro_grab_auto()'s request: backward, then X, then forward, then stop.
 static volatile bool _grab_auto_req  = false;
 static volatile bool _grab_auto_busy = false;   // macro_wait_done() waits for it
 static int           _grab_auto_fwd  = 0;
@@ -479,15 +479,12 @@ static void grab_auto_run() {
   intake_spin_stop();   // take the intake from any timed spin, as phase 2 does
   pros::delay(20);
 
-  intake_all(GRAB_SPEED);                          // forward
-  bool ok = grab_wait(_grab_auto_fwd);
-  if (ok) {
-    intake_all(-GRAB_SPEED);                       // X: backward ...
-    ok = grab_wait(GRAB_REV_MS);
-  }
+  intake_all(-GRAB_SPEED);                         // backward, then X:
+  bool ok = grab_wait(_grab_auto_rev + GRAB_REV_MS);   // still backward ...
   if (ok) {
     claw_set(CLAW_ON);                             // ... claw closes
-    ok = grab_wait(_grab_auto_rev);                // ... still backward
+    intake_all(GRAB_SPEED);                        // forward
+    ok = grab_wait(_grab_auto_fwd);
   }
   // Press 2 started meanwhile: it owns the intake now - leave it alone.
   if (grab_parked()) {
@@ -522,7 +519,7 @@ bool macro_grab() {
   return true;
 }
 
-bool macro_grab_auto(int fwd_ms, int rev_ms) {
+bool macro_grab_auto(int rev_ms, int fwd_ms) {
   // Parked, or press 1 on its way there (a phase running from not-parked).
   const bool press1 = grab_phase_running() && _phase != PH_WAITING;
   if (!grab_parked() && !press1) return false;
