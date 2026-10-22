@@ -596,7 +596,6 @@ pros::delay(200);
 claw_set(CLAW_OFF);
 pros::delay(200);
 chassis.pid_speed_max_set(127);
-macro_press();
 
 //Get To MatchLaoder 1
 chassis.drive_angle_set(270);
