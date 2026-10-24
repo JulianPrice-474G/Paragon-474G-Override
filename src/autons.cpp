@@ -542,7 +542,7 @@ chassis.headingPID.target_set(chassis.drive_imu_get());
 macro_press();
 // Second Pin
 press_y();
-intake_spin(10000,75);   // until one_pin_macro takes the intake over
+intake_spin(10000,127);   // until one_pin_macro takes the intake over
 chassis.pid_drive_set(8.5, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(227, 127);
@@ -571,7 +571,7 @@ pros::delay(300);
 
 
 //Third Pin
-intake_spin(10000,80);
+intake_spin(10000,127);
 chassis.headingPID.target_set(180);
 chassis.pid_wait_quick_chain();
 chassis.pid_drive_set(11, 127);
