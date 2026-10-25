@@ -862,7 +862,7 @@ macro_press();
 
 press_y();
 intake_spin(12000,127);
-chassis.pid_drive_set(8_in, 127);
+chassis.pid_drive_set(8.4_in, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(132.5, 127);
 chassis.pid_wait_quick_chain();
