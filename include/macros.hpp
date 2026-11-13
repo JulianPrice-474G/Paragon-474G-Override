@@ -98,8 +98,7 @@ constexpr int    CASCADE_STALL_MS  = 2000;
 constexpr int CASCADE_RAISE_SIGN = 1;
 
 // How close to the collect height still counts as "in the collect state".  Wider
-// than CASCADE_MOVE_TOL on purpose: the cascade drifts a little while holding,
-// and the upper roller should not cut out when it does.
+// than CASCADE_MOVE_TOL on purpose: the cascade drifts a little while holding.
 constexpr double CASCADE_COLLECT_TOL = 12;
 
 /////
@@ -132,7 +131,6 @@ constexpr int MACRO_STEP_DELAY = 0;  // ms
 // One press of the macro button.  The sequence runs in two halves:
 //
 //   press 1 -> flip height, then collect height, then WAIT
-//              (the upper roller is armed for as long as it waits)
 //   press 2 -> flip height, then back to low
 //
 // Pressing WHILE the cascade is moving cancels instead.  Everything runs in
@@ -153,9 +151,7 @@ bool macro_running();
 // One line of status for the controller screen.
 const char* macro_status_text();
 
-// True only after a macro move has COMPLETED at the collect height, and only
-// until the cascade leaves that window again.  The upper intake roller runs on
-// this, so driving past 276 with L1/L2 does not start it spinning.
+// True only while the macro is parked at collect after press 1.
 bool cascade_at_collect();
 
 // Physical proximity to the collect height, ignoring how it got there.  Used
@@ -251,8 +247,7 @@ bool macro_wait_done(int timeout_ms = 8000);
 // GRAB_SPEED, the claw closes after grab_ms while they keep going backward,
 // and rev_ms later it does press 2 - grip, lift, flip - finishing at
 // end_height like macro_press(end_height).  In that press 2 the
-// fins and dropdown OUTTAKE the whole time; the upper roller runs forward, then
-// reverses at the flip, as in a normal press 2.  Returns at once; the
+// whole intake OUTTAKES the whole time, flip included.  Returns at once; the
 // cascade worker runs it, so the auton keeps driving.
 //
 //   one_pin_macro();                    // main.cpp defaults, stay at out height
@@ -268,14 +263,14 @@ bool one_pin_macro(double end_height = -1,
                    int rev_ms  = ONE_PIN_REV_MS);
 
 // X in driver control.  Only while parked after press 1 (macro_waiting()):
-// runs all four intake motors backward, then after GRAB_REV_MS closes the
+// runs the whole intake backward, then after GRAB_REV_MS closes the
 // claw, still backward.  The intake stays backward until press 2 (RIGHT)
 // takes it over.  Returns false, doing nothing, if not parked.
 bool macro_grab();
 
 // X for autons, with a backward spin before it and a forward spin after it.
 // From the parked state after press 1 (waits for press 1 if it is still
-// running): all four intakes BACKWARD for rev_ms, then X - still backward,
+// running): the whole intake BACKWARD for rev_ms, then X - still backward,
 // claw closes after GRAB_REV_MS - then FORWARD for fwd_ms, then the intakes
 // stop.  Stays parked; macro_press() does press 2.  Returns at once;
 // macro_wait_done() waits for it.  Returns false, doing nothing, if not

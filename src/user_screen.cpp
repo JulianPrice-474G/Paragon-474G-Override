@@ -326,14 +326,13 @@ static bool _driver_mode_combo_fired() {
 
 // Commanded piston states.  A DigitalOut cannot be read back, so these are what
 // the code last TOLD each solenoid, not what it did.
-//   C = claw   F = C-flip   I = intake piston (1 = HIGH, 0 = MIDDLE)
+//   C = claw   F = C-flip
 static const char* ctrl_pistons_text() {
   static char buf[20];
 
-  snprintf(buf, sizeof(buf), "C%d F%d I%d",
-           claw_extended          ? 1 : 0,
-           c_flip_extended        ? 1 : 0,
-           intake_piston_extended ? 1 : 0);
+  snprintf(buf, sizeof(buf), "C%d F%d",
+           claw_extended   ? 1 : 0,
+           c_flip_extended ? 1 : 0);
   return buf;
 }
 

@@ -61,16 +61,23 @@ soft-float archives and breaks the link. Check any `.a` with
 
 Never call `.set_value()` on a solenoid or `.move()` on intake/cascade motors
 directly. A `DigitalOut` cannot be read back, so software mirrors
-(`claw_extended`, `intake_piston_extended`, …) are the only record of piston
+(`claw_extended`, `c_flip_extended`) are the only record of piston
 state — and the DOWN/LEFT toggles and the controller readout read them.
 
-- Pistons: `claw_set()`, `flip_set()`. The intake is one 25 mm piston on port F
-  (extended = HIGH, retracted = MIDDLE): use `intake_pos_set()` / `press_y()`,
-  which keep `intake_pos` in step. The dropdown motor always runs with the intake.
+- Pistons: `claw_set()`, `flip_set()`. There is no intake piston any more —
+  the dropdown intake is fixed down (port F is free).
+- Intake hardware: fins (ports 1, 11) and the dropdown (port 4). The back
+  roller has no motor of its own; it is **chained to the front intake**, so it
+  spins whenever the intake does and cannot reverse on its own.
+  `upper_roller_spin()` is kept only so old auton calls work — it is
+  `intake_spin()`.
+- Side toggles: motor on **port 19** (the old upper roller port),
+  `side_toggles_set()`. Driver control only — **Y held** spins them forward at
+  `SIDE_TOGGLES_SPEED`. Nothing in the autons or the macro runs them.
 - Intake: `intake_spin(ms, speed)` — non-blocking; `ms = -1` runs until
   `intake_spin_stop()`. `fins_spin()` / `fins_set()` drive only the two fins.
   `intake_spin` and `fins_spin` share one worker, so starting one replaces the
-  other. `intake_set(power, roller)` is the primitive underneath.
+  other. `intake_set(power)` is the primitive underneath.
 - Fins: only the "Fin Sync" task writes `fin_1`/`fin_2`. `fins_set()` records a
   power; the task slows whichever fin is ahead of the positions taken by
   `fins_sync_zero()` (start of every auton, and power-on). `FIN_SYNC_KP/MAX`
@@ -99,16 +106,16 @@ Outside it the UI owns LEFT/RIGHT/A/B for menu navigation.
 |---|---|
 | L1 / L2 | cascade up (stops at `CASCADE_MAX`) / down at 50% |
 | R1 / R2 | intake, both directions |
-| Y | intake piston HIGH ↔ MIDDLE |
+| Y (hold) | side toggles forward (`SIDE_TOGGLES_SPEED`) |
 | DOWN / LEFT | toggle claw / toggle C-flip |
 | RIGHT | cascade macro |
 | X | while parked after press 1: all intakes backward, claw closes after `GRAB_REV_MS` (90 ms), stays backward until press 2 (ignored while UP is held) |
 | LEFT+B held 1 s | run selected auton — only outside driver mode, off a comp switch |
-| A (hold) | all four intake motors forward for `A_FWD_MS` (1 s), then backward while still held; upper roller included at any cascade height |
+| A (hold) | whole intake forward for `A_FWD_MS` (1 s), then backward while still held |
 | B | unused (still half of the LEFT+B auton combo) |
 
 Controller in driver mode: row 1 `p### temps heading` (IMU zeroed on entering driver mode), row 2 commanded piston
-states `C F I`.
+states `C F`.
 
 ## Cascade
 
@@ -125,7 +132,7 @@ states `C F I`.
 
 - **Press 1:** preflight (flip on) → rise to FLIP and **arrive** → open the claw
   and drop the flip piston together → wait `..._DROP_DELAY_MS` → lower to
-  COLLECT → park. While parked, L1/L2 are locked and the upper roller is armed.
+  COLLECT → park. While parked, L1/L2 are locked.
   (A height-triggered version that fired mid-rise was glitchy on the robot and
   was replaced by this.)
 - **Two full sets of macro settings** at the top of `main.cpp`: `AUTO_*` for
@@ -136,7 +143,7 @@ states `C F I`.
   auton via `macro_in_auton()`; each phase picks its set as it starts.
   `CASCADE_MAX` (L1 limit) is shared.
 - **Press 2:** intake on → claw on → raise to OUT, with the flip piston extended
-  and the upper roller reversed `..._FLIP_DELAY_MS` into the rise → hold
+  and the **whole intake reversed** `..._FLIP_DELAY_MS` into the rise → hold
   until `..._AFTER_FLIP_MS` after the flip → **stays at OUT** by default →
   intake off, swap holding motor, hold position.
 - **The macro is never broken by another cascade request.** In an auton:
@@ -162,8 +169,7 @@ states `C F I`.
   than once; confirm on the robot before assuming.
 - `one_pin_macro(end, grab_ms, rev_ms)` — from the parked state after press 1
   only, starting like X (`macro_grab`): all intakes backward → claw on after
-  `grab_ms` (default `GRAB_REV_MS`), still backward → `rev_ms` later press 2, with the fins and dropdown outtaking throughout (upper roller as
-  normal: forward, then reverse at the flip). `ONE_PIN_REV_MS` and the `GRAB_*` settings are at the top of `main.cpp`. Waits for an
+  `grab_ms` (default `GRAB_REV_MS`), still backward → `rev_ms` later press 2, with the whole intake outtaking throughout, flip included. `ONE_PIN_REV_MS` and the `GRAB_*` settings are at the top of `main.cpp`. Waits for an
   unfinished press 1; does nothing (returns false) if not parked.
 - `macro_grab_auto(rev_ms, fwd_ms)` — X for autons: from parked after press 1
   (waits for press 1), all intakes backward `rev_ms` → X (still backward, claw

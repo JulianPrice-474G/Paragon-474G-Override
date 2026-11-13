@@ -23,12 +23,12 @@ void handle_ctrl_input();
 constexpr int8_t L_MOTOR_A_PORT = 13;
 constexpr int8_t L_MOTOR_B_PORT = 6;
 
-// ── R1 / R2 group - four  motors, three one way and the fourth the other ─────
+// ── R1 / R2 intake - three motors; the back roller is chained to the front ──
 // TODO: set your real ports.  R_MOTOR_D is the odd one out - it always runs
 // opposite to the other three.
 constexpr int8_t FIN_1_PORT = 1;
 constexpr int8_t DROPDOWN_PORT = 4;   // drop-down intake
-constexpr int8_t UPPER_ROLLER_PORT = 19;
+constexpr int8_t SIDE_TOGGLES_PORT = 19;  // side toggles - Y held, driver only
 constexpr int8_t FIN_2_PORT = 11;  // the one that spins opposite the other two
 
 
@@ -40,6 +40,7 @@ constexpr int L_SPEED    = 127;      // L1 - full power
 constexpr int L2_SPEED   = L_SPEED * 50 / 100;  // L2 - 50% of L_SPEED (= 63)
 constexpr int R_SPEED = 127;         // R1 / R2 group
 constexpr int A_FWD_MS = 1000;       // A held: all intakes forward this long, then backward
+constexpr int SIDE_TOGGLES_SPEED = 127;  // Y held: side toggles forward at this power
 constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can ask for
 
 // How close to the target heading drive_arc() calls it arrived.
@@ -53,7 +54,7 @@ constexpr int    FIN_SYNC_MAX = 40;
 // Fin jam guard - AUTONS ONLY.  If either fin feels FIN_JAM_NM of torque or
 // more for FIN_JAM_MS, both fins stop until the next intake/fins spin command.
 // The first FIN_JAM_GRACE_MS of every spin is ignored - spinning up loads the
-// motors.  Only the fins stop; the dropdown and upper roller carry on.
+// motors.  Only the fins stop; the dropdown (and the chained roller) carry on.
 constexpr double FIN_JAM_NM       = 0.4;   // Motor::get_torque(), in Nm
 constexpr int    FIN_JAM_MS       = 50;
 constexpr int    FIN_JAM_GRACE_MS = 300;
@@ -138,25 +139,20 @@ pros::Motor l_motor_b(L_MOTOR_B_PORT);
 // R1 / R2 group - A, B and C run together; D always runs opposite to them.
 pros::Motor fin_1(FIN_1_PORT);
 pros::Motor dropdown(DROPDOWN_PORT);
-pros::Motor upper_roller(UPPER_ROLLER_PORT);
+pros::Motor side_toggles(SIDE_TOGGLES_PORT);
 pros::Motor fin_2(FIN_2_PORT); 
 
 /////
 // PNEUMATICS - ADI (3-wire) ports, letters A-H
 /////
-constexpr char INTAKE_PISTON_PORT = 'F';  // 25 mm, UP <-> MIDDLE - toggled by Y
-constexpr char CLAW_PORT          = 'A';  // toggled by DOWN
-constexpr char C_FLIP_PORT        = 'B';  // toggled by LEFT
+constexpr char CLAW_PORT   = 'A';  // toggled by DOWN
+constexpr char C_FLIP_PORT = 'B';  // toggled by LEFT
 
 // Single-acting solenoids.  true = extended, false = retracted.
 // If your pistons turn out to behave backwards, swap these two values - that is
 // the only place the sense of "extended" is defined.
 constexpr bool PISTON_EXTENDED  = false;
 constexpr bool PISTON_RETRACTED = true;
-
-// Starts EXTENDED (intake UP).  The second constructor argument is the
-// power-on state, so it is already up before opcontrol runs.
-pros::adi::DigitalOut intake_piston(INTAKE_PISTON_PORT, PISTON_EXTENDED);
 
 // Claw starts CLAW_ON (gripping) and the C-flip starts FLIP_ON.  The second
 // constructor argument is the power-on state, so they are set before the match
@@ -166,14 +162,8 @@ pros::adi::DigitalOut c_flip(C_FLIP_PORT, FLIP_ON);
 
 // Software mirror of what each solenoid was last told to do.  A DigitalOut
 // cannot be read back, so this is the only record of piston state.
-bool intake_piston_extended = true;
-bool claw_extended          = CLAW_ON;
-bool c_flip_extended        = FLIP_ON;
-
-// Where the intake is.  One 25 mm piston moves it between the two positions.
-//   HIGH   piston extended - the resting position
-//   MIDDLE piston retracted
-IntakePos intake_pos = INTAKE_HIGH;
+bool claw_extended   = CLAW_ON;
+bool c_flip_extended = FLIP_ON;
 
 /////
 // CASCADE POSITION SOURCE
@@ -229,19 +219,20 @@ void cascade_hold() {
 // DigitalOut cannot be read back, so those mirrors are the only record of
 // piston state - the DOWN/LEFT toggles and the controller readout read them,
 // and they go wrong silently if a set_value() is done without one.
-void claw_set(bool on)          { claw_extended          = on; claw.set_value(on); }
-void flip_set(bool on)          { c_flip_extended        = on; c_flip.set_value(on); }
-void intake_piston_set(bool on) { intake_piston_extended = on; intake_piston.set_value(on); }
+void claw_set(bool on) { claw_extended   = on; claw.set_value(on); }
+void flip_set(bool on) { c_flip_extended = on; c_flip.set_value(on); }
 
-// Whole intake group in one call: -127 to 127, positive runs it the same way
-// the R1 button does.  roller = false holds the upper roller at zero, which is
-// what driver control does outside the collect height; everything else leaves
-// it true so all FOUR motors turn.
-void intake_set(int power, bool roller) {
+// Whole intake in one call: -127 to 127, positive runs it the same way the R1
+// button does.  The back roller is chained to the front intake, so this drives
+// it too.
+void intake_set(int power) {
   fins_set(power);
   dropdown.move(-power);
-  upper_roller.move(roller ? -power : 0);
 }
+
+// Side toggles (port 19).  Driver control only - Y held.  Nothing in the
+// autons or the macro ever runs them.
+void side_toggles_set(int power) { side_toggles.move(power); }
 
 /////
 // drive_arc - the simple version of a swing
@@ -391,15 +382,13 @@ bool drive_for_time_wait(int timeout_ms) {
   return true;
 }
 
-// Single intake motors, for when you want one on its own.  Same sign
-// convention as intake_set: positive runs it the way R1 does.
-void upper_roller_set(int power) { upper_roller.move(-power); }
-
+// Single intake motor, for when you want it on its own.  Same sign convention
+// as intake_set: positive runs it the way R1 does.
 void dropdown_set(int power) { dropdown.move(-power); }
 
 // Just the two fins, kept in step.  fin_2 is mounted opposite, so it is always
 // commanded the other way round - positive runs them the same way R1 does.  The
-// dropdown and the upper roller are left alone.
+// dropdown is left alone.
 //
 // fins_set() only records the power.  One long-lived task writes both motors
 // every tick, slowing whichever fin has got ahead of the positions recorded by
@@ -498,27 +487,26 @@ bool fins_jammed() { return _fins_jammed; }
 // Timed, non-blocking spins.  Each call returns immediately and a background
 // task drives the motors, so the next drive or turn starts straight away:
 //
-//   upper_roller_spin(800, 127);                      // returns at once
-//   chassis.pid_drive_set(24_in, DRIVE_SPEED);  // roller still spinning
+//   intake_spin(800, 127);                      // returns at once
+//   chassis.pid_drive_set(24_in, DRIVE_SPEED);  // intake still spinning
 //   chassis.pid_wait();
 //
 // ms > 0 runs for that long, ms < 0 runs until stopped, ms == 0 or speed == 0
 // stops that group now.  Positive speed runs the motors the way R1 does.
 //
-// The three groups are INDEPENDENT and can overlap - a roller spin does not
-// disturb a fins spin.  intake_spin() is shorthand for setting all three at
-// once.  Starting the same group again replaces its previous spin.
+// The two groups are INDEPENDENT and can overlap - a dropdown spin does not
+// disturb a fins spin.  intake_spin() is shorthand for setting both at once.
+// Starting the same group again replaces its previous spin.
 struct _SpinCh {
   int  until_ms;   // absolute deadline, or -1 for "until stopped"
   int  speed;
   bool active;
 };
 static volatile _SpinCh _ch_fins   = {0, 0, false};
-static volatile _SpinCh _ch_roller = {0, 0, false};
 static volatile _SpinCh _ch_drop   = {0, 0, false};
 
 bool intake_spin_active() {
-  return _ch_fins.active || _ch_roller.active || _ch_drop.active;
+  return _ch_fins.active || _ch_drop.active;
 }
 
 // Returns the power this channel should be driving at now, expiring it if its
@@ -540,7 +528,6 @@ static void intake_spin_task(void*) {
     // pass, which would stop the macro's own intake.
     if (macro_owns_intake()) {
       _ch_fins.active = false;
-      _ch_roller.active = false;
       _ch_drop.active = false;
       was_driving = false;
       pros::delay(ez::util::DELAY_TIME);
@@ -554,7 +541,6 @@ static void intake_spin_task(void*) {
     // writing entirely, or this would fight opcontrol every tick.
     if (driving || was_driving) {
       fins_write(_ch_power(_ch_fins));
-      upper_roller_set(_ch_power(_ch_roller));
       dropdown_set(_ch_power(_ch_drop));
     }
     was_driving = driving;
@@ -576,22 +562,25 @@ static void _ch_start(volatile _SpinCh& c, int ms, int speed) {
 }
 
 void fins_spin(int ms, int speed)     { _ch_start(_ch_fins,   ms, speed); }
-void upper_roller_spin(int ms, int speed)   { _ch_start(_ch_roller, ms, speed); }
 void dropdown_spin(int ms, int speed) { _ch_start(_ch_drop,   ms, speed); }
 
-// All three groups together.
+// Both groups together - the whole intake, chained back roller included.
 void intake_spin(int ms, int speed) {
   fins_spin(ms, speed);
-  upper_roller_spin(ms, speed);
   dropdown_spin(ms, speed);
 }
+
+// The upper roller used to have its own motor; it is chained to the front
+// intake now.  Kept so the autons' upper_roller_spin() calls still work: it
+// spins the whole intake, which is what turns the roller.
+void upper_roller_spin(int ms, int speed) { intake_spin(ms, speed); }
 void intake_spin_stop() { intake_spin(0, 0); }
 
 // Block until every running spin has finished.  The spins are non-blocking by
 // design - that is the point of them - so this is for when you want one to
 // finish before the next line runs:
 //
-//   upper_roller_spin(800, 127);
+//   intake_spin(800, 127);
 //   spin_wait();                 // waits out the 800 ms
 //   claw_set(CLAW_ON);           // only now
 //
@@ -614,18 +603,7 @@ void cascade_set(int power) {
 
 // De-energise every solenoid, so the cylinders vent and the robot is not left
 // holding pressure.  Called from disabled().
-// The intake position, exactly as the Y button drives it.  Driver control and
-// autons both call these, so a simulated press in an auton does the same thing
-// a real one does.
-//   Y  -> MIDDLE, or back to HIGH if already MIDDLE
-void intake_pos_set(IntakePos pos) {
-  intake_pos = pos;
-  intake_piston_set(pos == INTAKE_HIGH);   // extended = HIGH
-}
-void press_y() { intake_pos_set(intake_pos == INTAKE_MIDDLE ? INTAKE_HIGH : INTAKE_MIDDLE); }
-
 void release_all_pistons() {
-  intake_piston_set(false);
   claw_set(false);
   flip_set(false);
 }
@@ -725,11 +703,6 @@ void initialize() {
                                 pros::AivisionModeType::objects);
   ai_cam.set_tag_family(pros::AivisionTagFamily::tag_16H5);
 
-  // Put the intake in the HIGH position at power-on - piston extended.
-  // Commanded explicitly rather than relying on the DigitalOut constructor's
-  // initial state, so the solenoid actually receives it.
-  intake_pos_set(INTAKE_HIGH);
-
   // Fin alignment reference at power-on, for driver practice without an auton.
   // autonomous() takes it again.
   fins_sync_zero();
@@ -752,7 +725,6 @@ void initialize() {
 // Last intake command the R1/R2/A block in opcontrol() sent - see there.
 // INT32_MIN = nothing sent yet, so the next tick sends.
 static int  drv_intake_power  = INT32_MIN;
-static bool drv_intake_roller = false;
 
 // True from the start of an auton until driver control starts, so disabled()
 // can tell "the auton just ended" from "the match is over".
@@ -763,7 +735,6 @@ void disabled() {
   // pistons held out between matches - EXCEPT the flip piston (claw wrist)
   // straight after an auton: it stays where the auton left it.
   if (auton_ran_last) {
-    intake_piston_set(false);
     claw_set(false);
   } else {
     release_all_pistons();
@@ -966,7 +937,7 @@ void opcontrol() {
 
 
       // ── Cascade sequence, in two halves ─────────────────────────────────
-      //   press 1 -> flip height, then collect, then WAIT (roller armed)
+      //   press 1 -> flip height, then collect, then WAIT
       //   press 2 -> flip height, then back to low
       // Pressing while it is moving cancels instead.  Both halves run in their
       // own task, so the drivetrain keeps responding throughout.
@@ -982,8 +953,8 @@ void opcontrol() {
       // They are ignored until it finishes (see the cascade block below), then
       // work as normal if still held.  RIGHT is the way to abort.
 
-        // Intake piston - Y toggles between HIGH and MIDDLE.
-        if (master.get_digital_new_press(DIGITAL_Y)) press_y();
+      // Side toggles - forward while Y is held.  Driver control only.
+      side_toggles_set(master.get_digital(DIGITAL_Y) ? SIDE_TOGGLES_SPEED : 0);
 
       // Claw on DOWN, C-flip on LEFT - both latching toggles.  Safe to read
       // these with new_press: handle_ctrl_input() only consumes LEFT/RIGHT/A/B
@@ -997,17 +968,12 @@ void opcontrol() {
         c_flip.set_value(c_flip_extended);
       }
 
-      // Intake - four motors, R2 runs them in, R1 reverses all of them.
+      // Intake - three motors, R2 runs them in, R1 reverses all of them.
       //   port 1  (fin_1) fin      - always runs
       //   port 11 (fin_2) fin      - always runs, mounted opposite the rest
-      //   port 4  (dropdown) dropdown - always runs
-      //   port 19 (upper_roller) upper roller - runs ONLY at the collect height
-      // A runs all four forward for A_FWD_MS, then backward, roller included.
-
-      // The upper roller (port 19) only turns while the cascade is AT the
-      // collect height.  Anywhere else the fins (ports 1 and 11) and the
-      // dropdown still run, but the roller is held at zero.
-      bool roller_enabled = cascade_at_collect();
+      //   port 4  (dropdown) dropdown - always runs; the back roller is
+      //                               chained to the front intake
+      // A runs them forward for A_FWD_MS, then backward.
 
       // Skipped while the macro drives the intake itself - otherwise the else
       // branch below writes zero to these motors every tick and the macro's
@@ -1021,23 +987,21 @@ void opcontrol() {
         drv_intake_power = INT32_MIN;   // resend once it hands the intake back
       } else {
         int  power  = 0;
-        bool roller = true;
-        // A held: all four, upper roller included at any height - forward
-        // for A_FWD_MS, then backward for as long as A stays held.
+        // A held: the whole intake forward for A_FWD_MS, then backward for as
+        // long as A stays held.
         static uint32_t a_since = 0;   // when this A hold began; 0 = not held
         const bool a_held = master.get_digital(DIGITAL_A);
         if (!a_held) a_since = 0;
 
-        if      (master.get_digital(DIGITAL_R2)) { power = -R_SPEED; roller = roller_enabled; }
-        else if (master.get_digital(DIGITAL_R1)) { power =  R_SPEED; roller = roller_enabled; }
+        if      (master.get_digital(DIGITAL_R2)) power = -R_SPEED;
+        else if (master.get_digital(DIGITAL_R1)) power =  R_SPEED;
         else if (a_held) {
           if (a_since == 0) a_since = pros::millis();
           power = (pros::millis() - a_since < (uint32_t)A_FWD_MS) ? R_SPEED : -R_SPEED;
         }
-        if (power != drv_intake_power || roller != drv_intake_roller) {
-          intake_set(power, roller);
-          drv_intake_power  = power;
-          drv_intake_roller = roller;
+        if (power != drv_intake_power) {
+          intake_set(power);
+          drv_intake_power = power;
         }
       }
 
@@ -1078,6 +1042,7 @@ void opcontrol() {
       // returned.  Zeroing them every tick here fought it to a standstill.
       if (!macro_running())                               cascade_set(0);
       if (!macro_owns_intake() && !intake_spin_active())  intake_set(0);
+      side_toggles_set(0);   // Y only works in driver mode
       // Pistons hold their state and are not re-commanded here.
     }
 

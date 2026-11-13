@@ -87,7 +87,6 @@ void auton_setup() {
 
   // Pistons to a known starting state.  Change these to whatever the robot
   // should look like on the tile at the start of a match.
-  intake_pos_set(INTAKE_HIGH);   // intake UP
   claw_set(CLAW_ON);    // start CLOSED - CLAW_OFF here would open it
   flip_set(FLIP_ON);
 
@@ -145,19 +144,15 @@ void sawp() {
   //
   //   claw_set(true);           // pistons: true = activated
   //   flip_set(false);
-  //   press_y();                // intake HIGH <-> MIDDLE, like the Y button
-  //   intake_pos_set(INTAKE_MIDDLE);  // straight to a position
   //
-  //   intake_spin(3000, 127);   // all four, 3 s then stops itself
+  //   intake_spin(3000, 127);   // whole intake, 3 s then stops itself
   //   intake_spin(-1, 127);     // -1 = run until stopped
   //   intake_spin_stop();
   //
   //   fins_spin(800, 127);      // one group at a time - these are INDEPENDENT
-  //   upper_roller_spin(500, 127);    //   and overlap freely, so the roller can run
-  //   dropdown_spin(-1, 127);   //   while the fins are doing something else
+  //   dropdown_spin(-1, 127);   //   and overlap freely
   //
   //   fins_set(127);            // direct versions - run until set again
-  //   upper_roller_set(127);
   //   dropdown_set(127);
   //
   //   cascade_set(90);          // both cascade motors, +ve raises
@@ -220,7 +215,6 @@ pros::delay(300);
 macro_press();
 //Getting Secpond Pin
 
-press_y();
 intake_spin(12000,127);
 chassis.pid_drive_set(10, 127);
 chassis.pid_wait_quick_chain();
@@ -303,7 +297,6 @@ claw_set(CLAW_OFF);
 pros::delay(200);
 macro_press();
 // First Pin
-press_y();
 intake_spin(3000,127);
 chassis.pid_drive_set(10.45, 127);
 chassis.pid_wait_quick_chain();
@@ -437,7 +430,6 @@ pros::delay(200);
 macro_press();
 //Getting Secpond Pin
 
-press_y();
 intake_spin(3000,127);
 chassis.pid_drive_set(10, 127);
 chassis.pid_wait_quick_chain();
@@ -541,7 +533,6 @@ pros::delay(200);
 chassis.headingPID.target_set(chassis.drive_imu_get()); 
 macro_press();
 // Second Pin
-press_y();
 intake_spin(10000,127);   // until one_pin_macro takes the intake over
 chassis.pid_drive_set(8.5, 127);
 chassis.pid_wait_quick_chain();
@@ -785,19 +776,15 @@ void auto_4() {
   //
   //   claw_set(true);           // pistons: true = activated
   //   flip_set(false);
-  //   press_y();                // intake HIGH <-> MIDDLE, like the Y button
-  //   intake_pos_set(INTAKE_MIDDLE);  // straight to a position
   //
-  //   intake_spin(3000, 127);   // all four, 3 s then stops itself
+  //   intake_spin(3000, 127);   // whole intake, 3 s then stops itself
   //   intake_spin(-1, 127);     // -1 = run until stopped
   //   intake_spin_stop();
   //
   //   fins_spin(800, 127);      // one group at a time - these are INDEPENDENT
-  //   upper_roller_spin(500, 127);    //   and overlap freely, so the roller can run
-  //   dropdown_spin(-1, 127);   //   while the fins are doing something else
+  //   dropdown_spin(-1, 127);   //   and overlap freely
   //
   //   fins_set(127);            // direct versions - run until set again
-  //   upper_roller_set(127);
   //   dropdown_set(127);
   //
   //   cascade_set(90);          // both cascade motors, +ve raises
@@ -860,7 +847,6 @@ chassis.headingPID.target_set(chassis.drive_imu_get());
 macro_press();
 //Getting Secpond Pin
 
-press_y();
 intake_spin(12000,127);
 chassis.pid_drive_set(8.4_in, 127);
 chassis.pid_wait_quick_chain();
@@ -937,7 +923,6 @@ chassis.pid_turn_set(270, 127);
 chassis.pid_wait_quick_chain(); 
 chassis.pid_drive_set(-8, 127);
 chassis.pid_wait_quick_chain(); 
-press_y();
 pros::delay(300);
 claw_set(CLAW_OFF);
 pros::delay(200);

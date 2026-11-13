@@ -14,9 +14,9 @@ static bool        _failed      = false;  // last run ended STALLED or TIMEOUT
 // out height.
 static double      _phase2_end  = -1;
 
-// Set by one_pin_macro() for its press 2: the fins and dropdown run in the
-// OUTTAKE direction the whole time.  The upper roller does its usual
-// forward-then-reverse-at-flip.  Cleared after every phase 2.
+// Set by one_pin_macro() for its press 2: the whole intake runs in the
+// OUTTAKE direction the whole time, flip included.  Cleared after every
+// phase 2.
 static bool        _phase2_outtake = false;
 
 // A macro_press() with a delay_time, waiting to fire.  See macro_press().
@@ -270,23 +270,22 @@ static bool macro_wait(int ms, const char* step_name) {
 static bool _intake_owned = false;
 bool macro_owns_intake() { return _intake_owned; }
 
-// roller_back reverses ONLY the upper roller (port 19); the fins and dropdown
-// carry on in the normal direction - or in the outtake direction throughout,
-// during one_pin_macro()'s press 2 (_phase2_outtake).
-static void intake_run(bool on, bool roller_back = false) {
+// reverse runs the WHOLE intake backward - press 2 does that from the flip on.
+// The back roller is chained to the front intake, so it cannot reverse on its
+// own any more.  During one_pin_macro()'s press 2 (_phase2_outtake) the intake
+// is backward the whole time.
+static void intake_run(bool on, bool reverse = false) {
   int p = on ? MACRO_INTAKE_SPEED : 0;
-  int f = _phase2_outtake ? -p : p;   // fins + dropdown
+  int f = (reverse || _phase2_outtake) ? -p : p;
   fins_set(f);
   dropdown.move(-f);
-  upper_roller.move(roller_back ? p : -p);
 }
 
-// All four intake motors at one power, upper roller included.  Positive runs
-// them the way intake_run(true) does; negative runs every one of them backward.
+// The whole intake (chained back roller included) at one power.  Positive runs
+// it the way intake_run(true) does; negative runs it backward.
 static void intake_all(int p) {
   fins_set(p);
   dropdown.move(-p);
-  upper_roller.move(-p);
 }
 
 
@@ -306,7 +305,7 @@ static bool step_pause(const char* label) {
 enum _Phase {
   PH_IDLE,     // nothing running
   PH_GOING,    // phase 1 moving: flip height, then collect
-  PH_WAITING,  // parked at collect, roller armed, waiting for press 2
+  PH_WAITING,  // parked at collect, waiting for press 2
   PH_RETURN    // phase 2 moving: flip height, then low
 };
 static _Phase _phase = PH_IDLE;
@@ -318,8 +317,7 @@ bool cascade_near_collect() {
   return fabs(cascade_position() - macro_settings().collect) <= CASCADE_COLLECT_TOL;
 }
 
-// The upper roller is allowed to spin ONLY while the sequence is parked at
-// collect.  Driving through that height with L1/L2 does not arm it.
+// True only while the sequence is parked at collect after press 1.
 bool cascade_at_collect() {
   return _phase == PH_WAITING;
 }
@@ -358,7 +356,7 @@ static void phase1_task(void*) {
 
   cascade_stop();
   // Only park-and-arm if it actually arrived.  A cancel or stall drops back to
-  // idle, so the roller never arms off a failed move.
+  // idle, so a failed move never counts as parked.
   _phase  = ok ? PH_WAITING : PH_IDLE;
   _failed = !ok;
   if (ok) _step = "WAITING";
@@ -371,7 +369,7 @@ static void phase1_task(void*) {
 static uint32_t _flip_fired_ms = 0;   // when the flip piston last extended
 
 static void fire_flip() {
-  intake_run(true, true);   // upper roller reverses from here to the end
+  intake_run(true, true);   // whole intake reverses from here to the end
   flip_set(FLIP_ON);
   _flip_fired_ms = pros::millis();
 }
@@ -385,7 +383,7 @@ static void phase2_task(void*) {
 
   // Take the intake over from any timed spin an auton left running
   // (intake_spin(-1, ...) in particular).  Otherwise the spin's background task
-  // keeps writing the motors every tick and overrides the upper roller reversing
+  // keeps writing the motors every tick and overrides the intake reversing
   // for the flip.  The short wait lets that task make its final zeroing pass
   // BEFORE we switch the intake on, not after.
   intake_spin_stop();
@@ -397,7 +395,7 @@ static void phase2_task(void*) {
   bool ok = macro_wait(MACRO_PISTON_SETTLE, "4 claw") && step_pause("4 claw");
 
   // Rise to the out height, with the flip piston firing partway UP rather than
-  // after arriving - S.flip_delay_ms into the move.  The upper roller
+  // after arriving - S.flip_delay_ms into the move.  The whole intake
   // reverses at the same moment and stays reversed until the end.
   if (ok) ok = cascade_to(S.out, "5 out", CASCADE_MOVE_SPEED,
                           S.flip_delay_ms, fire_flip) &&
@@ -441,8 +439,8 @@ static void phase2_task(void*) {
   _running = false;   // last - see phase1_task()
 }
 
-// macro_grab() (X in driver control): while parked after press 1, all four
-// intake motors backward, then after GRAB_REV_MS close the claw.  The intake
+// macro_grab() (X in driver control): while parked after press 1, the whole
+// intake backward, then after GRAB_REV_MS close the claw.  The intake
 // stays backward - _intake_owned keeps opcontrol off it - until press 2 takes
 // the intake over.  Its own small task, NOT the cascade worker: the cascade is
 // not touched, and RIGHT must still be able to start press 2 at any moment.
@@ -538,7 +536,7 @@ static void one_pin_task() {
   intake_spin_stop();   // take the intake from any timed spin, as phase 2 does
   pros::delay(20);
 
-  // The cup, exactly as X does it (macro_grab): all four backward, then the
+  // The cup, exactly as X does it (macro_grab): intake backward, then the
   // claw closes while they keep going backward.
   intake_all(-GRAB_SPEED);
   bool ok = macro_wait(_one_pin_grab_ms, "1pin grab");
@@ -550,8 +548,7 @@ static void one_pin_task() {
 
   if (ok) {
     // Press 2 as normal.  It takes the intake itself and cleans up after.
-    // ... except the fins and dropdown outtake the whole time; the upper
-    // roller still goes forward, then reverses at the flip.
+    // ... except the whole intake outtakes the whole time, flip included.
     _phase2_end     = _one_pin_end;
     _phase2_outtake = true;
     phase2_task(nullptr);

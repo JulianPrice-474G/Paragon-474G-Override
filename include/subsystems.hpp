@@ -19,30 +19,16 @@ extern Drive chassis;
 // Motors - the ports for these are set at the top of main.cpp
 extern pros::Motor l_motor_a;  // L1 / L2 pair - always opposite l_motor_b
 extern pros::Motor l_motor_b;
-extern pros::Motor fin_1;  // R1 / R2 group - a, b, c together
-extern pros::Motor dropdown;
-extern pros::Motor upper_roller;
-extern pros::Motor fin_2;  // always opposite a, b, c
+extern pros::Motor fin_1;  // R1 / R2 intake - with dropdown and fin_2
+extern pros::Motor dropdown;  // front intake; the back roller is chained to it
+extern pros::Motor fin_2;  // always opposite fin_1
+extern pros::Motor side_toggles;  // port 19 - Y held in driver control only
 
 // Pneumatics - single-acting solenoids
-extern pros::adi::DigitalOut intake_piston;  // 25 mm, intake UP <-> MIDDLE
-extern pros::adi::DigitalOut claw;    // port C - toggled by RIGHT
-extern pros::adi::DigitalOut c_flip;  // port D - toggled by DOWN
-extern bool intake_piston_extended;
+extern pros::adi::DigitalOut claw;    // port A - toggled by DOWN
+extern pros::adi::DigitalOut c_flip;  // port B - toggled by LEFT
 extern bool claw_extended;
 extern bool c_flip_extended;
-
-// The intake position.  Set by Y in opcontrol and re-asserted by auton_setup().
-// One piston: extended = HIGH, retracted = MIDDLE.
-enum IntakePos { INTAKE_HIGH, INTAKE_MIDDLE };
-extern IntakePos intake_pos;
-
-// Simulate the Y button - use this in autons.  Same code driver control runs,
-// so it behaves identically.
-//   press_y()  -> MIDDLE, or HIGH if already MIDDLE
-// intake_pos_set() jumps straight to a position without the toggle.
-void press_y();
-void intake_pos_set(IntakePos pos);
 
 /////
 // Subsystem helpers - prefer these to touching the devices directly
@@ -52,32 +38,30 @@ void intake_pos_set(IntakePos pos);
 // DOWN/LEFT toggles and the controller readout read them.
 void claw_set(bool on);
 void flip_set(bool on);
-void intake_piston_set(bool on);   // prefer intake_pos_set() - keeps intake_pos in step
 
-// Whole intake group, -127 to 127.  Positive runs it the same way the R1
-// button does.  fin_2 is commanded opposite the others because it is mounted
-// that way.
-//
-// roller = false holds the upper roller at zero, which is what driver control
-// does outside the collect height.  Autons and intake_spin() leave it true, so
-// all four motors turn.
-void intake_set(int power, bool roller = true);
+// Whole intake, -127 to 127.  Positive runs it the same way the R1 button
+// does.  fin_2 is commanded opposite the others because it is mounted that
+// way.  The back roller is chained to the front intake, so this turns it too.
+void intake_set(int power);
+
+// Side toggles (port 19), -127 to 127.  Driver control runs them while Y is
+// held; the autons and the macro never do.
+void side_toggles_set(int power);
 
 // Timed, non-blocking spins.  Each returns immediately and a background task
 // drives the motors, so the next drive or turn starts straight away:
 //
-//   upper_roller_spin(800, 127);                      // returns at once
-//   chassis.pid_drive_set(24_in, DRIVE_SPEED);  // roller still spinning
+//   intake_spin(800, 127);                      // returns at once
+//   chassis.pid_drive_set(24_in, DRIVE_SPEED);  // intake still spinning
 //   chassis.pid_wait();
 //
 //   ms > 0   run for that long, then stop
 //   ms < 0   run until stopped
 //   ms == 0  stop that group now (so does speed == 0)
 //
-// Positive speed runs the motors the way R1 does.  The three groups are
-// INDEPENDENT and can overlap - a roller spin does not disturb a fins spin.
-// intake_spin() is shorthand for all three at once.  Starting the same group
-// again replaces its previous spin.
+// Positive speed runs the motors the way R1 does.  The two groups (fins,
+// dropdown) are INDEPENDENT and can overlap.  intake_spin() is shorthand for
+// both at once.  Starting the same group again replaces its previous spin.
 // Simple arc: give it the two side speeds and the heading to stop at, and it
 // drives until the robot faces that heading.  Blocks, so no pid_wait() after.
 //
@@ -97,7 +81,7 @@ bool drive_arc(double target_deg, int left_speed, int right_speed, int timeout_m
 //   drive_for_time(1500);            // back into the goal for 1.5 s
 //   pros::delay(200);
 //   claw_set(CLAW_OFF);              // score while still pushed in
-//   upper_roller_spin(800, 127);
+//   intake_spin(800, 127);
 //   drive_for_time_wait();           // let the push finish
 //   chassis.pid_drive_set(10_in, DRIVE_SPEED);
 //
@@ -139,11 +123,10 @@ void fins_sync_zero();
 // fins_set() or intake_set().  fins_jammed() is true while they are stopped.
 void fins_jam_guard(bool on);
 bool fins_jammed();
-void upper_roller_set(int power);    // port 19, the upper roller
 void dropdown_set(int power);  // port 4
 
 void fins_spin(int ms, int speed);
-void upper_roller_spin(int ms, int speed);
+void upper_roller_spin(int ms, int speed);   // = intake_spin(): the roller is chained to it now
 void dropdown_spin(int ms, int speed);
 void intake_spin(int ms, int speed);
 void intake_spin_stop();
