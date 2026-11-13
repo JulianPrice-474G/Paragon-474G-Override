@@ -72,7 +72,7 @@ state — and the DOWN/LEFT toggles and the controller readout read them.
   `upper_roller_spin()` is kept only so old auton calls work — it is
   `intake_spin()`.
 - Side toggles: motor on **port 19** (the old upper roller port),
-  `side_toggles_set()`. Driver control only — **Y held** spins them forward at
+  `side_toggles_set()`. Driver control only — **B held** spins them forward at
   `SIDE_TOGGLES_SPEED`. Nothing in the autons or the macro runs them.
 - Intake: `intake_spin(ms, speed)` — non-blocking; `ms = -1` runs until
   `intake_spin_stop()`. `fins_spin()` / `fins_set()` drive only the two fins.
@@ -106,13 +106,13 @@ Outside it the UI owns LEFT/RIGHT/A/B for menu navigation.
 |---|---|
 | L1 / L2 | cascade up (stops at `CASCADE_MAX`) / down at 50% |
 | R1 / R2 | intake, both directions |
-| Y (hold) | side toggles forward (`SIDE_TOGGLES_SPEED`) |
 | DOWN / LEFT | toggle claw / toggle C-flip |
 | RIGHT | cascade macro |
 | X | while parked after press 1: all intakes backward, claw closes after `GRAB_REV_MS` (90 ms), stays backward until press 2 (ignored while UP is held) |
 | LEFT+B held 1 s | run selected auton — only outside driver mode, off a comp switch |
 | A (hold) | whole intake forward for `A_FWD_MS` (1 s), then backward while still held |
-| B | unused (still half of the LEFT+B auton combo) |
+| B (hold) | side toggles forward (`SIDE_TOGGLES_SPEED`) — LEFT+B still starts an auton outside driver mode |
+| Y | unused |
 
 Controller in driver mode: row 1 `p### temps heading` (IMU zeroed on entering driver mode), row 2 commanded piston
 states `C F`.

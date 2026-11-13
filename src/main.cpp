@@ -28,7 +28,7 @@ constexpr int8_t L_MOTOR_B_PORT = 6;
 // opposite to the other three.
 constexpr int8_t FIN_1_PORT = 1;
 constexpr int8_t DROPDOWN_PORT = 4;   // drop-down intake
-constexpr int8_t SIDE_TOGGLES_PORT = 19;  // side toggles - Y held, driver only
+constexpr int8_t SIDE_TOGGLES_PORT = 19;  // side toggles - B held, driver only
 constexpr int8_t FIN_2_PORT = 11;  // the one that spins opposite the other two
 
 
@@ -40,7 +40,7 @@ constexpr int L_SPEED    = 127;      // L1 - full power
 constexpr int L2_SPEED   = L_SPEED * 50 / 100;  // L2 - 50% of L_SPEED (= 63)
 constexpr int R_SPEED = 127;         // R1 / R2 group
 constexpr int A_FWD_MS = 1000;       // A held: all intakes forward this long, then backward
-constexpr int SIDE_TOGGLES_SPEED = 127;  // Y held: side toggles forward at this power
+constexpr int SIDE_TOGGLES_SPEED = 127;  // B held: side toggles forward at this power
 constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can ask for
 
 // How close to the target heading drive_arc() calls it arrived.
@@ -230,7 +230,7 @@ void intake_set(int power) {
   dropdown.move(-power);
 }
 
-// Side toggles (port 19).  Driver control only - Y held.  Nothing in the
+// Side toggles (port 19).  Driver control only - B held.  Nothing in the
 // autons or the macro ever runs them.
 void side_toggles_set(int power) { side_toggles.move(power); }
 
@@ -953,8 +953,9 @@ void opcontrol() {
       // They are ignored until it finishes (see the cascade block below), then
       // work as normal if still held.  RIGHT is the way to abort.
 
-      // Side toggles - forward while Y is held.  Driver control only.
-      side_toggles_set(master.get_digital(DIGITAL_Y) ? SIDE_TOGGLES_SPEED : 0);
+      // Side toggles - forward while B is held.  Driver control only, so B is
+      // free here: LEFT+B only starts an auton outside driver mode.
+      side_toggles_set(master.get_digital(DIGITAL_B) ? SIDE_TOGGLES_SPEED : 0);
 
       // Claw on DOWN, C-flip on LEFT - both latching toggles.  Safe to read
       // these with new_press: handle_ctrl_input() only consumes LEFT/RIGHT/A/B
@@ -1042,7 +1043,7 @@ void opcontrol() {
       // returned.  Zeroing them every tick here fought it to a standstill.
       if (!macro_running())                               cascade_set(0);
       if (!macro_owns_intake() && !intake_spin_active())  intake_set(0);
-      side_toggles_set(0);   // Y only works in driver mode
+      side_toggles_set(0);   // B only spins them in driver mode
       // Pistons hold their state and are not re-commanded here.
     }
 

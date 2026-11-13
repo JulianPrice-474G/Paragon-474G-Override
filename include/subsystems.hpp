@@ -22,7 +22,7 @@ extern pros::Motor l_motor_b;
 extern pros::Motor fin_1;  // R1 / R2 intake - with dropdown and fin_2
 extern pros::Motor dropdown;  // front intake; the back roller is chained to it
 extern pros::Motor fin_2;  // always opposite fin_1
-extern pros::Motor side_toggles;  // port 19 - Y held in driver control only
+extern pros::Motor side_toggles;  // port 19 - B held in driver control only
 
 // Pneumatics - single-acting solenoids
 extern pros::adi::DigitalOut claw;    // port A - toggled by DOWN
@@ -44,7 +44,7 @@ void flip_set(bool on);
 // way.  The back roller is chained to the front intake, so this turns it too.
 void intake_set(int power);
 
-// Side toggles (port 19), -127 to 127.  Driver control runs them while Y is
+// Side toggles (port 19), -127 to 127.  Driver control runs them while B is
 // held; the autons and the macro never do.
 void side_toggles_set(int power);
 
