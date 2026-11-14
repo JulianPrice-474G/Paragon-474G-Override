@@ -64,7 +64,7 @@ directly. A `DigitalOut` cannot be read back, so software mirrors
 (`claw_extended`, `c_flip_extended`) are the only record of piston
 state — and the DOWN/LEFT toggles and the controller readout read them.
 
-- Pistons: `claw_set()`, `flip_set()`. There is no intake piston any more —
+- Pistons: `claw_set()`, `flip_set()`, `piston_h_set()` (port H, Y extends it). There is no intake piston any more —
   the dropdown intake is fixed down (port F is free).
 - Intake hardware: fins (ports 1, 11) and the dropdown (port 4). The back
   roller has no motor of its own; it is **chained to the front intake**, so it
@@ -112,7 +112,7 @@ Outside it the UI owns LEFT/RIGHT/A/B for menu navigation.
 | LEFT+B held 1 s | run selected auton — only outside driver mode, off a comp switch |
 | A (hold) | whole intake forward for `A_FWD_MS` (1 s), then backward while still held |
 | B (hold) | side toggles forward (`SIDE_TOGGLES_SPEED`) — LEFT+B still starts an auton outside driver mode |
-| Y | unused |
+| Y | extends the port H piston (`piston_h_set()`) — extend only; `disabled()` vents it |
 
 Controller in driver mode: row 1 `p### temps heading` (IMU zeroed on entering driver mode), row 2 commanded piston
 states `C F`.

@@ -147,6 +147,11 @@ pros::Motor fin_2(FIN_2_PORT);
 /////
 constexpr char CLAW_PORT   = 'A';  // toggled by DOWN
 constexpr char C_FLIP_PORT = 'B';  // toggled by LEFT
+constexpr char PISTON_H_PORT = 'H';  // extended by Y, driver only
+
+// Value that extends the port H piston.  Swap to false if it extends the wrong
+// way round.
+constexpr bool PISTON_H_ON = true;
 
 // Single-acting solenoids.  true = extended, false = retracted.
 // If your pistons turn out to behave backwards, swap these two values - that is
@@ -159,11 +164,13 @@ constexpr bool PISTON_RETRACTED = true;
 // starts.
 pros::adi::DigitalOut claw(CLAW_PORT,     CLAW_ON);
 pros::adi::DigitalOut c_flip(C_FLIP_PORT, FLIP_ON);
+pros::adi::DigitalOut piston_h(PISTON_H_PORT, !PISTON_H_ON);  // starts retracted
 
 // Software mirror of what each solenoid was last told to do.  A DigitalOut
 // cannot be read back, so this is the only record of piston state.
 bool claw_extended   = CLAW_ON;
 bool c_flip_extended = FLIP_ON;
+bool piston_h_extended = false;
 
 /////
 // CASCADE POSITION SOURCE
@@ -221,6 +228,10 @@ void cascade_hold() {
 // and they go wrong silently if a set_value() is done without one.
 void claw_set(bool on) { claw_extended   = on; claw.set_value(on); }
 void flip_set(bool on) { c_flip_extended = on; c_flip.set_value(on); }
+void piston_h_set(bool on) {
+  piston_h_extended = on;
+  piston_h.set_value(on ? PISTON_H_ON : !PISTON_H_ON);
+}
 
 // Whole intake in one call: -127 to 127, positive runs it the same way the R1
 // button does.  The back roller is chained to the front intake, so this drives
@@ -606,6 +617,7 @@ void cascade_set(int power) {
 void release_all_pistons() {
   claw_set(false);
   flip_set(false);
+  piston_h_set(false);
 }
 
 // Cascade hold state.  cascade_last_err is read by the controller readout in
@@ -968,6 +980,10 @@ void opcontrol() {
         c_flip_extended = !c_flip_extended;
         c_flip.set_value(c_flip_extended);
       }
+
+      // Port H piston - Y extends it.  Extend only: nothing in driver control
+      // retracts it; disabled() vents it with the others.
+      if (master.get_digital_new_press(DIGITAL_Y)) piston_h_set(true);
 
       // Intake - three motors, R2 runs them in, R1 reverses all of them.
       //   port 1  (fin_1) fin      - always runs

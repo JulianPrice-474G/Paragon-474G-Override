@@ -27,8 +27,10 @@ extern pros::Motor side_toggles;  // port 19 - B held in driver control only
 // Pneumatics - single-acting solenoids
 extern pros::adi::DigitalOut claw;    // port A - toggled by DOWN
 extern pros::adi::DigitalOut c_flip;  // port B - toggled by LEFT
+extern pros::adi::DigitalOut piston_h;  // port H - extended by Y
 extern bool claw_extended;
 extern bool c_flip_extended;
+extern bool piston_h_extended;
 
 /////
 // Subsystem helpers - prefer these to touching the devices directly
@@ -38,6 +40,7 @@ extern bool c_flip_extended;
 // DOWN/LEFT toggles and the controller readout read them.
 void claw_set(bool on);
 void flip_set(bool on);
+void piston_h_set(bool on);   // true = extended (PISTON_H_ON in main.cpp)
 
 // Whole intake, -127 to 127.  Positive runs it the same way the R1 button
 // does.  fin_2 is commanded opposite the others because it is mounted that
