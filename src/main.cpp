@@ -147,7 +147,7 @@ pros::Motor fin_2(FIN_2_PORT);
 /////
 constexpr char CLAW_PORT   = 'A';  // toggled by DOWN
 constexpr char C_FLIP_PORT = 'B';  // toggled by LEFT
-constexpr char PISTON_H_PORT = 'H';  // extended by Y, driver only
+constexpr char PISTON_H_PORT = 'H';  // extended at power-on, Y retracts
 
 // Value that extends the port H piston.  Swap to false if it extends the wrong
 // way round.
@@ -164,13 +164,13 @@ constexpr bool PISTON_RETRACTED = true;
 // starts.
 pros::adi::DigitalOut claw(CLAW_PORT,     CLAW_ON);
 pros::adi::DigitalOut c_flip(C_FLIP_PORT, FLIP_ON);
-pros::adi::DigitalOut piston_h(PISTON_H_PORT, !PISTON_H_ON);  // starts retracted
+pros::adi::DigitalOut piston_h(PISTON_H_PORT, PISTON_H_ON);  // starts extended
 
 // Software mirror of what each solenoid was last told to do.  A DigitalOut
 // cannot be read back, so this is the only record of piston state.
 bool claw_extended   = CLAW_ON;
 bool c_flip_extended = FLIP_ON;
-bool piston_h_extended = false;
+bool piston_h_extended = true;
 
 /////
 // CASCADE POSITION SOURCE
@@ -617,7 +617,8 @@ void cascade_set(int power) {
 void release_all_pistons() {
   claw_set(false);
   flip_set(false);
-  piston_h_set(false);
+  // piston_h is NOT vented: the robot sits in disabled() before the match,
+  // and the piston has to still be extended when it starts.
 }
 
 // Cascade hold state.  cascade_last_err is read by the controller readout in
@@ -981,9 +982,9 @@ void opcontrol() {
         c_flip.set_value(c_flip_extended);
       }
 
-      // Port H piston - Y extends it.  Extend only: nothing in driver control
-      // retracts it; disabled() vents it with the others.
-      if (master.get_digital_new_press(DIGITAL_Y)) piston_h_set(true);
+      // Port H piston - extended from power-on, Y retracts it.  Retract only:
+      // nothing re-extends it until the program restarts.
+      if (master.get_digital_new_press(DIGITAL_Y)) piston_h_set(false);
 
       // Intake - three motors, R2 runs them in, R1 reverses all of them.
       //   port 1  (fin_1) fin      - always runs

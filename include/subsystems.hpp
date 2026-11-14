@@ -27,7 +27,7 @@ extern pros::Motor side_toggles;  // port 19 - B held in driver control only
 // Pneumatics - single-acting solenoids
 extern pros::adi::DigitalOut claw;    // port A - toggled by DOWN
 extern pros::adi::DigitalOut c_flip;  // port B - toggled by LEFT
-extern pros::adi::DigitalOut piston_h;  // port H - extended by Y
+extern pros::adi::DigitalOut piston_h;  // port H - extended at power-on, Y retracts
 extern bool claw_extended;
 extern bool c_flip_extended;
 extern bool piston_h_extended;
