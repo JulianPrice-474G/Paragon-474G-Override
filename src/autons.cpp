@@ -831,9 +831,11 @@ void auto_4() {
 
 
 chassis.pid_speed_max_set(127);
+side_toggles_set(127);
 upper_roller_spin(700,127);
 cascade_move_async(110, 127);
 pros::delay(200);
+side_toggles_set(0);
 chassis.pid_drive_set(-8_in, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(270, 127);
