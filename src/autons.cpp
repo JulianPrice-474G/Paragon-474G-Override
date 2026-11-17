@@ -592,12 +592,13 @@ pros::delay(450);
 chassis.pid_speed_max_set(127);
 
 //Get To MatchLaoder 1
-intake_spin(15000,127);
+intake_spin(4000,-127);
 macro_press();
 chassis.pid_drive_set(25, 80);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(358, 127);
 chassis.pid_wait();
+intake_spin(15000,127);
 chassis.pid_drive_set(9, 30);
 chassis.pid_wait_quick_chain();
 pros::delay(1200);
@@ -618,12 +619,13 @@ pros::delay(200);
 chassis.pid_speed_max_set(127); 
 
 //Get To MatchLaoder 2
-intake_spin(15000,127);
+intake_spin(4000,-127);
 macro_press();
 chassis.pid_drive_set(25, 80);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(358, 127);
 chassis.pid_wait();
+intake_spin(15000,127);
 chassis.pid_drive_set(9, 30);
 chassis.pid_wait_quick_chain();
 pros::delay(1200);
@@ -644,14 +646,46 @@ claw_set(CLAW_OFF);
 pros::delay(200);
 chassis.pid_speed_max_set(127); 
 
-//Get To MatchLaoder 3
 
-intake_spin(15000,127);
+//mathclaoder 3
+
+intake_spin(4000,-127);
 macro_press();
 chassis.pid_drive_set(25, 80);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(358, 127);
 chassis.pid_wait();
+intake_spin(15000,127);
+chassis.pid_drive_set(9, 30);
+chassis.pid_wait_quick_chain();
+pros::delay(1200);
+chassis.pid_drive_set(-7.8_in, 35);
+chassis.pid_wait_quick_chain();
+pros::delay(800);
+chassis.pid_turn_set(270, 127);
+chassis.pid_wait_quick_chain();
+macro_press(1100);
+pros::delay(1300);
+chassis.pid_drive_set(-40, 65);
+chassis.pid_wait_until(-20_in);
+chassis.pid_speed_max_set(30);
+chassis.pid_wait_quick_chain();
+pros::delay(400);
+cascade_move_async(400, 70);
+pros::delay(400);
+claw_set(CLAW_OFF);
+pros::delay(200);
+chassis.pid_speed_max_set(127); 
+
+//Get To MatchLaoder 4
+
+intake_spin(4000,-127);
+macro_press();
+chassis.pid_drive_set(25, 80);
+chassis.pid_wait_quick_chain();
+chassis.pid_turn_set(358, 127);
+chassis.pid_wait();
+intake_spin(15000,127);
 chassis.pid_drive_set(9, 30);
 chassis.pid_wait_quick_chain();
 pros::delay(1200);
