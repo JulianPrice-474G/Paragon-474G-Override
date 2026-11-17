@@ -645,7 +645,6 @@ chassis.pid_speed_max_set(127);
 
 //Get To MatchLaoder 3
 
-
 intake_spin(15000,127);
 macro_press();
 chassis.pid_drive_set(25, 80);
@@ -657,49 +656,17 @@ chassis.pid_wait_quick_chain();
 pros::delay(1200);
 chassis.pid_drive_set(-8_in, 35);
 chassis.pid_wait_quick_chain();
-macro_press(1200);
+macro_grab_auto(1000, 1000);
+macro_wait_done();
+macro_press(1000);  
 chassis.pid_turn_set(270, 127);
 macro_wait_done();
-chassis.pid_drive_set(-40, 127);
-chassis.pid_wait_until(-20_in);
-chassis.pid_speed_max_set(30);
+chassis.pid_drive_set(-20, 127);
 chassis.pid_wait_quick_chain();
-pros::delay(200);
-pros::delay(200);
-cascade_move_async(1000, 127);
-pros::delay(400);
-claw_set(CLAW_OFF);
-pros::delay(200);
-chassis.pid_speed_max_set(127); 
-
-//Score FInal Pin
-intake_spin(15000,127);
-macro_press();
-chassis.pid_drive_set(25, 80);
+chassis.pid_turn_set(315, 127);
 chassis.pid_wait_quick_chain();
-chassis.pid_turn_set(360, 127);
-chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(10, 30);
-chassis.pid_wait_quick_chain();
-pros::delay(1200);
-chassis.pid_drive_set(-8_in, 35);
-chassis.pid_wait_quick_chain();
-macro_press(1400);
-chassis.pid_turn_set(270, 127);
-macro_wait_done();
-chassis.pid_drive_set(-40, 127);
-chassis.pid_wait_until(-20_in);
-chassis.pid_speed_max_set(30);
-chassis.pid_wait_quick_chain();
-pros::delay(200);
-pros::delay(200);
-cascade_move_async(1200, 127);
-pros::delay(400);
-claw_set(CLAW_OFF);
-pros::delay(200);
-chassis.pid_speed_max_set(127); 
-
-
+chassis.pid_drive_set(-100, 127);
+  
 }
 
 ///
@@ -728,6 +695,7 @@ macro_press();
 
   
 }
+
 
 ///
 // Auto 4 - SAWP Mirrored, the "SAWP Mirrored" button on the brain (slot 4)
