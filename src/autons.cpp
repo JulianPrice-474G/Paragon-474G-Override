@@ -504,6 +504,7 @@ claw_set(CLAW_OFF);
 ///
 void skills() {
   auton_setup();
+  piston_h_set(true);   // toggle tickler (port H) engaged - already is from power-on, unless Y retracted it
 
   // ── ONE PIN MACRO ─────────────────────────────────────────────────────────
   // Only from the parked state after press 1 (macro_press() first).  Same as
@@ -538,7 +539,7 @@ chassis.pid_drive_set(8.5, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(227, 127);
 chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(29, 127);
+chassis.pid_drive_set(28.35, 127);
 chassis.pid_wait_until(10_in);
 chassis.pid_speed_max_set(30);
 chassis.pid_wait_quick_chain();
@@ -570,7 +571,7 @@ chassis.pid_wait_quick_chain();
 macro_press();
 chassis.pid_turn_set(317.5, 127);
 chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(31.5, 127);
+chassis.pid_drive_set(30, 127);
 chassis.pid_wait_until(12_in);
 chassis.pid_speed_max_set(30);
 chassis.pid_wait_quick_chain();
@@ -584,33 +585,33 @@ chassis.pid_drive_set(-27, 127);
 chassis.pid_wait_until(-12_in);
 chassis.pid_speed_max_set(30);
 chassis.pid_wait_quick_chain();
-cascade_move_async(500, 127);
+cascade_move_async(500, 80);
 pros::delay(600);
 claw_set(CLAW_OFF);
 pros::delay(450);
 chassis.pid_speed_max_set(127);
 
 //Get To MatchLaoder 1
-chassis.drive_angle_set(270);
 intake_spin(15000,127);
 macro_press();
 chassis.pid_drive_set(25, 80);
 chassis.pid_wait_quick_chain();
-chassis.pid_turn_set(360, 127);
-chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(10, 30);
+chassis.pid_turn_set(358, 127);
+chassis.pid_wait();
+chassis.pid_drive_set(9, 30);
 chassis.pid_wait_quick_chain();
 pros::delay(1200);
-chassis.pid_drive_set(-8_in, 35);
+chassis.pid_drive_set(-7.8_in, 35);
 chassis.pid_wait_quick_chain();
+pros::delay(800);
 macro_press(800);
 chassis.pid_turn_set(270, 127);
 macro_wait_done();
-chassis.pid_drive_set(-40, 127);
+chassis.pid_drive_set(-40,70);
 chassis.pid_wait_until(-20_in);
 chassis.pid_speed_max_set(30);
 chassis.pid_wait_quick_chain();
-cascade_move_async(750, 127);
+cascade_move_async(400, 80);
 pros::delay(400);
 claw_set(CLAW_OFF);
 pros::delay(200);
@@ -621,24 +622,24 @@ intake_spin(15000,127);
 macro_press();
 chassis.pid_drive_set(25, 80);
 chassis.pid_wait_quick_chain();
-chassis.pid_turn_set(360, 127);
-chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(10, 30);
+chassis.pid_turn_set(358, 127);
+chassis.pid_wait();
+chassis.pid_drive_set(9, 30);
 chassis.pid_wait_quick_chain();
 pros::delay(1200);
-chassis.pid_drive_set(-8_in, 35);
+chassis.pid_drive_set(-7.8_in, 35);
 chassis.pid_wait_quick_chain();
+pros::delay(800);
 macro_press(1000);
 chassis.pid_turn_set(270, 127);
 macro_wait_done();
-chassis.pid_drive_set(-40, 127);
+chassis.pid_drive_set(-40, 70);
 chassis.pid_wait_until(-20_in);
 chassis.pid_speed_max_set(30);
 chassis.pid_wait_quick_chain();
-pros::delay(200);
-pros::delay(200);
-cascade_move_async(900, 127);
 pros::delay(400);
+cascade_move_async(400, 80);
+pros::delay(500);
 claw_set(CLAW_OFF);
 pros::delay(200);
 chassis.pid_speed_max_set(127); 
@@ -649,27 +650,31 @@ intake_spin(15000,127);
 macro_press();
 chassis.pid_drive_set(25, 80);
 chassis.pid_wait_quick_chain();
-chassis.pid_turn_set(360, 127);
-chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(10, 30);
+chassis.pid_turn_set(358, 127);
+chassis.pid_wait();
+chassis.pid_drive_set(9, 30);
 chassis.pid_wait_quick_chain();
 pros::delay(1200);
-chassis.pid_drive_set(-8_in, 35);
+chassis.pid_drive_set(-7.8_in, 35);
 chassis.pid_wait_quick_chain();
-macro_grab_auto(1000, 1000);
-macro_wait_done();
-macro_press(1000);  
+macro_grab_auto(1500, 1000);
+pros::delay(800);
+macro_press(400);  
 chassis.pid_turn_set(270, 127);
 macro_wait_done();
-chassis.pid_drive_set(-20, 127);
+chassis.pid_drive_set(-3, 127);
 chassis.pid_wait_quick_chain();
 chassis.pid_turn_set(315, 127);
 chassis.pid_wait_quick_chain();
-chassis.pid_drive_set(-100, 127);
+chassis.pid_drive_set(-100, 100);
+pros::delay(100);
+chassis.pid_wait_quick_chain();
+cascade_move_async(250, 80);
+pros::delay(400);
+claw_set(CLAW_OFF);
   
 }
 
-///
 // 1 pin - the "1 pin" button on the brain (slot 3)
 ///
 void one_pin() {
