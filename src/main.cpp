@@ -39,7 +39,6 @@ constexpr int8_t FIN_2_PORT = 11;  // the one that spins opposite the other two
 constexpr int L_SPEED    = 127;      // L1 - full power
 constexpr int L2_SPEED   = L_SPEED * 50 / 100;  // L2 - 50% of L_SPEED (= 63)
 constexpr int R_SPEED = 127;         // R1 / R2 group
-constexpr int A_FWD_MS = 1000;       // A held: all intakes forward this long, then backward
 constexpr int SIDE_TOGGLES_SPEED = 127;  // B held: side toggles forward at this power
 constexpr int DRIVE_SPEED = 127;     // caps how much power the joysticks can ask for
 
@@ -986,12 +985,19 @@ void opcontrol() {
       // nothing re-extends it until the program restarts.
       if (master.get_digital_new_press(DIGITAL_Y)) piston_h_set(false);
 
+      // A - cascade all the way down to DRIVER_CASCADE_LOW, in the background.
+      // Ignored while the macro is moving or parked after press 1, so it never
+      // breaks the macro sequence.  L1/L2 are ignored until the move ends.
+      if (master.get_digital_new_press(DIGITAL_A) &&
+          !macro_running() && !macro_waiting()) {
+        cascade_move_async(DRIVER_CASCADE_LOW);
+      }
+
       // Intake - three motors, R2 runs them in, R1 reverses all of them.
       //   port 1  (fin_1) fin      - always runs
       //   port 11 (fin_2) fin      - always runs, mounted opposite the rest
       //   port 4  (dropdown) dropdown - always runs; the back roller is
       //                               chained to the front intake
-      // A runs them forward for A_FWD_MS, then backward.
 
       // Skipped while the macro drives the intake itself - otherwise the else
       // branch below writes zero to these motors every tick and the macro's
@@ -1005,18 +1011,8 @@ void opcontrol() {
         drv_intake_power = INT32_MIN;   // resend once it hands the intake back
       } else {
         int  power  = 0;
-        // A held: the whole intake forward for A_FWD_MS, then backward for as
-        // long as A stays held.
-        static uint32_t a_since = 0;   // when this A hold began; 0 = not held
-        const bool a_held = master.get_digital(DIGITAL_A);
-        if (!a_held) a_since = 0;
-
         if      (master.get_digital(DIGITAL_R2)) power = -R_SPEED;
         else if (master.get_digital(DIGITAL_R1)) power =  R_SPEED;
-        else if (a_held) {
-          if (a_since == 0) a_since = pros::millis();
-          power = (pros::millis() - a_since < (uint32_t)A_FWD_MS) ? R_SPEED : -R_SPEED;
-        }
         if (power != drv_intake_power) {
           intake_set(power);
           drv_intake_power = power;

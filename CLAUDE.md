@@ -110,7 +110,7 @@ Outside it the UI owns LEFT/RIGHT/A/B for menu navigation.
 | RIGHT | cascade macro |
 | X | while parked after press 1: all intakes backward, claw closes after `GRAB_REV_MS` (90 ms), stays backward until press 2 (ignored while UP is held) |
 | LEFT+B held 1 s | run selected auton — only outside driver mode, off a comp switch |
-| A (hold) | whole intake forward for `A_FWD_MS` (1 s), then backward while still held |
+| A | cascade down to `DRIVER_CASCADE_LOW` (background move; ignored while the macro runs or is parked; RIGHT cancels it) |
 | B (hold) | side toggles forward (`SIDE_TOGGLES_SPEED`) — LEFT+B still starts an auton outside driver mode |
 | Y | retracts the port H piston (`piston_h_set()`) — it is extended from power-on and `disabled()` leaves it alone, so it is still out when the match starts; retract only |
 
