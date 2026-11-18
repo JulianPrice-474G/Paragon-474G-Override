@@ -680,10 +680,9 @@ chassis.pid_speed_max_set(127);
 //Get To MatchLaoder 4
 
 intake_spin(4000,-127);
+macro_press();
 chassis.pid_drive_set(25, 80);
 chassis.pid_wait_quick_chain();
-macro_press();
-macro_wait_done();
 chassis.pid_turn_set(358, 127);
 chassis.pid_wait();
 intake_spin(15000,127);
