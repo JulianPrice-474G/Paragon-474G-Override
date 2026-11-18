@@ -939,7 +939,7 @@ void opcontrol() {
     handle_ctrl_input();
     ez_template_extras();        // ← keeps the LEFT+B auton test
 
-    chassis.opcontrol_tank();   // left stick = left side, right stick = right side
+    chassis.opcontrol_arcade_standard(ez::SPLIT);
 
     if (!ctrl_flushed) { ctrl_flushed = true; CtrlFlush(); }
 
