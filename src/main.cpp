@@ -146,7 +146,7 @@ pros::Motor fin_2(FIN_2_PORT);
 /////
 constexpr char CLAW_PORT   = 'A';  // toggled by DOWN
 constexpr char C_FLIP_PORT = 'B';  // toggled by LEFT
-constexpr char PISTON_H_PORT = 'H';  // extended at power-on, Y retracts
+constexpr char PISTON_H_PORT = 'H';  // extended at power-on, A retracts
 
 // Value that extends the port H piston.  Swap to false if it extends the wrong
 // way round.
@@ -981,14 +981,15 @@ void opcontrol() {
         c_flip.set_value(c_flip_extended);
       }
 
-      // Port H piston - extended from power-on, Y retracts it.  Retract only:
-      // nothing re-extends it until the program restarts.
-      if (master.get_digital_new_press(DIGITAL_Y)) piston_h_set(false);
+      // Port H piston - extended from power-on, A retracts it.  Retract only:
+      // nothing re-extends it until the program restarts.  Safe to read A with
+      // new_press: the UI only consumes it while driver mode is OFF.
+      if (master.get_digital_new_press(DIGITAL_A)) piston_h_set(false);
 
-      // A - cascade all the way down to DRIVER_CASCADE_LOW, in the background.
+      // Y - cascade all the way down to DRIVER_CASCADE_LOW, in the background.
       // Ignored while the macro is moving or parked after press 1, so it never
       // breaks the macro sequence.  L1/L2 are ignored until the move ends.
-      if (master.get_digital_new_press(DIGITAL_A) &&
+      if (master.get_digital_new_press(DIGITAL_Y) &&
           !macro_running() && !macro_waiting()) {
         cascade_move_async(DRIVER_CASCADE_LOW);
       }

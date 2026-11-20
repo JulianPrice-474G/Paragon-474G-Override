@@ -64,7 +64,7 @@ directly. A `DigitalOut` cannot be read back, so software mirrors
 (`claw_extended`, `c_flip_extended`) are the only record of piston
 state — and the DOWN/LEFT toggles and the controller readout read them.
 
-- Pistons: `claw_set()`, `flip_set()`, `piston_h_set()` (port H, extended from power-on, Y retracts it). There is no intake piston any more —
+- Pistons: `claw_set()`, `flip_set()`, `piston_h_set()` (port H, extended from power-on, A retracts it). There is no intake piston any more —
   the dropdown intake is fixed down (port F is free).
 - Intake hardware: fins (ports 1, 11) and the dropdown (port 4). The back
   roller has no motor of its own; it is **chained to the front intake**, so it
@@ -110,9 +110,9 @@ Outside it the UI owns LEFT/RIGHT/A/B for menu navigation.
 | RIGHT | cascade macro |
 | X | while parked after press 1: all intakes backward, claw closes after `GRAB_REV_MS` (90 ms), stays backward until press 2 (ignored while UP is held) |
 | LEFT+B held 1 s | run selected auton — only outside driver mode, off a comp switch |
-| A | cascade down to `DRIVER_CASCADE_LOW` (background move; ignored while the macro runs or is parked; RIGHT cancels it) |
+| Y | cascade down to `DRIVER_CASCADE_LOW` (background move; ignored while the macro runs or is parked; RIGHT cancels it) |
 | B (hold) | side toggles forward (`SIDE_TOGGLES_SPEED`) — LEFT+B still starts an auton outside driver mode |
-| Y | retracts the port H piston (`piston_h_set()`) — it is extended from power-on and `disabled()` leaves it alone, so it is still out when the match starts; retract only |
+| A | retracts the port H piston (`piston_h_set()`) — it is extended from power-on and `disabled()` leaves it alone, so it is still out when the match starts; retract only |
 
 Controller in driver mode: row 1 `p### temps heading` (IMU zeroed on entering driver mode), row 2 commanded piston
 states `C F`.
