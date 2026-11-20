@@ -504,7 +504,7 @@ claw_set(CLAW_OFF);
 ///
 void skills() {
   auton_setup();
-  piston_h_set(true);   // toggle tickler (port H) engaged - already is from power-on, unless X retracted it
+  piston_h_set(true);   // toggle tickler (port H) engaged - already is from power-on, unless Y retracted it
 
   // ── ONE PIN MACRO ─────────────────────────────────────────────────────────
   // Only from the parked state after press 1 (macro_press() first).  Same as
