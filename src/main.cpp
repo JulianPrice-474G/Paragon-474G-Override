@@ -146,7 +146,7 @@ pros::Motor fin_2(FIN_2_PORT);
 /////
 constexpr char CLAW_PORT   = 'A';  // toggled by DOWN
 constexpr char C_FLIP_PORT = 'B';  // toggled by LEFT
-constexpr char PISTON_H_PORT = 'H';  // extended at power-on, Y retracts
+constexpr char PISTON_H_PORT = 'H';  // extended at power-on, X retracts
 
 // Value that extends the port H piston.  Swap to false if it extends the wrong
 // way round.
@@ -955,11 +955,15 @@ void opcontrol() {
       // own task, so the drivetrain keeps responding throughout.
       if (master.get_digital_new_press(DIGITAL_RIGHT)) macro_start();
 
-      // X while parked after press 1: intake backward, then close the claw -
-      // see macro_grab().  Ignored while UP is held, so the UP+X driver mode
-      // combo does not set it off.
-      if (master.get_digital_new_press(DIGITAL_X) && !master.get_digital(DIGITAL_UP))
-        macro_grab();
+      // X while the macro runs or is parked after press 1: intake backward,
+      // then close the claw - see macro_grab().  Any other time X retracts the
+      // port H piston (extended from power-on; retract only - nothing
+      // re-extends it until the program restarts).  Ignored while UP is held,
+      // so the UP+X driver mode combo does not set either off.
+      if (master.get_digital_new_press(DIGITAL_X) && !master.get_digital(DIGITAL_UP)) {
+        if (macro_running() || macro_waiting()) macro_grab();
+        else                                    piston_h_set(false);
+      }
 
       // L1/L2 do NOT cancel the macro - cancelling mid-step left it half done.
       // They are ignored until it finishes (see the cascade block below), then
@@ -981,14 +985,12 @@ void opcontrol() {
         c_flip.set_value(c_flip_extended);
       }
 
-      // Port H piston - extended from power-on, Y retracts it.  Retract only:
-      // nothing re-extends it until the program restarts.
-      if (master.get_digital_new_press(DIGITAL_Y)) piston_h_set(false);
-
-      // A - cascade all the way down to DRIVER_CASCADE_LOW, in the background.
-      // Ignored while the macro is moving or parked after press 1, so it never
-      // breaks the macro sequence.  L1/L2 are ignored until the move ends.
-      if (master.get_digital_new_press(DIGITAL_A) &&
+      // A or Y - cascade all the way down to DRIVER_CASCADE_LOW, in the
+      // background.  Ignored while the macro is moving or parked after press 1,
+      // so it never breaks the macro sequence.  L1/L2 are ignored until the
+      // move ends.
+      if ((master.get_digital_new_press(DIGITAL_A) ||
+           master.get_digital_new_press(DIGITAL_Y)) &&
           !macro_running() && !macro_waiting()) {
         cascade_move_async(DRIVER_CASCADE_LOW);
       }
