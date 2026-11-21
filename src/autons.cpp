@@ -519,7 +519,7 @@ void skills() {
   // Your code here.
   //First Pin
 chassis.pid_speed_max_set(127);
-upper_roller_spin(700,127);
+upper_roller_spin(1000,127);
 cascade_move_async(110, 127);
 pros::delay(200);
 chassis.pid_drive_set(-8_in, 127);
